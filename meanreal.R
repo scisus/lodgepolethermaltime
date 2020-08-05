@@ -29,3 +29,13 @@ phenfs <- phense %>% dplyr::filter(Sex == "FEMALE" & DoY == First_RF)
 input <- list("N" = nrow(phenfs), "forcing" = phenfs$sum_forcing)
 
 fit <- rstan::stan(file='meanfitreal.stan', chains=4, data=input)
+
+# plot modeled and true data
+
+get_variables(fit)
+ypred <- tidybayes::gather_draws(model = fit, `y_ppc*`[i], regex=TRUE)
+
+ggplot(ypred, aes(x=.value, group = as.factor(.chain), color="model")) +
+    geom_density() +
+    geom_density(data=phenfs, aes(x=sum_forcing, color="data"), inherit.aes = FALSE) +
+    ggtitle("observed data and model output")
