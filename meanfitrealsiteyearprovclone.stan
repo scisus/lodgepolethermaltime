@@ -34,7 +34,7 @@ parameters {
     vector[n_Site] site_offset; // site effect
     vector[n_Year] year_offset; //year effect
     vector[n_Provenance] prov_offset; //provenance effect
-    vector[n_Clone] clone_offset; //clone effect
+    vector[n_Clone] z_clone_offset; //clone effect
 
     real sigma_site; // site effect variance
     real sigma_year; // year effect variance
@@ -65,19 +65,23 @@ model {
     site_offset ~ normal(mu_site, sigma_site);
     year_offset ~ normal(mu_year, sigma_year);
     prov_offset ~ normal(mu_prov, sigma_prov);
-    clone_offset ~ normal(mu_clone, sigma_clone);
+    z_clone_offset ~ normal(0, 1);
 
     mu ~ normal(350, 20);
 
-    sum_forcing ~ normal(mu + site_offset[Site] + year_offset[Year] + prov_offset[Provenance] + clone_offset[Clone], sigma);
+    sum_forcing ~ normal(mu + site_offset[Site] + year_offset[Year] + prov_offset[Provenance] + 
+    (mu_clone + z_clone_offset[Clone] * sigma_clone), 
+    sigma);
 }
 
-//Simulate a full observation from the current value of the parameters
+// Simulate a full observation from the current value of the parameters
 generated quantities {
     real y_ppc[n];
-    // vector[n_Clone] clone_offset;
-    //
-    // clone_offset = z_clone_offset * sigma_clone;
+    
+    // reconstruct clone offset
+    vector[n_Clone] clone_offset;
+    
+    clone_offset = mu_clone + z_clone_offset * sigma_clone;
 
     { // Don't save tempvars
     for (i in 1:n)
