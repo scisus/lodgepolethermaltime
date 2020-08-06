@@ -8,6 +8,8 @@ library(rstan)
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
 
+sex="FEMALE"
+
 phen <- flowers::phenology %>% # phenology data
     filter(Phenophase_Derived==2 & Year < 2012) %>%
     rename(state = Phenophase_Derived) # only consider days when trees are flowering
@@ -35,17 +37,34 @@ phenfs <- phense %>% dplyr::filter(Sex == "FEMALE" & DoY == First_RF) %>%
 input <- tidybayes::compose_data(phenfs)
 
 
-fit <- rstan::stan(file='meanfitrealsiteyearprovclone.stan', chains=4, data=input, iter=7000, control = list(adapt_delta=0.99, max_treedepth=11))
+fit <- rstan::stan(file='meanfitrealsiteyearprovclone.stan', chains=8, data=input, iter=1e4, control = list(adapt_delta=0.99, max_treedepth=11), cores=20, pars=c("z_clone_offset", "clone_offset"), include=FALSE)
+
+saveRDS(fit, file = paste(Sys.Date(), "sypc", sex, ".rds", sep=''))
 
 print(fit)
 
-library(shinystan)
-launch_shinystan(fit)
+# library(shinystan)
+# launch_shinystan(fit)
 
 # plot modeled and true data
 
 get_variables(fit)
 
+withtypes <- fit %>%
+    recover_types(phenfs) #%>%
+    gather_draws(site_offset[Site], prov_offset[Provenance], year_offset[Year])
+
+site <- gather_draws(withtypes, site_offset[Site]) %>% 
+    dplyr::rename(.label = Site)
+prov <- gather_draws(withtypes, prov_offset[Provenance]) %>%
+    dplyr::rename(.label = Provenance)
+year <- gather_draws(withtypes, prov_offset[Year])
+
+siteprovmodoffsets <- bind_rows(site, prov)
+
+ggplot(siteprovmodoffsets, aes(x=.value, colour=.variable, group=.label)) +
+    geom_density()
+    
 ypred <- fit %>%
     recover_types(phenfs) %>%
     gather_draws(y_ppc[Site])
