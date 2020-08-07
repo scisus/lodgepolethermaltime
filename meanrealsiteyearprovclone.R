@@ -37,7 +37,7 @@ phenfs <- phense %>% dplyr::filter(Sex == "FEMALE" & DoY == First_RF) %>%
 input <- tidybayes::compose_data(phenfs)
 
 
-fit <- rstan::stan(file='meanfitrealsiteyearprovclone.stan', chains=8, data=input, iter=1e4, control = list(adapt_delta=0.99, max_treedepth=11), cores=20, pars=c("z_clone_offset", "clone_offset"), include=FALSE)
+fit <- rstan::stan(file='meanfitrealsiteyearprovclone.stan', chains=8, data=input, iter=1e4, control = list(adapt_delta=0.99, max_treedepth=11), cores=20, pars=c("z_clone_offset"), include=FALSE)
 
 saveRDS(fit, file = paste(Sys.Date(), "sypc", sex, ".rds", sep=''))
 
@@ -51,8 +51,7 @@ print(fit)
 get_variables(fit)
 
 withtypes <- fit %>%
-    recover_types(phenfs) #%>%
-    gather_draws(site_offset[Site], prov_offset[Provenance], year_offset[Year])
+    recover_types(phenfs) 
 
 site <- gather_draws(withtypes, site_offset[Site]) %>% 
     dplyr::rename(.label = Site)
