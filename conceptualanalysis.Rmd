@@ -1,0 +1,181 @@
+---
+title: "Phenology model workflow"
+author: "C. Susannah Tysor"
+date: '2020-08-17'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(ggplot2)
+library(zoo)
+```
+
+# Conceptual Analysis
+
+I have a record of days that lodgepole pine were recorded flowering or not flowering during the general flowering period. Trees were not observed every day and the start or end of the flowering period may have been missed.
+
+The flowering observations ($y$) were simplified to first recorded (began flowering) and last recorded (finished flowering) - discrete events. The amount of forcing accumulated at each event day was calculated using Risto Sarvas's 1972 curve.
+
+I want to know how much forcing after January 1 must accumulate for trees to achieve each event.
+
+$y_i \sim \mathcal{N}(f_i, \sigma)$
+
+I wish to account for several kinds of structure in the data:
+
+- year of observation
+- site where tree was grown
+- provenance the tree's parents were sourced from
+- clone identity (multiple ramets of clones are grown at seed orchard sites)
+
+So
+
+$f_i = \mu + alpha_{site} + \alpha_{prov} + \alpha_{year} + \alpha_{clone}$
+
+where mu is the average amount of forcing it takes for a tree to reach an event and the $\alpha$s describe how each group in each cluster (site, prov, year, clone) effects the overall amount of forcing required to reach the event.
+
+I want priors on parameters to be regularizing and weakly informative.
+
+# Define observational space
+
+There are several thousand observations of each event. Each observation is the amount of forcing units accumulated when the event occurs for a given tree. 
+
+
+
+So, how much forcing is accumulated over the year?
+
+```{r}
+
+# forcing units for 15 years and at sites included in this study
+forcing <- read.csv('../phenolology/data/all_clim_PCIC.csv', header=TRUE) %>%
+  dplyr::filter(forcing_type=="ristos")
+
+ggplot(forcing, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
+  geom_line() +
+  theme(legend.position = "none") +
+  ggtitle("forcing (ristos) accumulated at Day of Year")
+
+
+
+```
+
+What are reasonable amounts of forcing? Lodgepole in BC flower in May and June.
+
+```{r}
+# likely Day of Year limits for flowering
+early_limit <- as.numeric(strftime("2020-05-01", format = "%j"))
+late_limit <- as.numeric(strftime("2020-06-30", format = "%j"))
+
+ff <- dplyr::filter(forcing, DoY > early_limit & DoY < late_limit)
+
+ggplot(ff, aes(x=sum_forcing)) +
+         geom_histogram(bins=60) +
+  ggtitle("Range of forcing accummulations in May and June")
+
+ggplot(ff, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
+  geom_line() +
+  theme(legend.position = "none") +
+  ggtitle("forcing (ristos) accumulated at Day of Year", subtitle = "May and June")
+```
+
+Each event is associated with a year, provenance, site, and clone. There are 15 years, 7 sites and provenances, and several hundred clones.
+
+A flowering period of 2 weeks for a population would be very long and a flowering period of a week very long for an individual tree, so an effect ($\alpha$) that changed the timing of flowering by even a few days would be meaningful. An alpha that shifted flowering by 1 weeks would be quite extreme. How much forcing can accumulate in 1 week prior to an event?
+
+```{r}
+
+# get 2 week forcing accumulations
+
+janjun <- forcing %>%
+  filter(DoY < late_limit) 
+
+week_forcing <- janjun %>%
+  group_by(Site, Year) %>%
+  summarise(sum_forcing_week = zoo::rollsum(forcing, 7))
+
+ggplot(week_forcing, aes(x=sum_forcing_week)) +
+  geom_histogram() +
+  ggtitle("Forcing accumulation over 1 week periods from January 1 to June 30") +
+  geom_vline(xintercept = mean(week_forcing$sum_forcing_week))
+
+(alpha_sigma <- mean(week_forcing$sum_forcing_week))
+```
+Limiting the sums to 2 week periods where phenology might actually occur, it looks like 125 ristos would be a very extreme alpha.
+
+# Construct summary statistics
+
+Histograms of $y_i$ and each $\alpha_{cluster}$.
+
+# Model development
+
+$y_i$ are the observations of accumulated forcing. They are positive and continuous and should be between about 200 and 1000. 
+
+$y_i$'s value can be modeled as coming from a distribution with a mean forcing accumulation ($f_i$) and standard deviation $\sigma$ that represents our uncertainty in the observation - how good our temperature measurements are, how good the forcing unit accumulation function is, and whether the event was observed on the correct day. 
+
+I think that most error is probably within about 1 day of forcing units.
+
+```{r}
+
+ggplot(janjun, aes(x=forcing)) +
+  geom_histogram() +
+  ggtitle("Forcing accumulation over 1 day periods in May and June") +
+  geom_vline(xintercept = mean(janjun$forcing))
+
+(sigma_sd <- mean(janjun$forcing))
+
+hist(rexp(1000, 1))
+
+```
+
+So,
+
+$y_i ~ \mathcal{N}(f_i, \sigma)$
+
+$f_i$ is a function of $\mu$ and the $\alpha$ effects. 
+
+$\mu$ represents the population average for forcing required to achieve the flowering event of interest. It must be positive and continuous. Values less than ~275 and greater than ~1000 would be quite unusual for any phase.
+
+
+$\mu \sim \mathcal{N}(500,150)$
+
+Covers that range nicely.
+
+```{r}
+hist(rnorm(1000, 500, 150), breaks=60)
+```
+The $\alpha$ effects can be modeled as changes from $\mu$. I believe (hope?) they're zero, but they *could* be as much as a week's worth of forcing.
+
+$\alpha_{cluster} \sim \mathcal{N}(\mu_{cluster},\sigma_{cluster})$
+$\mu_{cluster} \sim \mathcal{N}(0, 14)$
+
+```{r}
+hist(rnorm(1000, 0, alpha_sigma/2), breaks=30)
+title(sub="mu_cluster prior")
+```
+I've reined in the range of mu a bit here because many of the higher values are from later in the season when flowering is almost certainly done and forcing is accumulating very rapidly.
+
+$\sigma_{cluster}$ describes variation between clusters. I think a very extreme value for this would be a difference of a week, ~ `r alpha_sigma`.
+
+$\sigma_{cluster} \sim \mathcal{Exp}(0.5)$
+
+```{r}
+
+hist(rexp(10000, 0.5), breaks=30)
+```
+ 
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
