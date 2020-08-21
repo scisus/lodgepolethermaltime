@@ -67,7 +67,7 @@ model {
     prov_offset ~ normal(mu_prov, sigma_prov);
     z_clone_offset ~ normal(0, 1);
 
-    mu ~ normal(500, 150);
+    mu ~ normal(400, 50);
 
     sum_forcing ~ normal(mu + site_offset[Site] + year_offset[Year] + prov_offset[Provenance] + 
     (mu_clone + z_clone_offset[Clone] * sigma_clone), 

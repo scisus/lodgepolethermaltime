@@ -139,14 +139,29 @@ $f_i$ is a function of $\mu$ and the $\alpha$ effects.
 
 $\mu$ represents the population average for forcing required to achieve the flowering event of interest. It must be positive and continuous. Values less than ~275 and greater than ~1000 would be quite unusual for any phase.
 
+For starting, values less than ~225 and greater than 750 would be surprising.
+For finishing, values less than ~250 and greater than 1000 would be surprising.
+
 
 $\mu \sim \mathcal{N}(500,150)$
 
-Covers that range nicely.
+Covers that entire range nicely.
 
 ```{r}
 hist(rnorm(1000, 500, 150), breaks=60)
 ```
+But smaller ranges specifically for start and end may be
+
+$\mu \sim \mathcal{N}(300,100)$
+$\mu \sim \mathcal{N}(500,100)$
+
+```{r}
+par(mfrow=c(2,1))
+
+hist(rnorm(1000, 400, 50), breaks=30)
+hist(rnorm(1000, 500, 50), breaks=30)
+```
+
 The $\alpha$ effects can be modeled as changes from $\mu$. I believe (hope?) they're zero, but they *could* be as much as a week's worth of forcing.
 
 $\alpha_{cluster} \sim \mathcal{N}(\mu_{cluster},\sigma_{cluster})$
@@ -169,16 +184,3 @@ hist(rexp(10000, 0.5), breaks=30)
 ```
  
 
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
