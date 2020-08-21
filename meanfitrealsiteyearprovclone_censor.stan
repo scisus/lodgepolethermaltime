@@ -17,14 +17,12 @@ data {
   int Provenance[n];
   int Clone[n];
   
-  vector[n] sum_forcing_obs;
+  vector<lower=0,upper=1000>[n] sum_forcing_obs;
 }
 
 
 
 parameters {
-  
-  real y_cens[n];
   real<lower=0> mu; //accumulated forcing cannot be negative
   real<lower=0> sigma_measure; //measurement error
   real<lower=0> sigma_process; //measurement error
@@ -44,9 +42,10 @@ parameters {
   real mu_prov; // provenance effect mean
   real mu_clone; //clone effect mean
   
-  real<lower=0> sum_forcing_true[n];
+  real<lower=0,upper=1000> sum_forcing_true[n];
 }
 
+// model true forcing values as < observed forcing values.
 transformed parameters {
   // dummy variable d that must be > 0
   // sample is rejected if d <= 0
@@ -84,7 +83,7 @@ model {
   prov_offset ~ normal(mu_prov, sigma_prov);
   z_clone_offset ~ normal(0, 1);
   
-  mu ~ normal(500, 150);
+  mu ~ normal(300, 100);
   
   sum_forcing_true ~ normal(mu + 
   site_offset[Site] + year_offset[Year] + prov_offset[Provenance] + 
