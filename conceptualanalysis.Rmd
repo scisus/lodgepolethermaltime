@@ -133,6 +133,8 @@ So,
 
 $y_i ~ \mathcal{N}(f_i, \sigma)$
 
+$\sigma \sim \mathcal{Exp}(1)$
+
 $f_i$ is a function of $\mu$ and the $\alpha$ effects. 
 
 $\mu$ represents the population average for forcing required to achieve the flowering event of interest. It must be positive and continuous. Values less than ~275 and greater than ~1000 would be quite unusual for any phase.
@@ -148,6 +150,7 @@ hist(rnorm(1000, 500, 150), breaks=60)
 The $\alpha$ effects can be modeled as changes from $\mu$. I believe (hope?) they're zero, but they *could* be as much as a week's worth of forcing.
 
 $\alpha_{cluster} \sim \mathcal{N}(\mu_{cluster},\sigma_{cluster})$
+
 $\mu_{cluster} \sim \mathcal{N}(0, 14)$
 
 ```{r}
