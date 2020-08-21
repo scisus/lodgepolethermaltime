@@ -12,7 +12,7 @@ options(mc.cores = parallel::detectCores())
 sex="FEMALE"
 
 phen <- flowers::phenology %>% # phenology data
-    filter(Phenophase_Derived==2 & Year < 2012) %>%
+    filter(Phenophase_Derived==2 & Year <= 2012) %>%
     rename(state = Phenophase_Derived) # only consider days when trees are flowering
 
 forcing <- read.csv("../phenolology/data/all_clim_PCIC.csv", header=TRUE, stringsAsFactors = FALSE) %>%
