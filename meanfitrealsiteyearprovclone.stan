@@ -51,23 +51,23 @@ parameters {
 // 'y' to be normally distributed with mean 'mu'
 // and standard deviation 'sigma'.
 model {
-    sigma ~ exponential(0.5);
+    sigma ~ exponential(1);
     sigma_site ~ exponential(0.5);
     sigma_year ~ exponential(0.5);
     sigma_prov ~ exponential(0.5);
     sigma_clone ~ exponential(0.5);
 
-    mu_site ~ normal(0,5);
-    mu_year ~ normal(0,5);
-    mu_prov ~ normal(0,5);
-    mu_clone ~ normal(0,5);
+    mu_site ~ normal(0,14);
+    mu_year ~ normal(0,14);
+    mu_prov ~ normal(0,14);
+    mu_clone ~ normal(0,14);
 
     site_offset ~ normal(mu_site, sigma_site);
     year_offset ~ normal(mu_year, sigma_year);
     prov_offset ~ normal(mu_prov, sigma_prov);
     z_clone_offset ~ normal(0, 1);
 
-    mu ~ normal(350, 20);
+    mu ~ normal(500, 150);
 
     sum_forcing ~ normal(mu + site_offset[Site] + year_offset[Year] + prov_offset[Provenance] + 
     (mu_clone + z_clone_offset[Clone] * sigma_clone), 

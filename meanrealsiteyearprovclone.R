@@ -5,8 +5,9 @@ library(dplyr)
 library(flowers)
 library(rstan)
 
-options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+
 
 sex="FEMALE"
 
