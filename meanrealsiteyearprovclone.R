@@ -31,18 +31,19 @@ phense <- dplyr::filter(phen, DoY == First_RF | DoY == Last_RF) %>%
 
 # receptivity start
 phenfs <- phense %>% dplyr::filter(Sex == "FEMALE" & DoY == First_RF) %>%
-    dplyr::select(Site, sum_forcing, Year, Provenance, Clone)
+    dplyr::select(sum_forcing, Site, Year, Provenance, Clone) %>%
+    rename(sum_forcing_obs = sum_forcing)
 
 # prepare data for stan
 
 input <- tidybayes::compose_data(phenfs)
 
 
-fit <- rstan::stan(file='meanfitrealsiteyearprovclone.stan', chains=8, data=input, iter=1e4, control = list(adapt_delta=0.99, max_treedepth=11), cores=20, pars=c("z_clone_offset"), include=FALSE)
+fit <- rstan::stan(file='meanfitrealsiteyearprovclone_censor.stan', chains=5, data=input, iter=1e4, control = list(adapt_delta=0.99, max_treedepth=11), cores=20, pars=c("z_clone_offset"), include=FALSE)
 
-saveRDS(fit, file = paste(Sys.Date(), "sypc", sex, ".rds", sep=''))
+saveRDS(fit, file = paste(Sys.Date(), "sypc_censor", sex, ".rds", sep=''))
 
-print(fit)
+pprint(fit)
 
 # library(shinystan)
 # launch_shinystan(fit)
