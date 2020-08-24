@@ -9,7 +9,7 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
 
-sex="FEMALE"
+
 
 phen <- flowers::phenology %>% # phenology data
     filter(Phenophase_Derived==2 & Year <= 2012) %>%
@@ -21,22 +21,33 @@ forcing <- read.csv("../phenolology/data/all_clim_PCIC.csv", header=TRUE, string
 spus <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv") %>%
     select(SPU_Name, Orchard) # provenance information for each orchard in phen
 
-# start and end phenology
-phense <- dplyr::filter(phen, DoY == First_RF | DoY == Last_RF) %>%
+# filter phenology dataset to only include start and end phenology
+phenbe <- dplyr::filter(phen, DoY == First_RF | DoY == Last_RF) %>%
     dplyr::left_join(forcing) %>%
     dplyr::left_join(spus) %>%
     dplyr::mutate(Year = as.character(Year), Clone = as.character(Clone)) %>%
     dplyr::rename(Provenance = SPU_Name)
 
+sex="FEMALE"
+event="begin"
+
 
 # receptivity start
-phenfs <- phense %>% dplyr::filter(Sex == "FEMALE" & DoY == First_RF) %>%
+phensub <- phenbe %>% 
+    dplyr::filter(if (event == "begin") Sex == sex & DoY == First_RF else Sex == sex & DoY == Last_RF) %>%
     dplyr::select(sum_forcing, Site, Year, Provenance, Clone) %>%
     rename(sum_forcing_obs = sum_forcing)
 
 # prepare data for stan
 
-input <- tidybayes::compose_data(phenfs)
+input <- tidybayes::compose_data(phensub)
+
+# add event-specific prior
+if (event=="begin") {
+    input <- c(input, mu_mean=400)
+} else {
+    input <- c(input, mu_mean=500)
+}
 
 
 fit <- rstan::stan(file='meanfitrealsiteyearprovclone_censor.stan', chains=5, data=input, iter=1e4, control = list(adapt_delta=0.99, max_treedepth=11), cores=20, pars=c("z_clone_offset"), include=FALSE)
