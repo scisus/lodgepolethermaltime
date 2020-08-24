@@ -148,29 +148,35 @@ $\sigma \sim \mathcal{Exp}(1)$
 
 $f_i$ is a function of $\mu$ and the $\alpha$ effects. 
 
-$\mu$ represents the population average for forcing required to achieve the flowering event of interest. It must be positive and continuous. Values less than ~275 and greater than ~1000 would be quite unusual for any phase.
+## mu
 
-For starting, values less than ~225 and greater than 750 would be surprising.
-For finishing, values less than ~250 and greater than 1000 would be surprising.
+$\mu$ represents the population average for forcing required to achieve the flowering event of interest. It must be positive and continuous. Values less than 75 and greater than ~1000 would be quite unusual for any phase.
+
+For starting, values less than ~75 and greater than ~600 would be surprising.
+For finishing, values less than ~160 and greater than ~950 would be surprising.
+
+### mu start
+For start events
 
 
-$\mu \sim \mathcal{N}(500,150)$
-
-Covers that entire range nicely.
 
 ```{r}
-hist(rnorm(1000, 500, 150), breaks=60)
+pnorm(600, mean = (75+600)/2, sd = 50) #start
+
+hist(rnorm(1000, 335, 50), breaks=60)
+abline(v=600)
 ```
-But smaller ranges specifically for start and end may be
+$\mu \sim \mathcal{N}(335,50)$
 
-$\mu \sim \mathcal{N}(300,100)$
-$\mu \sim \mathcal{N}(500,100)$
+### mu end
+
+For end events:
+
+$\mu \sim \mathcal{N}(555,50)$
 
 ```{r}
-par(mfrow=c(2,1))
-
-hist(rnorm(1000, 400, 50), breaks=30)
-hist(rnorm(1000, 500, 50), breaks=30)
+pnorm(950, mean = (160+950)/2, sd = 80) #end
+hist(rnorm(1000, 555, 80), breaks=60)
 ```
 
 The $\alpha$ effects can be modeled as changes from $\mu$. I believe (hope?) they're zero, but they *could* be as much as a week's worth of forcing.
