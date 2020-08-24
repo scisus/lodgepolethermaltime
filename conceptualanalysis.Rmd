@@ -111,18 +111,32 @@ $y_i$ are the observations of accumulated forcing. They are positive and continu
 
 $y_i$'s value can be modeled as coming from a distribution with a mean forcing accumulation ($f_i$) and standard deviation $\sigma$ that represents our uncertainty in the observation - how good our temperature measurements are, how good the forcing unit accumulation function is, and whether the event was observed on the correct day. 
 
-I think that most error is probably within about 1 day of forcing units.
+## sigma
+
+I think that most error is probably within about 1 day of forcing units in the observation period.
 
 ```{r}
+
+# get 1 day forcing accumulations
+
+janjun <- forcing %>%
+  filter(DoY < late_limit) 
 
 ggplot(janjun, aes(x=forcing)) +
   geom_histogram() +
   ggtitle("Forcing accumulation over 1 day periods in May and June") +
   geom_vline(xintercept = mean(janjun$forcing))
 
-(sigma_sd <- mean(janjun$forcing))
+# 90th percentile of forcing diffs
+dextreme <- quantile(janjun$forcing, 1)
 
-hist(rexp(1000, 1))
+pnorm(dextreme, 0, sd=6) # sd to cap at extreme
+pexp(6, 1)
+
+hist(rnorm(1000, 0, sd=6), breaks=30, xlim = c(-25, 25)) 
+abline(v = dextreme)
+hist(rexp(1000, 1), breaks=30)
+abline(v=5)
 
 ```
 
