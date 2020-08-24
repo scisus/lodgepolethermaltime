@@ -178,26 +178,57 @@ $\mu \sim \mathcal{N}(555,50)$
 pnorm(950, mean = (160+950)/2, sd = 80) #end
 hist(rnorm(1000, 555, 80), breaks=60)
 ```
+## alpha 
 
 The $\alpha$ effects can be modeled as changes from $\mu$. I believe (hope?) they're zero, but they *could* be as much as a week's worth of forcing.
+
+### alpha mean
+
+A flowering period of 2 weeks for a population would be very long and a flowering period of a week very long for an individual tree, so an effect ($\alpha$) that changed the timing of flowering by even a few days would be meaningful. An alpha that shifted flowering by 1 weeks would be quite extreme. How much forcing can accumulate in 1 week prior to an event?
+
+[Since there aren't extreme variations in the length of flowering period, using the first part of the flowering period might be a better guide for this. Currently using January - June]
+
+```{r}
+
+
+week_forcing <- janjun %>%
+  group_by(Site, Year) %>%
+  summarise(sum_forcing_week = zoo::rollsum(forcing, 7))
+
+ggplot(week_forcing, aes(x=sum_forcing_week)) +
+  geom_histogram() +
+  ggtitle("Forcing accumulation over 1 week periods from January 1 to June 30") +
+  geom_vline(xintercept = mean(week_forcing$sum_forcing_week))
+
+# 90th percentile of forcing that can accumulate in a week
+asextreme <- quantile(week_forcing$sum_forcing_week, .90) # because forcing accumulates so much faster at the end of june when flowering is quite unlikely, capping at 90%
+
+pnorm(asextreme, mean=0, sd=14) # what sd caps at extreme forcing accumulation
+
+```
+`r asextreme` would be a very extreme alpha.
+
 
 $\alpha_{cluster} \sim \mathcal{N}(\mu_{cluster},\sigma_{cluster})$
 
 $\mu_{cluster} \sim \mathcal{N}(0, 14)$
 
 ```{r}
-hist(rnorm(1000, 0, alpha_sigma/2), breaks=30)
-title(sub="mu_cluster prior")
+hist(rnorm(1000, mean=0, sd=14), breaks=50) 
+abline(v=asextreme)
 ```
-I've reined in the range of mu a bit here because many of the higher values are from later in the season when flowering is almost certainly done and forcing is accumulating very rapidly.
 
-$\sigma_{cluster}$ describes variation between clusters. I think a very extreme value for this would be a difference of a week, ~ `r alpha_sigma`.
 
-$\sigma_{cluster} \sim \mathcal{Exp}(0.5)$
+### alpha sigmas
+
+$\sigma_{cluster}$ describes variation between clusters. I think a very extreme value for this would be a difference of a week, maxing out at `r asextreme` forcing units. As calculated above, this requires a sigma of ~14.
+
+$\sigma_{cluster} \sim \mathcal{Exp}(0.7)$
 
 ```{r}
-
-hist(rexp(10000, 0.5), breaks=30)
+pexp(14, rate = 0.5)
+hist(rexp(1000, 0.5), breaks=40)
+abline(v=14)
 ```
  
 
