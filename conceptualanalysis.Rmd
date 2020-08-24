@@ -61,48 +61,45 @@ ggplot(forcing, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
 
 ```
 
-What are reasonable amounts of forcing? Lodgepole in BC flower in May and June.
+What are reasonable amounts of forcing? Lodgepole in BC flower in late spring.
 
 ```{r}
 # likely Day of Year limits for flowering
-early_limit <- as.numeric(strftime("2020-05-01", format = "%j"))
+early_limit <- as.numeric(strftime("2020-04-15", format = "%j"))
 late_limit <- as.numeric(strftime("2020-06-30", format = "%j"))
 
 ff <- dplyr::filter(forcing, DoY > early_limit & DoY < late_limit)
 
 ggplot(ff, aes(x=sum_forcing)) +
          geom_histogram(bins=60) +
-  ggtitle("Range of forcing accummulations in May and June")
+  ggtitle("Range of forcing accummulations Apr 15 - June 30")
 
 ggplot(ff, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
   geom_line() +
   theme(legend.position = "none") +
-  ggtitle("forcing (ristos) accumulated at Day of Year", subtitle = "May and June")
+  ggtitle("forcing (ristos) accumulated at Day of Year", subtitle = "April 15 - June 30")
 ```
 
-Each event is associated with a year, provenance, site, and clone. There are 15 years, 7 sites and provenances, and several hundred clones.
-
-A flowering period of 2 weeks for a population would be very long and a flowering period of a week very long for an individual tree, so an effect ($\alpha$) that changed the timing of flowering by even a few days would be meaningful. An alpha that shifted flowering by 1 weeks would be quite extreme. How much forcing can accumulate in 1 week prior to an event?
 
 ```{r}
+# May and June alone
+apr15 <- as.numeric(strftime("2020-04-15", format = "%j"))
+may31 <- as.numeric(strftime("2020-05-31", format = "%j"))
 
-# get 2 week forcing accumulations
+may15 <- as.numeric(strftime("2020-05-15", format = "%j"))
+jun30 <- as.numeric(strftime("2020-06-30", format = "%j"))
 
-janjun <- forcing %>%
-  filter(DoY < late_limit) 
+ffstart <- dplyr::filter(forcing, DoY > apr15 & DoY < may31)
+range(ffstart$sum_forcing)
 
-week_forcing <- janjun %>%
-  group_by(Site, Year) %>%
-  summarise(sum_forcing_week = zoo::rollsum(forcing, 7))
+ffend <- dplyr::filter(forcing, DoY > may15 & DoY < jun30)
+range(ffend$sum_forcing)
 
-ggplot(week_forcing, aes(x=sum_forcing_week)) +
-  geom_histogram() +
-  ggtitle("Forcing accumulation over 1 week periods from January 1 to June 30") +
-  geom_vline(xintercept = mean(week_forcing$sum_forcing_week))
-
-(alpha_sigma <- mean(week_forcing$sum_forcing_week))
 ```
-Limiting the sums to 2 week periods where phenology might actually occur, it looks like 125 ristos would be a very extreme alpha.
+Flowering is more likely to start in the first part (`r range(ffstart$sum_forcing)` forcing units) and end in the second part (`r range(ffend$sum_forcing)` forcing units) of this time period.
+
+Each event is associated with a year, provenance, site, and clone. There are 14 years, 7 sites and provenances, and several hundred clones.
+
 
 # Construct summary statistics
 
