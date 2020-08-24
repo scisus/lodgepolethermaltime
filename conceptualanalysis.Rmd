@@ -32,7 +32,7 @@ I wish to account for several kinds of structure in the data:
 
 So
 
-$f_i = \mu + alpha_{site} + \alpha_{prov} + \alpha_{year} + \alpha_{clone}$
+$f_i = \mu + alpha_{site,i} + \alpha_{prov,i} + \alpha_{year,i} + \alpha_{clone,i}$
 
 where mu is the average amount of forcing it takes for a tree to reach an event and the $\alpha$s describe how each group in each cluster (site, prov, year, clone) effects the overall amount of forcing required to reach the event.
 
