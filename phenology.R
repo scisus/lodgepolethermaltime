@@ -28,7 +28,7 @@ phenbe <- dplyr::filter(phen, DoY == First_RF | DoY == Last_RF) %>%
 
 
 # Fit a model in Stan to phenology data, return the model fit object and save the model fit object to a file. Choose whether the model is for "MALE" or "FEMALE" strobili and whether the event is the "begin" or "end" of flowering. data is a dataframe of flowering data. id is an optional identifier appended to the file name.
-fit_model <- function(data, sex, event, model = "phenology.stan", maxtreedepth=11) {
+fit_model <- function(data, sex, event, model = "phenology.stan", maxtreedepth=10) {
     
     # receptivity start
     phensub <- data %>% 
@@ -45,13 +45,13 @@ fit_model <- function(data, sex, event, model = "phenology.stan", maxtreedepth=1
     } 
     
     if (event == "end") {
-        input <- c(input, mu_mean=555, mu_sigma = 80)
+        input <- c(input, mu_mean=555, mu_sigma = 90)
     } 
     
     
-    fit <- rstan::stan(file= model, chains=8, data=input, iter=3000, cores=9, 
+    fit <- rstan::stan(file= model, chains=8, data=input, iter=3500, cores=9, 
                        pars=c("z_clone_alpha", "z_year_alpha"), include=FALSE, 
-                       init = rep(list(list(mu = rnorm(1,100,50), 
+                       init = rep(list(list(mu = abs(rnorm(1,100,50)), 
                                             sigma = rexp(1,1), 
                                             sigma_site = rexp(1,1), 
                                             sigma_year = rexp(1,1), 
@@ -66,17 +66,11 @@ fit_model <- function(data, sex, event, model = "phenology.stan", maxtreedepth=1
     return(fit)
 }
 
-# female_begin <- fit_model(data = phenbe, sex = "FEMALE", event = "begin")
-# female_end <- fit_model(data = phenbe, sex = "FEMALE", event = "end")
-# 
-# male_begin <- fit_model(data=phenbe, sex="MALE", event = "begin", model = 'phenology_noncenteredyear.stan', maxtreedepth = 12)
+female_begin <- fit_model(data = phenbe, sex = "FEMALE", event = "begin")
+female_end <- fit_model(data = phenbe, sex = "FEMALE", event = "end")
+
+male_begin <- fit_model(data=phenbe, sex="MALE", event = "begin")
 male_end <- fit_model(data = phenbe, sex="MALE", event = "end")
-
-
-
-
-
-
 
 # fitvars <- as.data.frame(rstan::extract(fit))
 # 
