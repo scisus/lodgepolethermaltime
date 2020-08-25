@@ -60,22 +60,17 @@ model {
     sigma_prov ~ exponential(0.5);
     sigma_clone ~ exponential(0.5);
 
-    mu_site ~ normal(0,14);
-    mu_year ~ normal(0,14);
-    mu_prov ~ normal(0,14);
-    mu_clone ~ normal(0,14);
-
-    alpha_site ~ normal(mu_site, sigma_site);
-    z_alpha_year ~ normal(mu_year, sigma_year);
-    alpha_prov ~ normal(mu_prov, sigma_prov);
+    alpha_site ~ normal(0, sigma_site);
+    z_alpha_year ~ normal(0, 1);
+    alpha_prov ~ normal(0, sigma_prov);
     z_alpha_clone ~ normal(0, 1);
 
     mu ~ normal(mu_mean, mu_sigma);
 
     sum_forcing ~ normal(mu + alpha_site[Site] + 
-    (mu_year + z_alpha_year[Year] * sigma_year) + 
+    (z_alpha_year[Year] * sigma_year) + 
     alpha_prov[Provenance] + 
-    (mu_clone + z_alpha_clone[Clone] * sigma_clone), 
+    (z_alpha_clone[Clone] * sigma_clone), 
     sigma);
 }
 
@@ -87,8 +82,8 @@ generated quantities {
     vector[n_Clone] alpha_clone;
     vector[n_Year] alpha_year;
     
-    alpha_clone = mu_clone + z_alpha_clone * sigma_clone;
-    alpha_year = mu_year + z_alpha_year * sigma_year;
+    alpha_clone = z_alpha_clone * sigma_clone;
+    alpha_year = z_alpha_year * sigma_year;
 
     { // Don't save tempvars
     for (i in 1:n)

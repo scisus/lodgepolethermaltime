@@ -44,10 +44,10 @@ parameters {
     real sigma_prov; // provenance effect variance
     real sigma_clone; //clone effect variance
 
-    real mu_site; // site effect mean
-    real mu_year; // year effect mean
-    real mu_prov; // provenance effect mean
-    real mu_clone; //clone effect mean
+    // real mu_site; // site effect mean
+    // real mu_year; // year effect mean
+    // real mu_prov; // provenance effect mean
+    // real mu_clone; //clone effect mean
 }
 
 // The model to be estimated. We model the output
@@ -60,20 +60,15 @@ model {
     sigma_prov ~ exponential(0.5);
     sigma_clone ~ exponential(0.5);
 
-    mu_site ~ normal(0,14);
-    mu_year ~ normal(0,14);
-    mu_prov ~ normal(0,14);
-    mu_clone ~ normal(0,14);
-
-    alpha_site ~ normal(mu_site, sigma_site);
-    alpha_year ~ normal(mu_year, sigma_year);
-    alpha_prov ~ normal(mu_prov, sigma_prov);
+    alpha_site ~ normal(0, sigma_site);
+    alpha_year ~ normal(0, sigma_year);
+    alpha_prov ~ normal(0, sigma_prov);
     z_alpha_clone ~ normal(0, 1);
 
     mu ~ normal(mu_mean, mu_sigma);
 
     sum_forcing ~ normal(mu + alpha_site[Site] + alpha_year[Year] + alpha_prov[Provenance] + 
-    (mu_clone + z_alpha_clone[Clone] * sigma_clone), 
+    (z_alpha_clone[Clone] * sigma_clone), 
     sigma);
 }
 
@@ -84,12 +79,10 @@ generated quantities {
     // reconstruct clone offset
     vector[n_Clone] alpha_clone;
     
-    alpha_clone = mu_clone + z_alpha_clone * sigma_clone;
+    alpha_clone = z_alpha_clone * sigma_clone;
 
     { // Don't save tempvars
     for (i in 1:n)
         y_ppc[i] = normal_rng(mu + alpha_site[Site[i]] + alpha_year[Year[i]] + alpha_prov[Provenance[i]] + alpha_clone[Clone[i]], sigma);
         }
 }
-
-
