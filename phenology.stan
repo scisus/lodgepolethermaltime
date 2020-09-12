@@ -26,10 +26,6 @@ data {
 // The parameters accepted by the model. Our model
 // accepts two parameters 'mu' and 'sigma'.
 
-  // vector[Nsite] z_site;
-  // vector[Nprovenance] z_prov;
-  // vector[Nclone] z_clone;
-  // vector[Nyear] z_year; //uncentered
 parameters {
     real<lower=0> mu; //accumulated forcing cannot be negative
     real<lower=0> sigma; //measurement error
@@ -44,10 +40,10 @@ parameters {
     real sigma_prov; // provenance effect variance
     real sigma_clone; //clone effect variance
 
-    // real mu_site; // site effect mean
-    // real mu_year; // year effect mean
-    // real mu_prov; // provenance effect mean
-    // real mu_clone; //clone effect mean
+    real mu_site; // site effect mean
+    real mu_year; // year effect mean
+    real mu_prov; // provenance effect mean
+    real mu_clone; //clone effect mean
 }
 
 // The model to be estimated. We model the output
@@ -55,22 +51,29 @@ parameters {
 // and standard deviation 'sigma'.
 model {
     sigma ~ exponential(1);
-    sigma_site ~ exponential(0.5);
-    sigma_year ~ exponential(0.5);
-    sigma_prov ~ exponential(0.5);
+    // these are half normals
+    sigma_site ~ normal(0, 5);
+    sigma_year ~ normal(0, 5);
+    sigma_prov ~ normal(0, 5);
     sigma_clone ~ exponential(0.5);
+    
+    mu_site ~ normal(0, 5);
+    mu_year ~ normal(0, 5);
+    mu_prov ~ normal(0, 5);
+    mu_clone ~ normal(0, 5);
 
-    alpha_site ~ normal(0, sigma_site);
-    alpha_year ~ normal(0, sigma_year);
-    alpha_prov ~ normal(0, sigma_prov);
-    z_alpha_clone ~ normal(0, 1);
+    alpha_site ~ normal(mu_site, sigma_site);
+    alpha_year ~ normal(mu_year, sigma_year);
+    alpha_prov ~ normal(mu_prov, sigma_prov);
+    z_alpha_clone ~ normal(0, 1); // non-centered clone
 
     mu ~ normal(mu_mean, mu_sigma);
 
     sum_forcing ~ normal(mu + alpha_site[Site] + alpha_year[Year] + alpha_prov[Provenance] + 
-    (z_alpha_clone[Clone] * sigma_clone), 
+    (mu_clone + z_alpha_clone[Clone] * sigma_clone), 
     sigma);
 }
+
 
 // Simulate a full observation from the current value of the parameters
 generated quantities {
@@ -79,10 +82,11 @@ generated quantities {
     // reconstruct clone offset
     vector[n_Clone] alpha_clone;
     
-    alpha_clone = z_alpha_clone * sigma_clone;
+    alpha_clone = mu_clone + z_alpha_clone * sigma_clone;
 
     { // Don't save tempvars
     for (i in 1:n)
-        y_ppc[i] = normal_rng(mu + alpha_site[Site[i]] + alpha_year[Year[i]] + alpha_prov[Provenance[i]] + alpha_clone[Clone[i]], sigma);
+        y_ppc[i] = normal_rng(mu + alpha_site[Site[i]] + alpha_year[Year[i]] + alpha_prov[Provenance[i]] + alpha_clone[Clone[i]]
+        , sigma);
         }
 }
