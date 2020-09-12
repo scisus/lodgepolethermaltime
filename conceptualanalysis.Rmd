@@ -1,7 +1,7 @@
 ---
 title: "Phenology model workflow"
 author: "C. Susannah Tysor"
-date: '2020-08-17'
+date: '2020-08-25'
 output: html_document
 ---
 
@@ -132,11 +132,14 @@ dextreme <- quantile(janjun$forcing, 1)
 
 pnorm(dextreme, 0, sd=6) # sd to cap at extreme
 pexp(6, 1)
+pnorm(6, 0, 2)
 
 hist(rnorm(1000, 0, sd=6), breaks=30, xlim = c(-25, 25)) 
 abline(v = dextreme)
 hist(rexp(1000, 1), breaks=30)
-abline(v=5)
+abline(v=6)
+hist(abs(rnorm(1e3, 0, 2)), breaks=30) 
+abline(v=6)
 
 ```
 
@@ -223,6 +226,8 @@ abline(v=asextreme)
 
 $\sigma_{cluster}$ describes variation between clusters. I think a very extreme value for this would be a difference of a week, maxing out at `r asextreme` forcing units. As calculated above, this requires a sigma of ~14.
 
+For clone, which has hundreds of clusters, we can use an exponential
+
 $\sigma_{cluster} \sim \mathcal{Exp}(0.7)$
 
 ```{r}
@@ -230,5 +235,16 @@ pexp(14, rate = 0.5)
 hist(rexp(1000, 0.5), breaks=40)
 abline(v=14)
 ```
+
+For site and clone (7 clusters), and maybe year (14 clusters), we should use something with thinner tails because we don't have many clusters to estimate sd with here.
+ 
+$\sigma_{cluster} \sim \mathcal{HalfNormal}(0, 4)$
+
+```{r}
+pnorm(14, 0, 5)
+hist(abs(rnorm(1000, 0, 5)), breaks=40)
+abline(v=14)
+```
+ 
  
 
