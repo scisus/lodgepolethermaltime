@@ -4,13 +4,17 @@ library(dplyr)
 library(purrr)
 library(rstan)
 
-fbfit <- readRDS('2020-08-24FEMALE_begin.rds')
-fefit <- readRDS('2020-08-24FEMALE_end.rds')
-mbfit <- readRDS('2020-08-24MALE_begin.rds')
-mefit <- readRDS('2020-08-24MALE_end.rds')
+fbfit <- readRDS('2020-09-03FEMALE_begin.rds')
+fefit <- readRDS('2020-09-03FEMALE_end.rds')
+mbfit <- readRDS('2020-09-03MALE_begin.rds')
+mefit <- readRDS('2020-09-03MALE_end.rds')
 
-# library(shinystan)
-# shinystan::launch_shinystan(fbfit)
+fbpars <- data.frame(rstan::extract(fbfit))
+
+
+library(shinystan)
+shinystan::launch_shinystan(fefit)
+
 
 # format for Rhat and ESS calculations
 sims <- list(fbsims = as.array(fbfit), fesims = as.array(fefit), mbsims = as.array(mbfit), mesims = as.array(mefit))
