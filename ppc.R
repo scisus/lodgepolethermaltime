@@ -1,6 +1,6 @@
 # posterior predictive checks
-# 
-# 
+# needs to be filtered for actual data points. consider tidybayes and maybe loo?
+
 library(tidybayes)
 library(dplyr)
 
