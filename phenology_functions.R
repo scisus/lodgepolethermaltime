@@ -58,7 +58,7 @@ fit_model <- function(phendat, sex, event, model = "phenology.stan", maxtreedept
   
   
   fit <- rstan::stan(file= model, chains=8, data=input, iter=3500, cores=9, 
-                     pars=c("z_alpha_clone", "z_alpha_ramet"), include=FALSE, 
+                     pars=c("z_alpha_clone"), include=FALSE, 
                      init = rep(list(list(mu = abs(rnorm(1,100,50)), 
                                           sigma = rexp(1,1), 
                                           sigma_site = rexp(1,1), 
