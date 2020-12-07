@@ -11,6 +11,10 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(ggplot2)
 library(zoo)
+library(flowers)
+library(dplyr)
+
+source('phenology_functions.R')
 ```
 
 # Conceptual Analysis
@@ -246,5 +250,61 @@ hist(abs(rnorm(1000, 0, 5)), breaks=40)
 abline(v=14)
 ```
  
- 
+## Centering
 
+Factors that have a lot of levels all with limited data, like clone, will probably sample best if non-centered.
+
+Some of my factors are very unbalanced with some levels very well represented and others not.
+
+```{r}
+phenbe <- filter_start_end() 
+
+phen_by_sex_and_side <- function(df, sex, side) {
+  outdf <- select_data(df, sex, side)
+  outdf$Side <- side
+  outdf$Sex <- sex
+  return(outdf)
+}
+
+male_begin <- phen_by_sex_and_side(phenbe, "MALE", "begin")
+male_end <- phen_by_sex_and_side(phenbe, "MALE", "end")
+female_begin <- phen_by_sex_and_side(phenbe, "FEMALE", "begin")
+female_end <- phen_by_sex_and_side(phenbe, "FEMALE", "end")
+
+phenbe <- rbind(male_begin, male_end, female_begin, female_end)
+
+#   dplyr::select(Year, Site, Provenance, Clone, Side, Sex) %>%
+#   mutate_all(as.character) %>%
+#   tidyr::pivot_longer( cols=c("Year", "Site", "Provenance", "Clone"), names_to = "Factor", values_to = "Level")
+
+
+ggplot(phenbe, aes(x=Site)) +
+  geom_histogram(stat="count") +
+  facet_grid(Sex ~ Side) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+
+ggplot(phenbe, aes(x=Provenance)) +
+  geom_histogram(stat="count") +
+  facet_grid(Sex ~ Side) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+
+ggplot(phenbe, aes(x=Year)) +
+  geom_histogram(stat="count") +
+  facet_grid(Sex ~ Side) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+
+ggplot(phenbe, aes(x=Clone)) +
+  geom_histogram(stat="count") +
+  facet_grid(Sex ~ Side) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+
+
+```
+
+Looks like Clone, Orchard, and Site all need to have non-centering *within* factors. 
+
+- Site threshold: 250
+- Provenance threshold: 150
+- Clone threshold: 10
+
+Year *might* benefit from non-centering with a threshold around either 150 or 100
