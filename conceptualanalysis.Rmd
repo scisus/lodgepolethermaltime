@@ -257,7 +257,9 @@ Factors that have a lot of levels all with limited data, like clone, will probab
 Some of my factors are very unbalanced with some levels very well represented and others not.
 
 ```{r}
-phenbe <- filter_start_end() 
+phenbe <- 
+ 
+  filter_start_end()
 
 phen_by_sex_and_side <- function(df, sex, side) {
   outdf <- select_data(df, sex, side)
