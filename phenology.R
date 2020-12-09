@@ -11,14 +11,30 @@ options(mc.cores = parallel::detectCores())
 source('phenology_functions.R')
 
 # choose only phenology data that is the start or end date
-phenbe <- filter_start_end()
+phenbe <- filter_start_end() 
+
+# male_begin <- phen_by_sex_and_side(phenbe, "MALE", "begin")
+# male_end <- phen_by_sex_and_side(phenbe, "MALE", "end")
+# female_begin <- phen_by_sex_and_side(phenbe, "FEMALE", "begin")
+# female_end <- phen_by_sex_and_side(phenbe, "FEMALE", "end")
+# 
+# phenbe <- rbind(male_begin, male_end, female_begin, female_end)
+
+
+# set thresholds
+# - Site threshold: 250
+# - Provenance threshold: 150
+# - Clone threshold: 10
+
+
+
 
 # fit models
-female_begin <- fit_model(data = phenbe, sex = "FEMALE", event = "begin")
-female_end <- fit_model(data = phenbe, sex = "FEMALE", event = "end")
+female_begin <- fit_model(phendat = phenbe, sex = "FEMALE", event = "begin")
+female_end <- fit_model(phendat = phenbe, sex = "FEMALE", event = "end")
 
-male_begin <- fit_model(data=phenbe, sex="MALE", event = "begin")
-male_end <- fit_model(data = phenbe, sex="MALE", event = "end")
+male_begin <- fit_model(phendat=phenbe, sex="MALE", event = "begin")
+male_end <- fit_model(phendat = phenbe, sex="MALE", event = "end")
 
 
 # plot modeled and true data
