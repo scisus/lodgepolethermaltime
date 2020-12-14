@@ -16,3 +16,5 @@ Order of analysis is
 
 - conceptual
 - simulations
+
+Data is prepared with `combine_phenology_and_heatsum.R`. Climate data is from `PCIC_all_seed_orchard_sites_adjusted.csv` in the `lodgepole_climate` project. Phenology data is from the `flowers` project.
