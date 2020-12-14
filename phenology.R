@@ -8,6 +8,7 @@ library(tidybayes)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
+source('calculate_forcingunits.R')
 source('phenology_functions.R')
 
 # choose only phenology data that is the start or end date
