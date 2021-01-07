@@ -53,7 +53,7 @@ So, how much forcing is accumulated over the year?
 ```{r}
 
 # forcing units for 15 years and at sites included in this study
-forcing <- read.csv('../phenolology/data/all_clim_PCIC.csv', header=TRUE) %>%
+forcing <- read.csv('data/all_clim_PCIC.csv', header=TRUE) %>%
   dplyr::filter(forcing_type=="ristos")
 
 ggplot(forcing, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
