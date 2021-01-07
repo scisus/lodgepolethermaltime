@@ -37,7 +37,6 @@ select_data <- function(phendat, sex, event) {
 # set thresholds
 # - Site threshold: 250
 # - Provenance threshold: 150
-# - Clone threshold: 10
 
 build_centering_index <- function(phensub, fac, threshold) {
   
@@ -91,14 +90,14 @@ fit_model <- function(phendat, sex, event, model = "phenology.stan", maxtreedept
   } 
   
   
-  fit <- rstan::stan(file= model, chains=6, data=input, iter=3000, cores=7,
+  fit <- rstan::stan(file= model, chains=6, data=input, iter=3500, cores=7,
                      pars=c("alpha_ncp_site", "alpha_cp_site", "alpha_ncp_prov", "alpha_cp_prov", "z_alpha_clone"), include=FALSE,
                      init = rep(list(list(mu = abs(rnorm(1,100,50)), # stop stan from sampling impossible negative numbers
                                           sigma = rexp(1,1),
                                           sigma_site = rexp(1,1),
                                           sigma_year = rexp(1,1),
                                           sigma_prov = rexp(1,1),
-                                          sigma_clone = rexp(1,1))), 8),
+                                          sigma_clone = rexp(1,1))), 6),
                      control = list(max_treedepth = maxtreedepth, adapt_delta=0.8))
 
   # fit <- rstan::stan(file= model, chains=6, data=input, cores=7, 

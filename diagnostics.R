@@ -4,16 +4,16 @@ library(dplyr)
 library(purrr)
 library(rstan)
 
-fbfit <- readRDS('2020-12-08FEMALE_begin.rds')
-fefit <- readRDS('2020-09-03FEMALE_end.rds')
-mbfit <- readRDS('2020-09-03MALE_begin.rds')
-mefit <- readRDS('2020-09-03MALE_end.rds')
+fbfit <- readRDS('2020-12-17FEMALE_begin.rds')
+fefit <- readRDS('2020-12-17FEMALE_end.rds')
+mbfit <- readRDS('2020-12-17MALE_begin.rds')
+mefit <- readRDS('2020-12-17MALE_end.rds')
 
-fbpars <- data.frame(rstan::extract(fbfit))
+#fbpars <- data.frame(rstan::extract(fbfit))
 
 
 library(shinystan)
-shinystan::launch_shinystan(fbfit)
+shinystan::launch_shinystan(fefit)
 
 
 # format for Rhat and ESS calculations
@@ -32,7 +32,9 @@ miness <- function(sims) {
 
 
 minesses <- purrr::map(sims, miness) %>%
-  dplyr::bind_rows()
+  dplyr::bind_rows(.id = "id")
+# Goal is for ESS to be at least 100 for each chain. e.g. if 6 chains, you're in trouble if min ESS < 600.
+print(minesses)
 
 maxrhat <- function(sims) {
   rhats <- apply(sims, MARGIN = 3, FUN = rstan::Rhat)
@@ -41,3 +43,5 @@ maxrhat <- function(sims) {
 }
 
 rhats <- purrr::map(sims, maxrhat)
+print(rhats)
+
