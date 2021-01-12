@@ -16,14 +16,29 @@ split_df_to_lists <- function(a, b) {
 }
 
 # given dataframes a (climate) and b (phenology) identify the day of year in a corresponding to reaching each sum_forcing in b. a must have a sum_forcing column and a DoY column and b must have a sum_forcing column. name the new_day_col arg with a string
+# find_day_of_forcing <- function(a, b, new_doy_col) {
+#   assertthat::assert_that(isFALSE(unique(b$sum_forcing %in% a$sum_forcing))) # no sum_forcing values are exactly identical
+#   
+#   # what row in a contains the interval for entries in b. Add 1 to the index because phenological events require the threshold to be reached. this introduces error, but is unavoidable in some direction.
+#   a_index <- findInterval(b$sum_forcing, a$sum_forcing) + 1
+#   
+#   # add a column to b for Day of Year and extract the correct Day of year from a using the index
+#   b[new_doy_col] <- a$DoY[a_index] 
+#   
+#   return(b)
+# }
+# 
 find_day_of_forcing <- function(a, b, new_doy_col) {
-  assertthat::assert_that(isFALSE(unique(b$sum_forcing %in% a$sum_forcing))) # no sum_forcing values are exactly identical
   
   # what row in a contains the interval for entries in b. Add 1 to the index because phenological events require the threshold to be reached. this introduces error, but is unavoidable in some direction.
   a_index <- findInterval(b$sum_forcing, a$sum_forcing) + 1
   
   # add a column to b for Day of Year and extract the correct Day of year from a using the index
   b[new_doy_col] <- a$DoY[a_index] 
+  
+  # when sum_forcing in b is exactly identical to sum_forcing in b, a_index will be +1 day. Re-write those 
+  identical_forcing_index <- which(b$sum_forcing %in% a$sum_forcing)
+  b[[new_doy_col]][identical_forcing_index] <- b[[new_doy_col]][identical_forcing_index] - 1
   
   return(b)
 }
