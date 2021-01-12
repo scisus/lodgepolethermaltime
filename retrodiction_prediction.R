@@ -53,8 +53,10 @@ fb_yppc <- fbfit %>%
 clim <- read.csv("data/all_clim_PCIC.csv") %>%
   dplyr::filter(forcing_type == "ristos")
 
+names(fb_yppc)[which(names(fb_yppc) == "y_ppc")] <- "sum_forcing"
 forcing_to_doy(a = clim, b = fb_yppc, new_doy_col = "DoY_ppc")
 
+fb_yppc <- forcing_to_doy(a = clim, b = data.frame(fb_yppc), new_doy_col = "DoY_ppc") %>%
 # find the DoY that a given sum of forcing accumulated on
 
 # 
@@ -105,6 +107,7 @@ doyperiodplus5 <- purrr::map_df(splitclimplus5, ifinder, forcinglengthdf) %>%
   mutate(doylength = dend-dbegin)
 
 assertthat::assert_that(nrow(doyperiod)==nrow(forcinglengthdf) * length(splitclim))
+  dplyr::rename(sum_forcing_ppc = sum_forcing)
 
 retrodiction <- left_join(fbdat, fb_yppc) 
 
