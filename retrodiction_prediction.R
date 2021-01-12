@@ -53,15 +53,135 @@ fb_yppc <- fbfit %>%
 clim <- read.csv("data/all_clim_PCIC.csv") %>%
   dplyr::filter(forcing_type == "ristos")
 
+forcing_to_doy(a = clim, b = fb_yppc, new_doy_col = "DoY_ppc")
+
+# find the DoY that a given sum of forcing accumulated on
+
+# 
+
+ifinder <-  function(phenology, climate, forcingcol) {
+  
+  
+  
+
+  return(doy)
+}
+
+# filter a dataframe of all climate data to match year and site for one phenology dataframe (with accumulated forcing data), then calculate the doy with findInterval
+match_dataframes_for_ifinder <- function(phenology, climate, forcingcol) {
+  # match data from climate and phenology datasets in the same site and year
+  site <- unique(phenology["Site"])
+  year <- as.numeric(unique(phenology["Year"]))
+  
+  forcing <- phenology[forcingcol]
+  
+  if (is.list(forcing)) {
+    forcing <- as.numeric(unlist(forcing))
+  }
+  
+  phendf <- phenology
+  
+  clim_temp <- dplyr::filter(climate, Site == site, Year == year) %>%
+    dplyr::arrange(Year, DoY, sum_forcing)
+  
+  # identify the day of year a particular forcing unit occurred on
+  
+  doy_index <- findInterval(forcing, clim_temp$sum_forcing) # identify location of DoY
+  phendf$doy_yppc <- climate$DoY[doy_index] # extract DoY
+  
+  return(phendf)
+}
+
+y_ppc_day <- purrr::map(split_fb_yppc, match_dataframes_for_ifinder, climate=clim, forcingcol = "y_ppc")
+
+
+split_fb_yppc[[1]]$DoY_yppc <- foo(clim, split_fb_yppc[[1]])
+
+doyperiod <- purrr::map_df(splitclim, ifinder, forcinglengthdf) %>%
+  mutate(doylength = dend-dbegin)
+doyperiodcc <- purrr::map_df(splitclimcc, ifinder, forcinglengthdf) %>%
+  mutate(doylength = dend-dbegin)
+doyperiodplus5 <- purrr::map_df(splitclimplus5, ifinder, forcinglengthdf) %>%
+  mutate(doylength = dend-dbegin)
+
+assertthat::assert_that(nrow(doyperiod)==nrow(forcinglengthdf) * length(splitclim))
+
+retrodiction <- left_join(fbdat, fb_yppc) 
+
+
+
+# match y_ppc to DoY
 
 # create a dataframe with observed forcing and modeled forcing
-retrodiction <- fb_factors %>% 
-  select(starts_with("."), Site, Provenance, Year, Clone) %>%
-  right_join(fbdat) %>%
-  right_join(fb_yppc)
 
-# ggplot(retrodiction, aes(x=sum_forcing, y=y_ppc)) +
-#   geom_point(pch=1, alpha=0.5)
+
+
+# ppc plots
+# 
+ggplot(retrodiction, aes(x=y_ppc)) +
+  geom_density() +
+  geom_density(data=retrodiction, aes(x=sum_forcing), color="green") +
+  ggtitle("Female begin data (green) and model")
+
+library(ggbeeswarm)
+ggplot(retrodiction, aes(x=Site, y=y_ppc)) +
+  geom_quasirandom(data=fbdat, aes(x=Site, y=sum_forcing), shape=1, alpha=0.5, varwidth = TRUE) +
+  geom_violin(fill="transparent", draw_quantiles = c(0.5)) +
+  ggtitle("Female begin data and model by Site")
+
+ggplot(retrodiction, aes(x=Provenance, y=y_ppc)) +
+  geom_quasirandom(data=fbdat, aes(x=Provenance, y=sum_forcing), shape=1, alpha=0.5, varwidth = TRUE) +
+  geom_violin(fill="transparent", draw_quantiles = c(0.5)) +
+  ggtitle("Female begin data and model by Provenance")
+
+ggplot(retrodiction, aes(x=Year, y=y_ppc)) +
+  geom_quasirandom(data=fbdat, aes(x=Year, y=sum_forcing), shape=1, alpha=0.5, varwidth = TRUE) +
+  geom_violin(fill="transparent", draw_quantiles = c(0.5)) +
+  ggtitle("Female begin data and model by Year")
+
+
+ggplot(retrodiction, aes(x=y_ppc)) +
+  geom_density() +
+  geom_density(data=retrodiction, aes(x=sum_forcing), color="green") +
+  ggtitle("Female begin data (green) and model by provenance") +
+  facet_wrap("Year", scales = "free_y")
+
+clonesample <- sample(unique(retrodiction$Clone), 12)
+ggplot(filter(retrodiction, Clone %in% clonesample), aes(x=y_ppc)) +
+  geom_density() +
+  geom_density(data = filter(retrodiction, Clone %in% clonesample), aes(x=sum_forcing), color="green") +
+  ggtitle("Female begin data (green) and model by clone", subtitle = "Clones with only one observation have flat density") +
+  facet_wrap("Clone", scales = "free_y")
+
+# take a random sample of observations and plot model predictions with 50% and 90% intervals
+obssample <- sample(fbdat$i, 100)
+retroplot <- ggplot(filter(retrodiction, i %in% obssample), aes(x=as.factor(i), y = y_ppc)) +
+  stat_pointinterval(alpha=0.5, .width=c(0.5, 0.9), point_interval = median_hdi)
+
+retroplot +
+  ggtitle("Retrodictions", subtitle = "data in blue, model in black") +
+  geom_point(data=filter(fbdat, i %in% obssample), aes(x = as.factor(i), y=sum_forcing), color="cadetblue4")
+
+# plot site level means and predictions
+retroplot <- ggplot(retrodiction, aes(x=Site, y = y_ppc)) +
+  stat_pointinterval(alpha=0.5, .width=c(0.5, 0.9), point_interval = median_hdi)
+
+retroplot +
+  ggtitle("Retrodictions", subtitle = "data in blue, model in black") +
+  stat_pointinterval(data=fbdat, aes(x = Site, y=sum_forcing), color="cadetblue4") # build better plots like this?
+
+# doesn't look very good at individual level. calculate proportion of data in 50% and 90% intervals
+
+intervals89 <- retrodiction %>%
+  group_by(i, sum_forcing) %>%
+  median_hdi(y_ppc, .width=0.50) %>%
+  full_join(fbdat) %>%
+  mutate(inint = case_when(sum_forcing > .lower & sum_forcing < .upper ~ TRUE,
+                           sum_forcing < .lower | sum_forcing > .upper ~ FALSE))
+
+intervals89 %>%
+  group_by(.width) %>%
+  summarize(sum(inint)/n())
 
 # ggplot(retrodiction, aes(x=y_ppc, y=sum_forcing, group=i)) +
 #   stat_interval(.width = c(.95, .8, .5), show_point=TRUE, thickness = 0.1, point_colour="black", point_size=0.5) +
