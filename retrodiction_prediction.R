@@ -1,4 +1,4 @@
-# retrodictions
+# retrodictions: what does the model say our observations should have been?
 
 library(dplyr)
 library(rstan)
@@ -6,38 +6,53 @@ library(tidybayes)
 library(magrittr)
 
 source('phenology_functions.R')
+source('retrodiction_functions.R')
 
 # phenology data
 phenbe <- filter_start_end()
 
-fbdat <- select_data(phenbe, "FEMALE", "begin") 
+fbdat <- select_data(phenbe, "FEMALE", "begin", keep_day = TRUE) 
+ggplot(fbdat, aes(x=sum_forcing, fill=Year)) +
+  geom_histogram() 
 fbdat$i <- 1:nrow(fbdat)
+
 # fedat <- select_data(phenbe, "FEMALE", "end")
 # mbdat <- select_data(phenbe, "MALE", "begin")
 # medat <- select_data(phenbe, "MALE", "end")
 
 # phenology models
-fbfit <- readRDS('2020-09-03FEMALE_begin.rds')
+fbfit <- readRDS('2021-01-07FEMALE_begin.rds')
 # fefit <- readRDS('2020-09-03FEMALE_end.rds')
 # mbfit <- readRDS('2020-09-03MALE_begin.rds')
 # mefit <- readRDS('2020-09-03MALE_end.rds')
 
-tidybayes::get_variables(fbfit)
+modpars <- tidybayes::get_variables(fbfit)
 
 fbfit %<>% recover_types(fbdat)
 # fefit %<>% recover_types(fedat)
 # mbfit %<>% recover_types(mbdat)
 # mefit %<>% recover_types(medat)
 
-n <- 1000
+
+n <- 25 # draw n samples from the posterior for each observation
 seed <- 752
 
 # all group level parameter values (excludes superpopulation parameters mu_* and sigma_*)
 fb_factors <- fbfit %>%
   tidybayes::spread_draws(mu, sigma, alpha_site[Site], alpha_prov[Provenance], alpha_year[Year], alpha_clone[Clone], n = n, seed = seed)
 
+
 fb_yppc <- fbfit %>%
-  tidybayes::spread_draws(`y_ppc.*`[i], regex=TRUE, n=n, seed=seed)
+  tidybayes::spread_draws(`y_ppc.*`[i], regex=TRUE, n=n, seed=seed) %>% # y_ppc generated in stan model into tidy df
+  dplyr::left_join(
+    dplyr::select(fbdat, Site, Year, i) # add identifying information (Site, Year) from data for matching with climate
+  )
+
+
+# read in climate data
+clim <- read.csv("data/all_clim_PCIC.csv") %>%
+  dplyr::filter(forcing_type == "ristos")
+
 
 # create a dataframe with observed forcing and modeled forcing
 retrodiction <- fb_factors %>% 
