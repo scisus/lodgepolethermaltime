@@ -70,6 +70,11 @@ retrodiction <- left_join(fbdat, fb_yppc)
 
 # ppc plots
 # 
+ggplot(retrodiction, aes(x = DoY, y=DoY_ppc)) +
+  geom_point(pch=1, alpha=0.5) +
+  geom_abline(slope=1, intercept = 0) +
+  ggtitle("Day of year modeled and predicted", subtitle = "Female begin")
+
 ggplot(retrodiction, aes(x=y_ppc)) +
   geom_density() +
   geom_density(data=retrodiction, aes(x=sum_forcing), color="green") +
