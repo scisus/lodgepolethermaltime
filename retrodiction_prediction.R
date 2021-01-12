@@ -54,59 +54,8 @@ clim <- read.csv("data/all_clim_PCIC.csv") %>%
   dplyr::filter(forcing_type == "ristos")
 
 names(fb_yppc)[which(names(fb_yppc) == "y_ppc")] <- "sum_forcing"
-forcing_to_doy(a = clim, b = fb_yppc, new_doy_col = "DoY_ppc")
 
 fb_yppc <- forcing_to_doy(a = clim, b = data.frame(fb_yppc), new_doy_col = "DoY_ppc") %>%
-# find the DoY that a given sum of forcing accumulated on
-
-# 
-
-ifinder <-  function(phenology, climate, forcingcol) {
-  
-  
-  
-
-  return(doy)
-}
-
-# filter a dataframe of all climate data to match year and site for one phenology dataframe (with accumulated forcing data), then calculate the doy with findInterval
-match_dataframes_for_ifinder <- function(phenology, climate, forcingcol) {
-  # match data from climate and phenology datasets in the same site and year
-  site <- unique(phenology["Site"])
-  year <- as.numeric(unique(phenology["Year"]))
-  
-  forcing <- phenology[forcingcol]
-  
-  if (is.list(forcing)) {
-    forcing <- as.numeric(unlist(forcing))
-  }
-  
-  phendf <- phenology
-  
-  clim_temp <- dplyr::filter(climate, Site == site, Year == year) %>%
-    dplyr::arrange(Year, DoY, sum_forcing)
-  
-  # identify the day of year a particular forcing unit occurred on
-  
-  doy_index <- findInterval(forcing, clim_temp$sum_forcing) # identify location of DoY
-  phendf$doy_yppc <- climate$DoY[doy_index] # extract DoY
-  
-  return(phendf)
-}
-
-y_ppc_day <- purrr::map(split_fb_yppc, match_dataframes_for_ifinder, climate=clim, forcingcol = "y_ppc")
-
-
-split_fb_yppc[[1]]$DoY_yppc <- foo(clim, split_fb_yppc[[1]])
-
-doyperiod <- purrr::map_df(splitclim, ifinder, forcinglengthdf) %>%
-  mutate(doylength = dend-dbegin)
-doyperiodcc <- purrr::map_df(splitclimcc, ifinder, forcinglengthdf) %>%
-  mutate(doylength = dend-dbegin)
-doyperiodplus5 <- purrr::map_df(splitclimplus5, ifinder, forcinglengthdf) %>%
-  mutate(doylength = dend-dbegin)
-
-assertthat::assert_that(nrow(doyperiod)==nrow(forcinglengthdf) * length(splitclim))
   dplyr::rename(sum_forcing_ppc = sum_forcing)
 
 retrodiction <- left_join(fbdat, fb_yppc) 
