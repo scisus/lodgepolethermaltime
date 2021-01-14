@@ -8,38 +8,38 @@ library(magrittr)
 source('phenology_functions.R')
 source('retrodiction_functions.R')
 
+# If you need to work with smaller sample size
+# n <- 500 # draw n samples from the posterior for each observation
+# seed <- 752
+
+# Read in Data #############
+# climate data
+clim <- read.csv("data/all_clim_PCIC.csv") %>% # read in climate data
+  dplyr::filter(forcing_type == "ristos")
+
 # phenology data
 phenbe <- filter_start_end()
 
 fbdat <- select_data(phenbe, "FEMALE", "begin", keep_day = TRUE) 
-ggplot(fbdat, aes(x=sum_forcing, colour=Year)) +
-  geom_density() 
 fbdat$i <- 1:nrow(fbdat)
 
 # fedat <- select_data(phenbe, "FEMALE", "end")
 # mbdat <- select_data(phenbe, "MALE", "begin")
 # medat <- select_data(phenbe, "MALE", "end")
 
-# phenology models
+# phenology models #########
 fbfit <- readRDS('2021-01-07FEMALE_begin.rds')
 # fefit <- readRDS('2020-09-03FEMALE_end.rds')
 # mbfit <- readRDS('2020-09-03MALE_begin.rds')
 # mefit <- readRDS('2020-09-03MALE_end.rds')
 
+# extract and format ppc ##########
 modpars <- tidybayes::get_variables(fbfit)
 
 fbfit %<>% recover_types(fbdat)
 # fefit %<>% recover_types(fedat)
 # mbfit %<>% recover_types(mbdat)
 # mefit %<>% recover_types(medat)
-
-
-# n <- 436 # draw n samples from the posterior for each observation
-# seed <- 752
-
-# all group level parameter values (excludes superpopulation parameters mu_* and sigma_*) MOVE TO PREDICTION
-# fb_factors <- fbfit %>%
-#   tidybayes::spread_draws(mu, sigma, alpha_site[Site], alpha_prov[Provenance], alpha_year[Year], alpha_clone[Clone], n = n, seed = seed)
 
 
 fb_yppc <- fbfit %>%
@@ -51,16 +51,12 @@ fb_yppc <- fbfit %>%
   dplyr::rename(sum_forcing_ppc = y_ppc)
 
 
-# add DoY for modeled sum_forcing
-clim <- read.csv("data/all_clim_PCIC.csv") %>% # read in climate data
-  dplyr::filter(forcing_type == "ristos")
-
-
 fb_yppc <- forcing_to_doy(a = clim, b = data.frame(fb_yppc), aforce = "sum_forcing", bforce = "sum_forcing_ppc", new_doy_col = "DoY_ppc")  
 
 retrodiction <- left_join(fbdat, fb_yppc) # dataframe with observed and modeled sum_forcing and DoY
 
 
+# HPDI Intervals ###########3
 # Calculate HPDI for predicted sum_forcing
 intervals <- retrodiction %>%
   group_by(i) %>%
@@ -79,10 +75,10 @@ intervals <- intervals %>%
          in_doy_int = case_when(DoY >= .lower_day & DoY <= .upper_day ~ TRUE,
                                 DoY < .lower_day | DoY > .upper_day ~ FALSE))
 
-  
 
-# Add DoY estimates for forcing ppc and interval columns
-
+# Retrodiction performance ##########
+# 
+# table
 retrodiction_table <- intervals %>%
   group_by(.width) %>%
   summarize(prop_in_forcing_int = sum(in_forcing_int)/n(), 
@@ -102,9 +98,14 @@ ggplot(retrodiction, aes(x = sum_forcing, color="Observed")) +
   xlab("Accumulated Forcing")
   
 
-# calculate predictions
+# calculate predictions #############
 
 # superpopulations
+# 
+# 
+#all group level parameter values (excludes superpopulation parameters mu_* and sigma_*)
+fb_factors <- fbfit %>%
+  tidybayes::spread_draws(mu, sigma, alpha_site[Site], alpha_prov[Provenance], alpha_year[Year], alpha_clone[Clone], n = n, seed = seed)
 # 
 fb_super <- fbfit %>%
 tidybayes::spread_draws(mu, sigma, mu_site, mu_prov, mu_year, mu_clone, sigma_site, sigma_prov, sigma_year, sigma_clone, n = n, seed = seed)
