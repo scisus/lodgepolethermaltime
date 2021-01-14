@@ -61,13 +61,29 @@ fb_yppc <- forcing_to_doy(a = clim, b = data.frame(fb_yppc), aforce = "sum_forci
 retrodiction <- left_join(fbdat, fb_yppc) 
 
 
+# Calculate HPDI for predicted sum_forcing
+intervals <- retrodiction %>%
+  group_by(i) %>%
+  median_hdi(sum_forcing_ppc, .width=c(0.50, 0.75, 0.90)) %>%
+  full_join(fbdat) 
 
-# match y_ppc to DoY
+# what DoY is associated with each forcing?
+intervals <- forcing_to_doy(clim, intervals, aforce = "sum_forcing", bforce = ".lower", new_doy_col = ".lower_day")
+intervals <- forcing_to_doy(clim, intervals, aforce = "sum_forcing", bforce = ".upper", new_doy_col = ".upper_day")
+intervals <- forcing_to_doy(clim, intervals, aforce = "sum_forcing", bforce = "sum_forcing_ppc", new_doy_col = "doy_ppc")
 
-# create a dataframe with observed forcing and modeled forcing
+# What proportion of observations are within the HDPIs?
+intervals <- intervals %>%
+  dplyr::mutate(in_forcing_int = case_when(sum_forcing >= .lower & sum_forcing <= .upper ~ TRUE,
+                           sum_forcing < .lower | sum_forcing > .upper ~ FALSE),
+         in_doy_int = case_when(DoY >= .lower_day & DoY <= .upper_day ~ TRUE,
+                                DoY < .lower_day | DoY > .upper_day ~ FALSE))
 
+  
 
+# Add DoY estimates for forcing ppc and interval columns
 
+retrodiction_table <- intervals %>%
 # ppc plots
 # 
 ggplot(retrodiction, aes(x = DoY, y=DoY_ppc)) +
@@ -138,25 +154,21 @@ intervals89 <- retrodiction %>%
 
 intervals89 %>%
   group_by(.width) %>%
-  summarize(sum(inint)/n())
+  summarize(prop_in_forcing_int = sum(in_forcing_int)/n(), 
+            prop_in_doy_int = sum(in_doy_int)/n()) %>%
+  rename("HDI width" = .width, Forcing = prop_in_forcing_int, "Day of Year" = prop_in_doy_int)
 
-# ggplot(retrodiction, aes(x=y_ppc, y=sum_forcing, group=i)) +
-#   stat_interval(.width = c(.95, .8, .5), show_point=TRUE, thickness = 0.1, point_colour="black", point_size=0.5) +
-#   coord_flip() +
-#   geom_abline(slope=1, intercept=0)
+knitr::kable(retrodiction_table) # PAPER
 
-# baseplot <- ggplot(retrodiction, aes(x=y_ppc, y=sum_forcing, group=i)) +
-#   stat_pointinterval(.width = c(0.95,0.5), alpha=0.1) +
-#   coord_flip() 
-# 
-# baseplot + 
-#   geom_abline(slope=1, intercept=0) +
-#   ylim(c(250,450)) +
-#   xlim(c(250,450)) +
-#   theme_classic() +
-#   xlab("modeled forcing") +
-#   ylab("observed forcing") +
-#   ggtitle("Retrodictions for female begin")
+# plot overall retrodiction
+ggplot(retrodiction, aes(x = sum_forcing, color="Observed")) +
+  geom_density() +
+  geom_density(aes(x=sum_forcing_ppc, color="Modeled")) +
+  scale_color_viridis_d() +
+  theme_dark() +
+  ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
+  ylab("") +
+  xlab("Accumulated Forcing")
   
 
 
