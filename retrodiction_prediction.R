@@ -43,20 +43,20 @@ fb_factors <- fbfit %>%
 
 
 fb_yppc <- fbfit %>%
-  tidybayes::spread_draws(`y_ppc.*`[i], regex=TRUE, n=n, seed=seed) %>% # y_ppc generated in stan model into tidy df
+  #tidybayes::spread_draws(`y_ppc.*`[i], regex=TRUE, n=n, seed=seed) %>% # y_ppc generated in stan model into tidy df
+  tidybayes::spread_draws(`y_ppc.*`[i], regex=TRUE) %>% # y_ppc generated in stan model into tidy df
   dplyr::left_join(
     dplyr::select(fbdat, Site, Year, i) # add identifying information (Site, Year) from data for matching with climate
-  )
+  ) %>%
+  dplyr::rename(sum_forcing_ppc = y_ppc)
 
 
 # read in climate data
 clim <- read.csv("data/all_clim_PCIC.csv") %>%
   dplyr::filter(forcing_type == "ristos")
 
-names(fb_yppc)[which(names(fb_yppc) == "y_ppc")] <- "sum_forcing"
 
-fb_yppc <- forcing_to_doy(a = clim, b = data.frame(fb_yppc), new_doy_col = "DoY_ppc") %>%
-  dplyr::rename(sum_forcing_ppc = sum_forcing)
+fb_yppc <- forcing_to_doy(a = clim, b = data.frame(fb_yppc), aforce = "sum_forcing", bforce = "sum_forcing_ppc", new_doy_col = "DoY_ppc")  
 
 retrodiction <- left_join(fbdat, fb_yppc) 
 

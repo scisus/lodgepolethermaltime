@@ -15,40 +15,59 @@ split_df_to_lists <- function(a, b) {
   return(list(listainb = ainb, listb = listb))
 }
 
-# given dataframes a (climate) and b (phenology) identify the day of year in a corresponding to reaching each sum_forcing in b. a must have a sum_forcing column and a DoY column and b must have a sum_forcing column. name the new_day_col arg with a string
+# # given dataframes a (climate) and b (phenology) identify the day of year in a corresponding to reaching each sum_forcing in b. a must have a sum_forcing column and a DoY column and b must have a sum_forcing column. name the new_day_col arg with a string
 # find_day_of_forcing <- function(a, b, new_doy_col) {
-#   assertthat::assert_that(isFALSE(unique(b$sum_forcing %in% a$sum_forcing))) # no sum_forcing values are exactly identical
 #   
 #   # what row in a contains the interval for entries in b. Add 1 to the index because phenological events require the threshold to be reached. this introduces error, but is unavoidable in some direction.
 #   a_index <- findInterval(b$sum_forcing, a$sum_forcing) + 1
 #   
+#   
 #   # add a column to b for Day of Year and extract the correct Day of year from a using the index
 #   b[new_doy_col] <- a$DoY[a_index] 
 #   
+#   # when sum_forcing in b is exactly identical to sum_forcing in b, a_index will be +1 day. Re-write those 
+#   identical_forcing_index <- which(b$sum_forcing %in% a$sum_forcing)
+#   b[[new_doy_col]][identical_forcing_index] <- b[[new_doy_col]][identical_forcing_index] - 1
+#   
 #   return(b)
 # }
-# 
-find_day_of_forcing <- function(a, b, new_doy_col) {
+
+# given dataframes adf (climate) and bdf (phenology) identify the day of year corresponding to reaching each sum_forcing bcol in df. adf must have a sum_forcing column identified by name acol and a DoY column and b must have a sum_forcing column identified with name bcol. name the new_day_col arg with a string
+find_day_of_forcing <- function(adf, bdf, aforce, bforce, new_doy_col) {
   
   # what row in a contains the interval for entries in b. Add 1 to the index because phenological events require the threshold to be reached. this introduces error, but is unavoidable in some direction.
-  a_index <- findInterval(b$sum_forcing, a$sum_forcing) + 1
+  a_index <- findInterval(bdf[[bforce]], adf[[aforce]]) + 1
+  
   
   # add a column to b for Day of Year and extract the correct Day of year from a using the index
-  b[new_doy_col] <- a$DoY[a_index] 
+  bdf[new_doy_col] <- adf$DoY[a_index] 
   
   # when sum_forcing in b is exactly identical to sum_forcing in b, a_index will be +1 day. Re-write those 
-  identical_forcing_index <- which(b$sum_forcing %in% a$sum_forcing)
-  b[[new_doy_col]][identical_forcing_index] <- b[[new_doy_col]][identical_forcing_index] - 1
+  identical_forcing_index <- which(bdf[[bforce]] %in% adf[[aforce]])
+  bdf[[new_doy_col]][identical_forcing_index] <- bdf[[new_doy_col]][identical_forcing_index] - 1
   
-  return(b)
+  return(bdf)
 }
 
-# find DoY from a climate dataset corresponding to each sum_forcing in a phenology dataset
-forcing_to_doy <- function(a, b, new_doy_col) {
+# # find DoY from a climate dataset corresponding to each sum_forcing in a phenology dataset
+# forcing_to_doy <- function(a, b, new_doy_col) {
+#   # prepare dataframes for interval finding by splitting into lists
+#   splitdfs <- split_df_to_lists(a, b)
+#   
+#   df <- purrr::map2(splitdfs$listainb, splitdfs$listb, find_day_of_forcing, new_doy_col = new_doy_col) %>% # find DoY in A corresponding to each sum_forcing in B
+#     purrr::map_dfr(bind_rows) # combine into a single dataframe
+#   
+#   return(df)
+# }
+
+find_day_of_forcing(adf=adf, bdf=bdf, aforce="sum_forcing", bforce = bforce, new_doy_col = new_doy_col)
+
+# find DoY from a climate dataset a corresponding to each sum_forcing in a phenology dataset b. Identify column names of forcing columns as strings aforce and bforce and the name of the new doy column as a string to new_doy_col. Day of Year in the climate dataset must be DoY
+forcing_to_doy <- function(a, b, new_doy_col, aforce, bforce) {
   # prepare dataframes for interval finding by splitting into lists
   splitdfs <- split_df_to_lists(a, b)
   
-  df <- purrr::map2(splitdfs$listainb, splitdfs$listb, find_day_of_forcing, new_doy_col = new_doy_col) %>% # find DoY in A corresponding to each sum_forcing in B
+  df <- purrr::map2(splitdfs$listainb, splitdfs$listb, find_day_of_forcing, aforce = aforce, bforce = bforce, new_doy_col = new_doy_col) %>% # find DoY in A corresponding to each sum_forcing in B
     purrr::map_dfr(bind_rows) # combine into a single dataframe
   
   return(df)
