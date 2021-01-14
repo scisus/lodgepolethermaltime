@@ -12,8 +12,8 @@ source('retrodiction_functions.R')
 phenbe <- filter_start_end()
 
 fbdat <- select_data(phenbe, "FEMALE", "begin", keep_day = TRUE) 
-ggplot(fbdat, aes(x=sum_forcing, fill=Year)) +
-  geom_histogram() 
+ggplot(fbdat, aes(x=sum_forcing, colour=Year)) +
+  geom_density() 
 fbdat$i <- 1:nrow(fbdat)
 
 # fedat <- select_data(phenbe, "FEMALE", "end")
