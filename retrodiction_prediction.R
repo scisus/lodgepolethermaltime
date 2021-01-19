@@ -42,39 +42,39 @@ fbfit %<>% recover_types(fbdat)
 # mefit %<>% recover_types(medat)
 
 
-fb_yppc <- fbfit %>%
-  #tidybayes::spread_draws(`y_ppc.*`[i], regex=TRUE, n=n, seed=seed) %>% # y_ppc generated in stan model into tidy df
-  tidybayes::spread_draws(`y_ppc.*`[i], regex=TRUE) %>% # y_ppc generated in stan model into tidy df
+fb_rep <- fbfit %>%
+  tidybayes::spread_draws(`sum_forcing_rep.*`[i], regex=TRUE, n=n, seed=seed) %>% # y_ppc generated in stan model into tidy df
+  #tidybayes::spread_draws(`y_ppc.*`[i], regex=TRUE) %>% # y_ppc generated in stan model into tidy df
   dplyr::left_join(
     dplyr::select(fbdat, Site, Year, i) # add identifying information (Site, Year) from data for matching with climate
-  ) %>%
-  dplyr::rename(sum_forcing_ppc = y_ppc)
+  ) 
 
+# convert forcing units to day of year
+fb_rep$doy_rep <- forcing_to_doy(a = clim, b = data.frame(fb_rep), aforce = "sum_forcing", bforce = "sum_forcing_rep") 
 
-fb_yppc <- forcing_to_doy(a = clim, b = data.frame(fb_yppc), aforce = "sum_forcing", bforce = "sum_forcing_ppc", new_doy_col = "DoY_ppc")  
+retrodiction <- left_join(fbdat, fb_rep) # dataframe with observed and modeled sum_forcing and DoY
 
-retrodiction <- left_join(fbdat, fb_yppc) # dataframe with observed and modeled sum_forcing and DoY
 
 
 # HPDI Intervals ###########3
 # Calculate HPDI for predicted sum_forcing
 intervals <- retrodiction %>%
   group_by(i) %>%
-  median_hdi(sum_forcing_ppc, .width=c(0.50, 0.75, 0.90)) %>%
+  median_hdi(sum_forcing_rep, .width=c(0.50, 0.75, 0.90)) %>%
+  rename(sum_forcing_rep_median = sum_forcing_rep) %>%
   full_join(fbdat) 
 
 # what DoY is associated with each forcing?
-intervals <- forcing_to_doy(clim, intervals, aforce = "sum_forcing", bforce = ".lower", new_doy_col = ".lower_day")
-intervals <- forcing_to_doy(clim, intervals, aforce = "sum_forcing", bforce = ".upper", new_doy_col = ".upper_day")
-intervals <- forcing_to_doy(clim, intervals, aforce = "sum_forcing", bforce = "sum_forcing_ppc", new_doy_col = "doy_ppc")
+intervals$.lower_doy <- forcing_to_doy(clim, intervals, aforce = "sum_forcing", bforce = ".lower") 
+intervals$.upper_doy <- forcing_to_doy(clim, intervals, aforce = "sum_forcing", bforce = ".upper") 
+intervals$doy_rep_median <- forcing_to_doy(clim, intervals, aforce = "sum_forcing", bforce = "sum_forcing_rep_median") 
 
 # What proportion of observations are within the HDPIs?
 intervals <- intervals %>%
   dplyr::mutate(in_forcing_int = case_when(sum_forcing >= .lower & sum_forcing <= .upper ~ TRUE,
                            sum_forcing < .lower | sum_forcing > .upper ~ FALSE),
-         in_doy_int = case_when(DoY >= .lower_day & DoY <= .upper_day ~ TRUE,
-                                DoY < .lower_day | DoY > .upper_day ~ FALSE))
-
+         in_doy_int = case_when(DoY >= .lower_doy & DoY <= .upper_doy ~ TRUE,
+                                DoY < .lower_doy | DoY > .upper_doy ~ FALSE))
 
 # Retrodiction performance ##########
 # 
