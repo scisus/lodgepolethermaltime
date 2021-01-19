@@ -9,8 +9,8 @@ source('phenology_functions.R')
 source('retrodiction_functions.R')
 
 # If you need to work with smaller sample size
-# n <- 500 # draw n samples from the posterior for each observation
-# seed <- 752
+n <- 500 # draw n samples from the posterior for each observation
+seed <- 752
 
 # Read in Data #############
 # climate data
@@ -18,7 +18,7 @@ clim <- read.csv("data/all_clim_PCIC.csv") %>% # read in climate data
   dplyr::filter(forcing_type == "ristos")
 
 # phenology data
-phenbe <- filter_start_end()
+phenbe <- filter_start_end() # reduce to first and last day of observations
 
 fbdat <- select_data(phenbe, "FEMALE", "begin", keep_day = TRUE) 
 fbdat$i <- 1:nrow(fbdat)
@@ -28,13 +28,13 @@ fbdat$i <- 1:nrow(fbdat)
 # medat <- select_data(phenbe, "MALE", "end")
 
 # phenology models #########
-fbfit <- readRDS('2021-01-07FEMALE_begin.rds')
+fbfit <- readRDS('2021-01-19FEMALE_begin.rds')
 # fefit <- readRDS('2020-09-03FEMALE_end.rds')
 # mbfit <- readRDS('2020-09-03MALE_begin.rds')
 # mefit <- readRDS('2020-09-03MALE_end.rds')
 
 # extract and format ppc ##########
-modpars <- tidybayes::get_variables(fbfit)
+#modpars <- tidybayes::get_variables(fbfit)
 
 fbfit %<>% recover_types(fbdat)
 # fefit %<>% recover_types(fedat)
