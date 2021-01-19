@@ -91,8 +91,16 @@ knitr::kable(retrodiction_table) # PAPER
 ggplot(retrodiction, aes(x = sum_forcing, color="Observed")) +
   geom_density() +
   geom_density(aes(x=sum_forcing_ppc, color="Modeled")) +
+
+ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
+  geom_line(stat="density", alpha = 0.1) +
+  geom_density(aes(x = sum_forcing, color="Observed")) +
   scale_color_viridis_d() +
+  ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
+  ylab("") +
+  xlab("Accumulated Forcing") +
   theme_dark() +
+  facet_grid(Year ~ Site)
   ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
   ylab("") +
   xlab("Accumulated Forcing")
