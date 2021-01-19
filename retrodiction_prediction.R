@@ -184,7 +184,7 @@ sumf <- data.frame(sum_forcing = sumf)
 
 ggplot(fbdat, aes(x=sum_forcing, colour=Provenance)) +
   geom_dots() +
-  stat_pointinterval(data=retrodiction, aes(x=sum_forcing_ppc), .width = c(0.5, 0.95), inherit.aes = FALSE) +
+  stat_pointinterval(data=retrodiction, aes(x=sum_forcing_rep), .width = c(0.5, 0.95), inherit.aes = FALSE) +
   stat_pointinterval(data=sumf, aes(x=sum_forcing, y = -0.25), .width = c(0.5, 0.95), inherit.aes = FALSE) +
   theme_classic(base_size = 18) +
   annotate("text", label = "retrodiction", x = 200, y = 0, hjust = 0, vjust = 0.3) +
