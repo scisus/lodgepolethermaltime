@@ -78,6 +78,8 @@ intervals <- intervals %>%
 
 # Retrodiction performance ##########
 # 
+# Plots and tables
+# 
 # table
 retrodiction_table <- intervals %>%
   group_by(.width) %>%
@@ -87,10 +89,7 @@ retrodiction_table <- intervals %>%
 
 knitr::kable(retrodiction_table) # PAPER
 
-# plot overall retrodiction
-ggplot(retrodiction, aes(x = sum_forcing, color="Observed")) +
-  geom_density() +
-  geom_density(aes(x=sum_forcing_ppc, color="Modeled")) +
+
 
 ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
   geom_line(stat="density", alpha = 0.1) +
@@ -101,9 +100,66 @@ ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
   xlab("Accumulated Forcing") +
   theme_dark() +
   facet_grid(Year ~ Site)
+
+# plot median observed vs. modeled
+# 
+medians_only <- intervals %>%
+  dplyr::filter(.width == 0.5) # no duplicate obs
+  
+ggplot(medians_only, aes(x = sum_forcing, y=sum_forcing_rep_median)) +
+  geom_point(pch=1, alpha = 0.5) +
+  ggtitle("Observed sum forcing vs. median modeled sum forcing") +
+  geom_abline(slope=1, intercept = 0) +
+  theme_bw()
+
+ggplot(medians_only, aes(x = DoY, y=doy_rep_median)) +
+  geom_point(pch=1, alpha = 0.5) +
+  ggtitle("Observed Day of Year vs. median Day of Year") +
+  geom_abline(slope=1, intercept = 0) +
+  theme_bw()
+
+
+# plot overall retrodiction #PAPER?
+ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
+  geom_line(stat="density", alpha = 0.1) +
+  geom_density(aes(x = sum_forcing, color="Observed")) +
+  scale_color_viridis_d() +
   ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
   ylab("") +
-  xlab("Accumulated Forcing")
+  xlab("Accumulated Forcing") +
+  theme_dark() 
+
+ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
+  geom_line(stat="ecdf", alpha = 0.1) +
+  stat_ecdf(aes(x = sum_forcing, color="Observed")) +
+  scale_color_viridis_d() +
+  ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
+  ylab("") +
+  xlab("Accumulated Forcing") +
+  theme_dark() 
+
+# retrodictions by site
+ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
+  geom_line(stat="density", alpha = 0.1) +
+  geom_density(aes(x = sum_forcing, color="Observed")) +
+  scale_color_viridis_d() +
+  ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
+  ylab("") +
+  xlab("Accumulated Forcing") +
+  theme_dark() +
+  facet_wrap("Site")
+
+ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
+  geom_line(stat="density", alpha = 0.1) +
+  geom_density(aes(x = sum_forcing, color="Observed")) +
+  scale_color_viridis_d() +
+  ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
+  ylab("") +
+  xlab("Accumulated Forcing") +
+  theme_dark() +
+  facet_wrap("Year")
+
+
   
 
 # calculate predictions #############
