@@ -70,8 +70,13 @@ tab.fb <- retrotable(interval.fb)
 knitr::kable(tab.fb, caption = "FEMALE begin")
 tab.fe <- retrotable(interval.fe)
 knitr::kable(tab.fe, caption = "FEMALE end")
-tab.fb <- retrotable(interval.fb)
-tab.fb <- retrotable(interval.fb)
+tab.mb <- retrotable(interval.mb)
+tab.me <- retrotable(interval.me)
+
+
+########### STOP
+
+
 retrotabler <- intervals %>%
   group_by(.width) %>%
   summarize(prop_in_forcing_int = sum(in_forcing_int)/n(), 
@@ -79,6 +84,8 @@ retrotabler <- intervals %>%
   rename("HDI width" = .width, Forcing = prop_in_forcing_int, "Day of Year" = prop_in_doy_int)
 
 knitr::kable(retrodiction_table) # PAPER
+
+
 
 
 # plot median observed vs. modeled
