@@ -12,6 +12,8 @@ split_df_to_lists <- function(a, b) {
   # subset lista so it only contains Site x Year that also occur in B
   ainb <- lista[names(listb)] 
   
+  assertthat::are_equal(names(ainb), names(listb)) 
+  
   return(list(listainb = ainb, listb = listb))
 }
 
@@ -29,6 +31,13 @@ find_day_of_forcing <- function(adf, bdf, aforce, bforce) {
   # when sum_forcing in b is exactly identical to sum_forcing in b, a_index will be +1 day. Re-write those 
   identical_forcing_index <- which(bdf[[bforce]] %in% adf[[aforce]])
   bdf$newdoycol[identical_forcing_index] <- bdf$newdoycol[identical_forcing_index] - 1
+  
+  # (indirectly) test whether the correct day of year is being assigned to the correct forcing unit - for any site x year, sorting by sum_forcing_rep or newdoycol should produce the same ordering of newdoycol in bdf
+  
+  order_by_sumforcing <- arrange(bdf, sum_forcing_rep, newdoycol)$newdoycol
+  order_by_newdoycol <- arrange(bdf, newdoycol)$newdoycol
+  
+  assertthat::are_equal(order_by_sumforcing, order_by_newdoycol)
   
   return(bdf)
 }
@@ -61,7 +70,7 @@ retrodict <- function(modelfile, dat, climate) {
   # convert forcing units to day of year
   rep$doy_rep <- forcing_to_doy(a = climate, b = data.frame(rep), aforce = "sum_forcing", bforce = "sum_forcing_rep") 
   
-  retrodiction <- dplyr::left_join(dat, rep) # dataframe with observed and modeled sum_forcing and DoY
+  retrodiction <- dplyr::left_join(rep, dat) # dataframe with observed and modeled sum_forcing and DoY
   
   return(retrodiction)
 }

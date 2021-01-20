@@ -9,8 +9,6 @@ source('phenology_functions.R')
 source('retrodiction_functions.R')
 
 # If you need to work with smaller sample size
-n <- 500 # draw n samples from the posterior for each observation
-seed <- 752
 
 # Read in Data #############
 # climate data
@@ -40,46 +38,48 @@ retro.fe <- retrodict(modelfile = '2021-01-19FEMALE_end.rds', dat=fedat, climate
 retro.mb <- retrodict(modelfile = '2021-01-19MALE_begin.rds', dat=mbdat, climate=clim)
 retro.me <- retrodict(modelfile = '2021-01-19MALE_end.rds', dat=medat, climate=clim)
 
-fb_rep <- fbfit %>%
-  tidybayes::spread_draws(`sum_forcing_rep.*`[i], regex=TRUE, n=n, seed=seed) %>% # y_ppc generated in stan model into tidy df
-  #tidybayes::spread_draws(`y_ppc.*`[i], regex=TRUE) %>% # y_ppc generated in stan model into tidy df
-  dplyr::left_join(
-    dplyr::select(fbdat, Site, Year, i) # add identifying information (Site, Year) from data for matching with climate
-  ) 
-
-# convert forcing units to day of year
-fb_rep$doy_rep <- forcing_to_doy(a = clim, b = data.frame(fb_rep), aforce = "sum_forcing", bforce = "sum_forcing_rep") 
-
-retrodiction <- left_join(fbdat, fb_rep) # dataframe with observed and modeled sum_forcing and DoY
+#########
+filter(retro.fb, i %in% c(1:3, 35:38, 125:127)) %>%
+  ggplot(aes(x = sum_forcing_rep, y= doy_rep, group = i)) +
+  geom_line()
+#########
 
 
+# HPDI Intervals ###########
 
-# HPDI Intervals ###########3
-# Calculate HPDI for predicted sum_forcing
-intervals <- retrodiction %>%
-  group_by(i) %>%
-  median_hdi(sum_forcing_rep, .width=c(0.50, 0.75, 0.90)) %>%
-  rename(sum_forcing_rep_median = sum_forcing_rep) %>%
-  full_join(fbdat) 
+# calculate HPDIs for each group, determine Day of Year associated with HPDIs, and calculate whether group observations are within intervals for day and sum_forcing
 
-# what DoY is associated with each forcing?
-intervals$.lower_doy <- forcing_to_doy(clim, intervals, aforce = "sum_forcing", bforce = ".lower") 
-intervals$.upper_doy <- forcing_to_doy(clim, intervals, aforce = "sum_forcing", bforce = ".upper") 
-intervals$doy_rep_median <- forcing_to_doy(clim, intervals, aforce = "sum_forcing", bforce = "sum_forcing_rep_median") 
+interval.fb <- intervalate(retrodictions = retro.fb, climate = clim, dat = fbdat)
+interval.fe <- intervalate(retro.fe, clim, fedat)
+interval.mb <- intervalate(retro.mb, clim, mbdat)
+interval.me <- intervalate(retro.me, clim, medat)
 
-# What proportion of observations are within the HDPIs?
-intervals <- intervals %>%
-  dplyr::mutate(in_forcing_int = case_when(sum_forcing >= .lower & sum_forcing <= .upper ~ TRUE,
-                           sum_forcing < .lower | sum_forcing > .upper ~ FALSE),
-         in_doy_int = case_when(DoY >= .lower_doy & DoY <= .upper_doy ~ TRUE,
-                                DoY < .lower_doy | DoY > .upper_doy ~ FALSE))
 
 # Retrodiction performance ##########
 # 
 # Plots and tables
 # 
 # table
-retrodiction_table <- intervals %>%
+# 
+retrotable <- function(intervaldf) {
+  tab <- intervaldf %>%
+    group_by(.width) %>%
+    summarize(prop_in_forcing_int = sum(in_forcing_int)/n(), 
+              prop_in_doy_int = sum(in_doy_int)/n()) %>%
+    rename("HDPI width" = .width, Forcing = prop_in_forcing_int, "Day of Year" = prop_in_doy_int)
+  
+  return(tab) # PAPER
+}
+
+intervals %>% group_by(.width) %>%
+  summarize(prop_in_doy_int = sum(in_doy_int)/n())
+tab.fb <- retrotable(interval.fb)
+knitr::kable(tab.fb, caption = "FEMALE begin")
+tab.fe <- retrotable(interval.fe)
+knitr::kable(tab.fe, caption = "FEMALE end")
+tab.fb <- retrotable(interval.fb)
+tab.fb <- retrotable(interval.fb)
+retrotabler <- intervals %>%
   group_by(.width) %>%
   summarize(prop_in_forcing_int = sum(in_forcing_int)/n(), 
             prop_in_doy_int = sum(in_doy_int)/n()) %>%
@@ -87,17 +87,6 @@ retrodiction_table <- intervals %>%
 
 knitr::kable(retrodiction_table) # PAPER
 
-
-
-ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
-  geom_line(stat="density", alpha = 0.1) +
-  geom_density(aes(x = sum_forcing, color="Observed")) +
-  scale_color_viridis_d() +
-  ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
-  ylab("") +
-  xlab("Accumulated Forcing") +
-  theme_dark() +
-  facet_grid(Year ~ Site)
 
 # plot median observed vs. modeled
 # 
@@ -126,6 +115,42 @@ ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
   ylab("") +
   xlab("Accumulated Forcing") +
   theme_dark() 
+
+ggplot(retrodiction, aes(x="", y=sum_forcing_rep, color = "Model")) +
+  ggbeeswarm::geom_quasirandom(data=fbdat, aes(x = "", y= sum_forcing, color = "Data"), pch=1, alpha = 0.75) +
+  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill=NA) +
+  theme_dark() +
+  scale_colour_viridis_d()
+
+ggplot(retrodiction, aes(x=as.factor(Year), y=sum_forcing_rep, colour = "Model")) +
+  ggbeeswarm::geom_quasirandom(data=fbdat, aes(x = as.factor(Year), y= sum_forcing, colour = "Data"), groupOnX = TRUE, pch=1) +
+  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill=NA) +
+  theme_dark() +
+  scale_colour_viridis_d() +
+  # scale_fill_viridis_d(alpha = 0.5) +
+  facet_wrap("Site", scales="free_x") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+retro6 <- filter(retrodiction, Year == 2006)
+dat6 <- filter(fbdat, Year == 2006)
+
+ggplot(retro6, aes(x=Site, y=sum_forcing_rep, colour = "Model")) +
+  ggbeeswarm::geom_quasirandom(data=dat6, aes(x = Site, y= sum_forcing, colour = "Data"), groupOnX = TRUE, pch=1) +
+  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill=NA) +
+  theme_dark() +
+  scale_colour_viridis_d() +
+  # scale_fill_viridis_d(alpha = 0.5) +
+  facet_wrap("Provenance", scales = "free_x") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+ggplot(retrodiction, aes(x=sum_forcing, colour = "Observed")) +
+  stat_ecdf() +
+  stat_pointinterval(data = retrodiction, aes(x=sum_forcing_rep, y=0.5, colour = "Modeled"), point_interval = median_hdi, .width = c(0.5, 0.75, 0.95), size = c(10, 5, 1)) +
+  ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
+  ylab("") +
+  xlab("Accumulated Forcing") +
+  theme_dark() +
+  scale_colour_viridis_d() 
 
 ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
   geom_line(stat="ecdf", alpha = 0.1) +
