@@ -23,24 +23,22 @@ phenbe <- filter_start_end() # reduce to first and last day of observations
 fbdat <- select_data(phenbe, "FEMALE", "begin", keep_day = TRUE) 
 fbdat$i <- 1:nrow(fbdat)
 
-# fedat <- select_data(phenbe, "FEMALE", "end")
-# mbdat <- select_data(phenbe, "MALE", "begin")
-# medat <- select_data(phenbe, "MALE", "end")
+fedat <- select_data(phenbe, "FEMALE", "end", keep_day = TRUE)
+fedat$i <- 1:nrow(fedat)
 
-# phenology models #########
-fbfit <- readRDS('2021-01-19FEMALE_begin.rds')
-# fefit <- readRDS('2020-09-03FEMALE_end.rds')
-# mbfit <- readRDS('2020-09-03MALE_begin.rds')
-# mefit <- readRDS('2020-09-03MALE_end.rds')
+mbdat <- select_data(phenbe, "MALE", "begin", keep_day = TRUE)
+mbdat$i <- 1:nrow(mbdat)
 
-# extract and format ppc ##########
-#modpars <- tidybayes::get_variables(fbfit)
+medat <- select_data(phenbe, "MALE", "end", keep_day = TRUE)
+medat$i <- 1:nrow(medat)
 
-fbfit %<>% recover_types(fbdat)
-# fefit %<>% recover_types(fedat)
-# mbfit %<>% recover_types(mbdat)
-# mefit %<>% recover_types(medat)
+# Retrodictions ###########
+# create a dataframe of retrodictions with associated Site, Provenance, Clone, and Year information
 
+retro.fb <-retrodict(modelfile = '2021-01-19FEMALE_begin.rds', dat=fbdat, climate=clim)
+retro.fe <- retrodict(modelfile = '2021-01-19FEMALE_end.rds', dat=fedat, climate=clim)
+retro.mb <- retrodict(modelfile = '2021-01-19MALE_begin.rds', dat=mbdat, climate=clim)
+retro.me <- retrodict(modelfile = '2021-01-19MALE_end.rds', dat=medat, climate=clim)
 
 fb_rep <- fbfit %>%
   tidybayes::spread_draws(`sum_forcing_rep.*`[i], regex=TRUE, n=n, seed=seed) %>% # y_ppc generated in stan model into tidy df
