@@ -38,12 +38,6 @@ retro.fe <- retrodict(modelfile = '2021-01-19FEMALE_end.rds', dat=fedat, climate
 retro.mb <- retrodict(modelfile = '2021-01-19MALE_begin.rds', dat=mbdat, climate=clim)
 retro.me <- retrodict(modelfile = '2021-01-19MALE_end.rds', dat=medat, climate=clim)
 
-#########
-filter(retro.fb, i %in% c(1:3, 35:38, 125:127)) %>%
-  ggplot(aes(x = sum_forcing_rep, y= doy_rep, group = i)) +
-  geom_line()
-#########
-
 
 # HPDI Intervals ###########
 
@@ -71,8 +65,7 @@ retrotable <- function(intervaldf) {
   return(tab) # PAPER
 }
 
-intervals %>% group_by(.width) %>%
-  summarize(prop_in_doy_int = sum(in_doy_int)/n())
+
 tab.fb <- retrotable(interval.fb)
 knitr::kable(tab.fb, caption = "FEMALE begin")
 tab.fe <- retrotable(interval.fe)

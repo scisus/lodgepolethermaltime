@@ -34,7 +34,7 @@ find_day_of_forcing <- function(adf, bdf, aforce, bforce) {
   
   # (indirectly) test whether the correct day of year is being assigned to the correct forcing unit - for any site x year, sorting by sum_forcing_rep or newdoycol should produce the same ordering of newdoycol in bdf
   
-  order_by_sumforcing <- arrange(bdf, sum_forcing_rep, newdoycol)$newdoycol
+  order_by_sumforcing <- arrange(bdf, bforce, newdoycol)$newdoycol
   order_by_newdoycol <- arrange(bdf, newdoycol)$newdoycol
   
   assertthat::are_equal(order_by_sumforcing, order_by_newdoycol)
@@ -44,14 +44,16 @@ find_day_of_forcing <- function(adf, bdf, aforce, bforce) {
 
 
 # find DoY from a climate dataset a corresponding to each sum_forcing in a phenology dataset b. Identify column names of forcing columns as strings aforce and bforce and the name of the new doy column as a string to newdoycol. Day of Year in the climate dataset must be DoY
-forcing_to_doy <- function(a, b, aforce, bforce) {
+forcing_to_doy <- function(a, b, aforce, bforce, newdoycolname) {
   # prepare dataframes for interval finding by splitting into lists
   splitdfs <- split_df_to_lists(a, b)
   
   df <- purrr::map2(splitdfs$listainb, splitdfs$listb, find_day_of_forcing, aforce = aforce, bforce = bforce) %>% # find DoY in A corresponding to each sum_forcing in B
     purrr::map_dfr(bind_rows) # combine into a single dataframe
   
-  return(df$newdoycol)
+  names(df)[which(names(df) == "newdoycol")] <- newdoycolname 
+  
+  return(df)
 }
 
 # build a dataframe of retrodictions for sum_forcing and doy with associate Site, Provenance, Clone and Year information. Requires model file with sum_forcing_rep parameter and data used in the model as well as daily temperature with sum_forcing for sites and years in the data.
@@ -68,9 +70,9 @@ retrodict <- function(modelfile, dat, climate) {
     ) 
   
   # convert forcing units to day of year
-  rep$doy_rep <- forcing_to_doy(a = climate, b = data.frame(rep), aforce = "sum_forcing", bforce = "sum_forcing_rep") 
+  rep$doy_rep <- forcing_to_doy(a = climate, b = data.frame(rep), aforce = "sum_forcing", bforce = "sum_forcing_rep", newdoycolname = "doy_rep") 
   
-  retrodiction <- dplyr::left_join(rep, dat) # dataframe with observed and modeled sum_forcing and DoY
+  retrodiction <- dplyr::left_join(dat,rep) # dataframe with observed and modeled sum_forcing and DoY
   
   return(retrodiction)
 }
@@ -84,9 +86,9 @@ intervalate <- function(retrodictions, climate, dat) {
     full_join(dat) 
   
   # what DoY is associated with each forcing?
-  intervals$.lower_doy <- forcing_to_doy(a = climate, b = intervals, aforce = "sum_forcing", bforce = ".lower") 
-  intervals$.upper_doy <- forcing_to_doy(a = climate, b = intervals, aforce = "sum_forcing", bforce = ".upper") 
-  intervals$doy_rep_median <- forcing_to_doy(a = climate, b = intervals, aforce = "sum_forcing", bforce = "sum_forcing_rep_median") 
+  intervals <- forcing_to_doy(a = climate, b = intervals, aforce = "sum_forcing", bforce = ".lower", newdoycolname = ".lower_doy") 
+  intervals <- forcing_to_doy(a = climate, b = intervals, aforce = "sum_forcing", bforce = ".upper", newdoycolname = ".upper_doy") 
+ # intervals$doy_rep_median <- forcing_to_doy(a = climate, b = intervals, aforce = "sum_forcing", bforce = "sum_forcing_rep_median") 
   
   # What proportion of observations are within the HDPIs?
   intervals <- intervals %>%
