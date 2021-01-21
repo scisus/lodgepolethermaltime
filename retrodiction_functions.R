@@ -34,10 +34,10 @@ find_day_of_forcing <- function(adf, bdf, aforce, bforce) {
   
   # (indirectly) test whether the correct day of year is being assigned to the correct forcing unit - for any site x year, sorting by sum_forcing_rep or newdoycol should produce the same ordering of newdoycol in bdf
   
-  order_by_sumforcing <- arrange(bdf, bforce, newdoycol)$newdoycol
-  order_by_newdoycol <- arrange(bdf, newdoycol)$newdoycol
-  
-  assertthat::are_equal(order_by_sumforcing, order_by_newdoycol)
+  # order_by_sumforcing <- arrange(bdf, bforce, newdoycol)$newdoycol
+  # order_by_newdoycol <- arrange(bdf, newdoycol)$newdoycol
+  # 
+  # assertthat::are_equal(order_by_sumforcing, order_by_newdoycol)
   
   return(bdf)
 }
