@@ -99,3 +99,15 @@ intervalate <- function(retrodictions, climate, dat) {
   
   return(intervals)
 }
+
+# Create a table showing the proportion of observations in the modeled forcing interval and doy interval
+
+retrotable <- function(intervaldf) {
+  tab <- intervaldf %>%
+    group_by(.width) %>%
+    summarize(prop_in_forcing_int = sum(in_forcing_int)/n(), 
+              prop_in_doy_int = sum(in_doy_int)/n()) %>%
+    rename("HDPI width" = .width, Forcing = prop_in_forcing_int, "Day of Year" = prop_in_doy_int)
+  
+  return(tab) # PAPER
+}

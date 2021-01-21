@@ -52,18 +52,7 @@ interval.me <- intervalate(retro.me, clim, medat)
 # Retrodiction performance ##########
 # 
 # Plots and tables
-# 
-# table
-# 
-retrotable <- function(intervaldf) {
-  tab <- intervaldf %>%
-    group_by(.width) %>%
-    summarize(prop_in_forcing_int = sum(in_forcing_int)/n(), 
-              prop_in_doy_int = sum(in_doy_int)/n()) %>%
-    rename("HDPI width" = .width, Forcing = prop_in_forcing_int, "Day of Year" = prop_in_doy_int)
-  
-  return(tab) # PAPER
-}
+# tableS
 
 
 tab.fb <- retrotable(interval.fb)
@@ -71,19 +60,68 @@ knitr::kable(tab.fb, caption = "FEMALE begin")
 tab.fe <- retrotable(interval.fe)
 knitr::kable(tab.fe, caption = "FEMALE end")
 tab.mb <- retrotable(interval.mb)
+knitr::kable(tab.mb, caption = "MALE begin")
 tab.me <- retrotable(interval.me)
+knitr::kable(tab.me, caption = "MALE end")
 
 
-########### STOP
+########### PLOT RETRODICTIONS ##################
+
+retrodf <- list("FEMALE begin" = retro.fb, "FEMALE end" = retro.fe, "MALE begin" = retro.mb, "MALE end" = retro.me) %>%
+  dplyr::bind_rows(.id = ".id") %>%
+  tidyr::separate(.id, into=c("Sex", "event"))
+
+datdf <- list("FEMALE begin" = fbdat, "FEMALE end" = fedat, "MALE begin" = mbdat, "MALE end" = medat) %>%
+  dplyr::bind_rows(.id = ".id") %>%
+  tidyr::separate(.id, into=c("Sex", "event"))
+
+lildf <- retrodf %>% 
+  group_by(Sex, event) %>%
+  sample_n(size = 1e4)
+
+# Forcing PAPER
+ggplot(lildf, aes(x=sum_forcing_rep, colour = "Model", fill="Model")) +
+  stat_slab(alpha =0.5) +
+  facet_grid(event ~ Sex) +
+  geom_dots(data=datdf, aes(x=sum_forcing, color = "Observations"), alpha = 0.3, pch = 1) +
+  stat_pointinterval(point_interval = median_hdi, .width = c(.5, .9)) +
+  scale_colour_viridis_d() +
+  scale_fill_viridis_d() +
+  theme_dark() +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  ggtitle("Accumulated forcing required to begin and end flowering", subtitle = "1000 samples from each model") +
+  xlab("Accumulated forcing") +
+  ylab("") 
+
+# lilsum <- lildf %>%
+#   group_by(event, Sex, Site, Year, DoY) %>%
+#   summarise(count = n())
+# 
+# ggplot(filter(lildf, Year %in% c(2006,2011)), aes(x=doy_rep, y=interaction(event, Sex), colour = "Model")) +
+#   facet_wrap(~ Site + Year, ncol = 10, scales = "free_x") +
+#   geom_boxplot(fill=NA, size = 2) +
+#   stat_pointinterval(data=filter(datdf, Year %in% c(2006,2011)), aes(x=DoY, y=interaction(event, Sex), color = "Observations"), .width = c(0.5, 1), alpha =0.5) +
+#   scale_colour_viridis_d() +
+#   scale_fill_viridis_c() +
+#   theme_dark() +
+#   ggtitle("Flowering Day of Year", subtitle = "Model DoY from 50 & 90% HDI accumulated forcing, median and range of obs") +
+#   xlab("Day of Year") +
+#   coord_flip()
+# 
+# ggplot(filter(lilsum, Year == 2006), aes(x = Site, y=DoY, size = count)) +
+#   geom_jitter() +
+#   facet_grid(event ~ Sex) + 
+#   geom_jitter(datdf)
+
+ggplot(lildf, aes(x = DoY, y = doy_rep, colour = Site, group=Year)) +
+  stat_pointinterval(alpha = 0.5, position = "jitter") +
+  facet_grid(event ~ Sex) +
+  geom_abline(slope = 1, intercept=0) +
+  scale_color_viridis_d() +
+  theme_dark()
 
 
-retrotabler <- intervals %>%
-  group_by(.width) %>%
-  summarize(prop_in_forcing_int = sum(in_forcing_int)/n(), 
-            prop_in_doy_int = sum(in_doy_int)/n()) %>%
-  rename("HDI width" = .width, Forcing = prop_in_forcing_int, "Day of Year" = prop_in_doy_int)
-
-knitr::kable(retrodiction_table) # PAPER
 
 
 
