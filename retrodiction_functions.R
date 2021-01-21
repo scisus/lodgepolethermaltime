@@ -70,7 +70,7 @@ retrodict <- function(modelfile, dat, climate) {
     ) 
   
   # convert forcing units to day of year
-  rep$doy_rep <- forcing_to_doy(a = climate, b = data.frame(rep), aforce = "sum_forcing", bforce = "sum_forcing_rep", newdoycolname = "doy_rep") 
+  rep <- forcing_to_doy(a = climate, b = data.frame(rep), aforce = "sum_forcing", bforce = "sum_forcing_rep", newdoycolname = "doy_rep") 
   
   retrodiction <- dplyr::left_join(dat,rep) # dataframe with observed and modeled sum_forcing and DoY
   
