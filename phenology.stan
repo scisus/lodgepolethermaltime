@@ -6,9 +6,29 @@
 
 // The input data is a vector 'y' of length 'k'.
 
+functions {
+  // from example by Christiaan van Dorp [https://tbz533.blogspot.com/2019/07/neat-encoding-of-censored-data-in-stan.html]
+    real censored_normal_lpdf(real x, real mu, real sigma, int cc) {
+        real ll;
+        if ( cc == 0 ) { // uncensored
+            ll = normal_lpdf(x | mu, sigma);
+        } else if ( cc == 1 ) { // left-censored
+            ll = normal_lcdf(x | mu, sigma);
+        } else if ( cc == 2 ) { // right-censored
+            ll = normal_lccdf(x | mu, sigma);
+        } else if ( cc == 3 ) { // missing data
+            ll = 0.0;
+        } else { // any other censoring code is invalid
+            reject("invalid censoring code in censored_normal_lpdf");
+        }
+        return ll;
+    }
+}
+
 data {
   int<lower=1> k; // number of observations
   vector[k] sum_forcing; // observations
+  int<lower=0, upper=3> censorship[k]; // censorship code (0 uncensored, 1 left, 2 right, 3 no flowering obs)
   
   real<lower=0> mu_mean; // mean for prior on overall mean
   real<lower=0> mu_sigma; // sigma for prior on overall mean (measurement variability)
@@ -108,7 +128,7 @@ transformed parameters {
 // and standard deviation 'sigma'.
 model {
   // prior model
-  
+  real sftrue[k];
   sigma ~ exponential(1);
   // these are half normals
   sigma_site ~ normal(0, 5);
@@ -139,14 +159,25 @@ model {
   
   mu ~ normal(mu_mean, mu_sigma);
   
-  // sum_forcing ~ normal(mu + alpha_site[Site] + alpha_year[Year] + alpha_prov[Provenance] +
+  // sum_forcing ~ normal(mu + alpha_site[Site] + alpha_year[Year] +  alpha_prov[Provenance] +
   // (mu_clone + z_alpha_clone[Clone] * sigma_clone),
   // sigma);
-  sum_forcing ~ normal(mu + alpha_site[Site] + alpha_year[Year] +  alpha_prov[Provenance] +
-  (mu_clone + z_alpha_clone[Clone] * sigma_clone),
-  sigma);
+  
+  for (n in 1:k) {
+    sftrue[n] = mu + alpha_site[Site[n]] + alpha_year[Year[n]] +  alpha_prov[Provenance[n]] +
+  (mu_clone + z_alpha_clone[Clone[n]] * sigma_clone);
+    sum_forcing[n] ~ censored_normal(sftrue[n], sigma, censorship[n]);
+  }
+  
+
   
   //sum_forcing ~ normal(mu + alpha_site[Site] + alpha_year[Year] + alpha_prov[Provenance] + alpha_clone[Clone], sigma);
+  
+//   model {
+//     for ( n in 1:N ) {
+//         Observations[n] ~ censored_normal(mu, sigma, CensorCodes[n]);
+//     }
+// }
 }
 
 
@@ -154,12 +185,10 @@ model {
 generated quantities {
   real sum_forcing_rep[k];
   
-  // reconstruct partially non-centered parameters
+  // reconstruct non-centered parameters
   vector[k_Clone] alpha_clone;
- // vector[k_Year] alpha_year;
 
   alpha_clone = mu_clone + z_alpha_clone * sigma_clone;
-  //alpha_year = mu_year + z_alpha_year * sigma_year;
   
   { // Don't save tempvars
   for (i in 1:k)
