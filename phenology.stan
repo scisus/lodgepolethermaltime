@@ -6,6 +6,7 @@
 
 // The input data is a vector 'y' of length 'k'.
 
+
 data {
   int<lower=1> k; // number of observations
   vector[k] sum_forcing; // observations
@@ -161,7 +162,7 @@ generated quantities {
   alpha_clone = mu_clone + z_alpha_clone * sigma_clone;
   //alpha_year = mu_year + z_alpha_year * sigma_year;
   
-  { // Don't save tempvars
+  { 
   for (i in 1:k)
   sum_forcing_rep[i] = normal_rng(mu + alpha_site[Site[i]] + alpha_year[Year[i]] + alpha_prov[Provenance[i]] + alpha_clone[Clone[i]]
   , sigma);
