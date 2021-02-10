@@ -34,6 +34,7 @@ medat$i <- 1:nrow(medat)
 # create a dataframe of retrodictions with associated Site, Provenance, Clone, and Year information
 
 retro.fb <-retrodict(modelfile = '2021-01-19FEMALE_begin.rds', dat=fbdat, climate=clim)
+#write.csv(retro.fb, "retrodictions/retrofb.csv", row.names = FALSE, col.names = TRUE)
 retro.fe <- retrodict(modelfile = '2021-01-19FEMALE_end.rds', dat=fedat, climate=clim)
 retro.mb <- retrodict(modelfile = '2021-01-19MALE_begin.rds', dat=mbdat, climate=clim)
 retro.me <- retrodict(modelfile = '2021-01-19MALE_end.rds', dat=medat, climate=clim)
