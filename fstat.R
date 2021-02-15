@@ -1,109 +1,105 @@
-# calculate f statistics
+# calculate f statistics for data and model
 # 
 library(dplyr)
 
-# read in retrodictions
-retro.fb <- read.csv("retrodictions/retrofb.csv", header=TRUE)
-
-# filter out obs
-obs <- dplyr::select(retro.fb, i, sum_forcing, DoY, Site, Year, Provenance, Clone) %>% 
-    distinct()
-
-
-# calculate f statistics for factors in a dataset
-calc_f_obs <- function(df, sum_forcing, factor_id) {
+# functions ########
+# calculate f statistics for factors in a dataset - requires observations ("y") and a factor ("factor_id") that are columns in a dataframe "df"
+calc_f_stat <- function(df, y, factor_id) {
   
-  sum_forcing <- df[[sum_forcing]]
+  y <- df[[y]]
   factor_id <- df[[factor_id]]
   
-  assertthat::are_equal(length(sum_forcing), length(factor_id))
+  assertthat::are_equal(length(y), length(factor_id))
   
-  groupmeans <- tapply(sum_forcing, factor_id, mean)
-  assertthat::assert_that(!any(is.na(groupmeans)), msg = "One of the group means is NA") # no means are NA
+  groupmeans <- tapply(y, factor_id, mean)
+  assertthat::assert_that(!any(is.na(groupmeans)), msg = "One of the group means is NA - something is wrong")
   
-  groupsds <- tapply(sum_forcing, factor_id, sd)
-  assertthat::assert_that(!any(is.na(groupsds)), msg = "One of the group sds is NA - check your sample sizes")
-                          
-  grandmean <- mean(sum_forcing)
-  n_group <- tapply(sum_forcing, factor_id, length)
+  groupsds <- tapply(y, factor_id, sd)
+  if (any(is.na(groupsds))) { print("One or more of the group sds is NA - check your sample sizes") } # no means are NA
+  
+  grandmean <- mean(y)
+  n_group <- tapply(y, factor_id, length)
   k_group <- length(n_group)
-  n_tot <- length(sum_forcing)
+  n_tot <- length(y)
   
   between <- sum(n_group * (groupmeans - grandmean)^2) / (k_group - 1)
   within <- sum(groupsds^2 * (n_group - 1)) / (n_tot - k_group)
   
-  fobs <- between/within
-  return(fobs)
+  fstat <- between/within
+  return(fstat)
 }
 
-# calculate f statistic for factors for each iteration of a dataset within a model
-calc_f_mod <- function(splitlist, factor_id, y) {
-  purrr::map(splitlist, .f = calc_f_obs, sum_forcing = y, factor_id = factor_id) %>%
-    dplyr::bind_cols() %>%
-    tidyr::pivot_longer(cols = everything(), names_to = ".draw", values_to = factor_id)
+# calculate site, provenance, and year f_statistic for a Site, Provenance, Year, and Clone factors in dataset (df) with observations (y)
+calc_f_facs <- function(df, y) {
+  fsite <- calc_f_stat(df, y, "Site")
+  fprov <- calc_f_stat(df, y, "Provenance")
+  fyear <- calc_f_stat(df, y, "Year")
+  # fclone <- calc_f_stat(df, y, "Clone") #sd is infinite where clone only observed once and fstat cannot be calculated for this factor
+  
+  fstat <- data.frame(Site = fsite, Provenance = fprov, Year = fyear)
+  return(fstat)
 }
-####
 
-# fstat forcing obs ########
-fsite <- calc_f_obs(obs, "sum_forcing", "Site")
-fprov <- calc_f_obs(obs, "sum_forcing", "Provenance")
-fyear <- calc_f_obs(obs, "sum_forcing", "Year")
-fclone <- calc_f_obs(obs, "sum_forcing", "Clone") #sd is infinite where clone only observed once and fstat cannot be calculated for this factor
+# MCMC draws from stan produce estimates for the entire dataset at each iteration. For each draw of a dataset within a model, calculate the fstatistic factors Site, Provenance, and Year
 
-fobs <- list(Site = fsite, Provenance = fprov, Year = fyear, Clone = fclone)
-fobs
+calc_f_draws <- function(splitlist, y) {
+  
+  fstat_frame <-  splitlist %>% 
+    purrr::map(.f = calc_f_facs, y = y) %>%
+    dplyr::bind_rows(.id = ".draw")
+  
+  return(fstat_frame)
+}
 
 
-# fstat forcing model #########
+# data #########
 
+# read in retrodictions
+retro.fb <- read.csv("retrodictions/retrofb.csv", header=TRUE)
+
+# filter for observations only
+obs <- dplyr::select(retro.fb, i, sum_forcing, DoY, Site, Year, Provenance, Clone) %>% 
+    distinct()
+
+facs <- c("Site", "Provenance", "Year", "Clone")
+
+
+# fstats for observations ########
+# 
+
+fstat_obs_forcing <- calc_f_facs(obs, "sum_forcing")
+fstat_obs_day <- calc_f_facs(obs, "DoY")
+
+fstat_obs <- rbind(fstat_obs_forcing, fstat_obs_day)
+fstat_obs$y <- c("Sum Forcing", "Day of Year")
+
+fstat_obs <- tidyr::pivot_longer(fstat_obs, cols = any_of(facs), names_to = "factors", values_to = "F_statistic") 
+
+
+# fstats for models #########
+# 
 # split retrodictions df into a list by draws - fstatistic should be calculated for the full "dataset" at each draw of the model
-retrosplit <- retro.fb %>%
+retrosplit <- retro.fb %>% #this object is needed only temporarily
   split(.$.draw) 
 
-fmods <- list()
-fmods$Site <- calc_f_mod(retrosplit, "Site", y = "sum_forcing_rep")
-fmods$Provenance <- calc_f_mod(retrosplit, "Provenance", y = "sum_forcing_rep")
-fmods$Year <- calc_f_mod(retrosplit, "Year", y = "sum_forcing_rep")
+fstat_mod_forcing <- calc_f_draws(retrosplit, "sum_forcing_rep")
 
-fmods <- cbind(fmods$Site, Provenance = fmods$Provenance$Provenance, Year = fmods$Year$Year)
+fstat_mod_doy <- calc_f_draws(retrosplit, "doy_rep")
 
-ggplot(fmods, aes(x = Site)) +
+# figures ########
+
+fstat_forcing_long <- fstat_mod_forcing %>%
+  tidyr::pivot_longer(cols = any_of(facs), names_to = "factors", values_to = "F_statistic") 
+fstat_forcing_long$y <- "Sum Forcing"
+
+fstat_doy_long <- fstat_mod_doy %>%
+  tidyr::pivot_longer(cols = any_of(facs), names_to = "factors", values_to = "F_statistic") 
+fstat_doy_long$y <- "Day of Year"
+
+fstat_mod <- rbind(fstat_forcing_long, fstat_doy_long)
+
+ggplot(fstat_mod, aes(x= F_statistic)) +
   geom_histogram(bins = 50) +
-  geom_vline(xintercept = fobs$Site)
+  facet_grid(factors ~ y, scales = "free_x") +
+  geom_vline(data = fstat_obs, aes(xintercept = F_statistic))
 
-ggplot(fmods, aes(x = Provenance)) + 
-  geom_histogram(bins = 50) +
-  geom_vline(xintercept = fobs$Provenance)
-
-ggplot(fmods, aes(x = Year)) +
-  geom_histogram(bins = 50) +
-  geom_vline(xintercept = fobs$Year)
-
-# fstat day obs ########
-fsite <- calc_f_obs(obs, "DoY", "Site")
-fprov <- calc_f_obs(obs, "DoY", "Provenance")
-fyear <- calc_f_obs(obs, "DoY", "Year")
-fclone <- calc_f_obs(obs, "DoY", "Clone") #sd is infinite where clone only observed once and fstat cannot be calculated for this factor
-
-fobs <- list(Site = fsite, Provenance = fprov, Year = fyear, Clone = fclone)
-fobs
-
-# fstat day mod ##########
-fmods <- list()
-fmods$Site <- calc_f_mod(retrosplit, "Site", y = "doy_rep")
-fmods$Provenance <- calc_f_mod(retrosplit, "Provenance", y="doy_rep")
-fmods$Year <- calc_f_mod(retrosplit, "Year", y = "doy_rep")
-
-fmods <- cbind(fmods$Site, Provenance = fmods$Provenance$Provenance, Year = fmods$Year$Year)
-
-ggplot(fmods, aes(x = Site)) +
-  geom_histogram(bins = 50) +
-  geom_vline(xintercept = fobs$Site)
-
-ggplot(fmods, aes(x = Provenance)) + 
-  geom_histogram(bins = 50) +
-  geom_vline(xintercept = fobs$Provenance)
-
-ggplot(fmods, aes(x = Year)) +
-  geom_histogram(bins = 50) +
-  geom_vline(xintercept = fobs$Year)
