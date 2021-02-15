@@ -9,73 +9,101 @@ retro.fb <- read.csv("retrodictions/retrofb.csv", header=TRUE)
 obs <- dplyr::select(retro.fb, i, sum_forcing, DoY, Site, Year, Provenance, Clone) %>% 
     distinct()
 
-# calculate f statistic for observation factor
-# 
-apply(iris[,1:4],2,function(x) tapply(x,iris$Species,mean)) #group means
-apply(obs[,2], 2, function(x) tapply(x, obs$Site, mean))
 
-# This correctly calculates the fstatistic for the observations
-groupmeans <- tapply(obs$sum_forcing, obs$Site, mean)
-groupsds <- tapply(obs$sum_forcing, obs$Site, sd)
-grandmean <- mean(obs$sum_forcing)
-n_group <- tapply(obs$sum_forcing, obs$Site, length)
-k_group <- length(n_group)
-n_tot <- nrow(obs)
-#####
+# calculate f statistics for factors in a dataset
+calc_f_obs <- function(df, sum_forcing, factor_id) {
+  
+  sum_forcing <- df[[sum_forcing]]
+  factor_id <- df[[factor_id]]
+  
+  assertthat::are_equal(length(sum_forcing), length(factor_id))
+  
+  groupmeans <- tapply(sum_forcing, factor_id, mean)
+  assertthat::assert_that(!any(is.na(groupmeans)), msg = "One of the group means is NA") # no means are NA
+  
+  groupsds <- tapply(sum_forcing, factor_id, sd)
+  assertthat::assert_that(!any(is.na(groupsds)), msg = "One of the group sds is NA - check your sample sizes")
+                          
+  grandmean <- mean(sum_forcing)
+  n_group <- tapply(sum_forcing, factor_id, length)
+  k_group <- length(n_group)
+  n_tot <- length(sum_forcing)
+  
+  between <- sum(n_group * (groupmeans - grandmean)^2) / (k_group - 1)
+  within <- sum(groupsds^2 * (n_group - 1)) / (n_tot - k_group)
+  
+  fobs <- between/within
+  return(fobs)
+}
 
-between <- sum(n_group * (groupmeans - grandmean)^2) / (k_group - 1)
-within <- sum(groupsds^2 * (n_group - 1)) / (n_tot - k_group)
+# calculate f statistic for factors for each iteration of a dataset within a model
+calc_f_mod <- function(splitlist, factor_id, y) {
+  purrr::map(splitlist, .f = calc_f_obs, sum_forcing = y, factor_id = factor_id) %>%
+    dplyr::bind_cols() %>%
+    tidyr::pivot_longer(cols = everything(), names_to = ".draw", values_to = factor_id)
+}
+####
 
-fobs <- between/within
-apply(iris[,1:4],2,mean) #grand means 
+# fstat forcing obs ########
+fsite <- calc_f_obs(obs, "sum_forcing", "Site")
+fprov <- calc_f_obs(obs, "sum_forcing", "Provenance")
+fyear <- calc_f_obs(obs, "sum_forcing", "Year")
+fclone <- calc_f_obs(obs, "sum_forcing", "Clone") #sd is infinite where clone only observed once and fstat cannot be calculated for this factor
+
+fobs <- list(Site = fsite, Provenance = fprov, Year = fyear, Clone = fclone)
+fobs
 
 
-samplestats <- iris %>%
-  group_by(Species) %>%
-  summarise(sitemeans = mean(Sepal.Length), sitesd = sd(Sepal.Length), n = n())
+# fstat forcing model #########
 
-grandmean <- mean(iris$Sepal.Length)
+# split retrodictions df into a list by draws - fstatistic should be calculated for the full "dataset" at each draw of the model
+retrosplit <- retro.fb %>%
+  split(.$.draw) 
 
-between_group <- sum(samplestats$n * (samplestats$sitemeans - grandmean)^2) / (nrow(samplestats) - 1) 
+fmods <- list()
+fmods$Site <- calc_f_mod(retrosplit, "Site", y = "sum_forcing_rep")
+fmods$Provenance <- calc_f_mod(retrosplit, "Provenance", y = "sum_forcing_rep")
+fmods$Year <- calc_f_mod(retrosplit, "Year", y = "sum_forcing_rep")
 
-samplestats <- obs %>%
-    group_by(Site) %>%
-    summarise(sitemeans = mean(sum_forcing), sitesd = sd(sum_forcing), n = n())
+fmods <- cbind(fmods$Site, Provenance = fmods$Provenance$Provenance, Year = fmods$Year$Year)
 
-grandmean <- mean(obs$sum_forcing)
+ggplot(fmods, aes(x = Site)) +
+  geom_histogram(bins = 50) +
+  geom_vline(xintercept = fobs$Site)
 
-between_group <- sum(samplestats$n * (samplestats$sitemeans - grandmean)^2) / (nrow(samplestats) - 1) #mean square group
-within_group <- sum(samplestats$sitesd^2 * (samplestats$n - 1)) / (nrow(obs) - nrow(samplestats))
+ggplot(fmods, aes(x = Provenance)) + 
+  geom_histogram(bins = 50) +
+  geom_vline(xintercept = fobs$Provenance)
 
-f_obs <- between_group/within_group    
+ggplot(fmods, aes(x = Year)) +
+  geom_histogram(bins = 50) +
+  geom_vline(xintercept = fobs$Year)
 
-# calculate f statistic for modeled factor
+# fstat day obs ########
+fsite <- calc_f_obs(obs, "DoY", "Site")
+fprov <- calc_f_obs(obs, "DoY", "Provenance")
+fyear <- calc_f_obs(obs, "DoY", "Year")
+fclone <- calc_f_obs(obs, "DoY", "Clone") #sd is infinite where clone only observed once and fstat cannot be calculated for this factor
 
-modelstats <- retro.fb %>%
-  group_by(.draw, Site) %>%
-  summarise(sitemeans = mean(sum_forcing_rep), sitesd = sd(sum_forcing_rep), n = n())
+fobs <- list(Site = fsite, Provenance = fprov, Year = fyear, Clone = fclone)
+fobs
 
-grandmeanmodel <- retro.fb %>%
-  group_by(.draw) %>%
-  summarize(grandmean = mean(sum_forcing_rep))
+# fstat day mod ##########
+fmods <- list()
+fmods$Site <- calc_f_mod(retrosplit, "Site", y = "doy_rep")
+fmods$Provenance <- calc_f_mod(retrosplit, "Provenance", y="doy_rep")
+fmods$Year <- calc_f_mod(retrosplit, "Year", y = "doy_rep")
 
-f_mod <- modelstats %>%
-  left_join(grandmeanmodel) %>%
-  mutate(sqdiffs = (n * (sitemeans - grandmean)^2), sqsds = sitesd^2 * (n-1)) %>%
-  group_by(.draw) %>%
-  summarise(between_group = sum(sqdiffs)/(n() - 1), within_group = sum(sqdiffs)/(nrow(obs) - n())) %>%
-  mutate(f_mod = between_group/within_group)
+fmods <- cbind(fmods$Site, Provenance = fmods$Provenance$Provenance, Year = fmods$Year$Year)
 
-ggplot(f_mod, aes(x=.draw, y=f_mod)) +
-  geom_point()
+ggplot(fmods, aes(x = Site)) +
+  geom_histogram(bins = 50) +
+  geom_vline(xintercept = fobs$Site)
 
-ggplot(modelstats, aes(x=sitemeans)) +
-  geom_histogram() + 
-  facet_wrap("Site")
+ggplot(fmods, aes(x = Provenance)) + 
+  geom_histogram(bins = 50) +
+  geom_vline(xintercept = fobs$Provenance)
 
-ggplot(modelstats, aes(x=sitesd)) +
-  geom_histogram() +
-  facet_wrap("Site")
-
-ggplot(grandmeanmodel, aes(x = grandmean)) + 
-  geom_histogram()
+ggplot(fmods, aes(x = Year)) +
+  geom_histogram(bins = 50) +
+  geom_vline(xintercept = fobs$Year)
