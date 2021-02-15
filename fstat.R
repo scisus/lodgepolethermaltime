@@ -51,6 +51,40 @@ calc_f_draws <- function(splitlist, y) {
   return(fstat_frame)
 }
 
+# calculate f_statistics on the observations for both sum forcing and doy and format data into a tidy dataframe
+calculate_fstat_obs <- function(obs) {
+  fstat_obs_forcing <- calc_f_facs(obs, "sum_forcing")
+  fstat_obs_day <- calc_f_facs(obs, "DoY")
+  
+  fstat_obs <- rbind(fstat_obs_forcing, fstat_obs_day)
+  fstat_obs$y <- c("Sum Forcing", "Day of Year")
+  
+  fstat_obs <- tidyr::pivot_longer(fstat_obs, cols = any_of(facs), names_to = "factors", values_to = "F_statistic")
+  return(fstat_obs)
+}
+
+# calculate f_statistics on the model output for both sum forcing and doy and format data into a tidy dataframe
+calculate_fstat_mod <- function(retrodictions) {
+  retrosplit <- retrodictions %>% #this object is needed only temporarily
+    split(.$.draw) 
+  
+  fstat_mod_forcing <- calc_f_draws(retrosplit, "sum_forcing_rep")
+  
+  fstat_mod_doy <- calc_f_draws(retrosplit, "doy_rep")
+  
+  fstat_forcing_long <- fstat_mod_forcing %>%
+    tidyr::pivot_longer(cols = any_of(facs), names_to = "factors", values_to = "F_statistic") 
+  fstat_forcing_long$y <- "Sum Forcing"
+  
+  fstat_doy_long <- fstat_mod_doy %>%
+    tidyr::pivot_longer(cols = any_of(facs), names_to = "factors", values_to = "F_statistic") 
+  fstat_doy_long$y <- "Day of Year"
+  
+  fstat_mod <- rbind(fstat_forcing_long, fstat_doy_long)
+  
+  return(fstat_mod)
+}
+
 
 # data #########
 
@@ -58,7 +92,7 @@ calc_f_draws <- function(splitlist, y) {
 retro.fb <- read.csv("retrodictions/retrofb.csv", header=TRUE)
 
 # filter for observations only
-obs <- dplyr::select(retro.fb, i, sum_forcing, DoY, Site, Year, Provenance, Clone) %>% 
+obs.fb <- dplyr::select(retro.fb, i, sum_forcing, DoY, Site, Year, Provenance, Clone) %>% 
     distinct()
 
 facs <- c("Site", "Provenance", "Year", "Clone")
@@ -67,39 +101,18 @@ facs <- c("Site", "Provenance", "Year", "Clone")
 # fstats for observations ########
 # 
 
-fstat_obs_forcing <- calc_f_facs(obs, "sum_forcing")
-fstat_obs_day <- calc_f_facs(obs, "DoY")
 
-fstat_obs <- rbind(fstat_obs_forcing, fstat_obs_day)
-fstat_obs$y <- c("Sum Forcing", "Day of Year")
 
-fstat_obs <- tidyr::pivot_longer(fstat_obs, cols = any_of(facs), names_to = "factors", values_to = "F_statistic") 
-
+fstat_obs <- calculate_fstat_obs(obs.fb)
 
 # fstats for models #########
-# 
-# split retrodictions df into a list by draws - fstatistic should be calculated for the full "dataset" at each draw of the model
-retrosplit <- retro.fb %>% #this object is needed only temporarily
-  split(.$.draw) 
 
-fstat_mod_forcing <- calc_f_draws(retrosplit, "sum_forcing_rep")
-
-fstat_mod_doy <- calc_f_draws(retrosplit, "doy_rep")
-
+fstat_mod <- calculate_fstat_mod(retro.fb)
 # figures ########
 
-fstat_forcing_long <- fstat_mod_forcing %>%
-  tidyr::pivot_longer(cols = any_of(facs), names_to = "factors", values_to = "F_statistic") 
-fstat_forcing_long$y <- "Sum Forcing"
-
-fstat_doy_long <- fstat_mod_doy %>%
-  tidyr::pivot_longer(cols = any_of(facs), names_to = "factors", values_to = "F_statistic") 
-fstat_doy_long$y <- "Day of Year"
-
-fstat_mod <- rbind(fstat_forcing_long, fstat_doy_long)
 
 ggplot(fstat_mod, aes(x= F_statistic)) +
   geom_histogram(bins = 50) +
-  facet_grid(factors ~ y, scales = "free_x") +
+  facet_grid(factors ~ y, scales = "free") +
   geom_vline(data = fstat_obs, aes(xintercept = F_statistic))
 
