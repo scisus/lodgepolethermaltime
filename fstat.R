@@ -1,6 +1,9 @@
 # calculate f statistics for data and model
 # 
 library(dplyr)
+library(ggplot2)
+
+options(dplyr.summarise.inform = FALSE) # prevent dplyr from printing thousands of messages
 
 # functions ########
 # calculate f statistics for factors in a dataset - requires observations ("y") and a factor ("factor_id") that are columns in a dataframe "df"
@@ -121,4 +124,45 @@ ggplot(fstat_mod, aes(x= F_statistic)) +
   geom_histogram(bins = 50) +
   facet_grid(factors ~ y, scales = "free") +
   geom_vline(data = fstat_obs, aes(xintercept = F_statistic))
+
+# level means ########
+
+# plot level means of y (an outcome) calculated from the data (observations df with factor and y column) and for each draw in the model (mcmc dataframe with .draw, factor, and y_rep column). 
+plot_level_means <- function(retrodictions, observations, fac, y, y_rep) {
+  
+retro.fb.means <- retrodictions %>%
+    dplyr::group_by(.draw, {{fac}}) %>%
+    dplyr::summarise("{{y}}" := mean({{y_rep}}))
+  
+  obs.fb.means <- observations %>%
+    dplyr::group_by({{fac}}) %>%
+    dplyr::summarise("{{y}}" := mean({{y}}))
+  
+  plot <- ggplot(retro.fb.means, aes(x = {{y}})) +
+    geom_histogram(bins = 50) +
+    facet_wrap(vars({{fac}}), scales = "free_y") +
+    geom_vline(data = obs.fb.means, aes(xintercept = {{y}})) +
+    theme_bw() +
+    ggtitle(label = paste("Mean of", substitute(fac), "factor levels"), subtitle = "data is vertical line, model is distribution")
+  
+  print(plot)
+}
+
+#forcing
+
+
+plot_level_means(retro.fb, obs.fb, Site, sum_forcing, sum_forcing_rep)
+plot_level_means(retro.fb, obs.fb, Provenance, sum_forcing, sum_forcing_rep)
+plot_level_means(retro.fb, obs.fb, Year, sum_forcing, sum_forcing_rep)
+
+clonesample <- sample(unique(obs.fb$Clone), 20)
+plot_level_means(filter(retro.fb, Clone %in% clonesample), filter(obs.fb, Clone %in% clonesample), Clone, sum_forcing, sum_forcing_rep)
+
+#doy
+plot_level_means(retro.fb, obs.fb, Site, DoY, doy_rep)
+plot_level_means(retro.fb, obs.fb, Provenance,DoY, doy_rep)
+plot_level_means(retro.fb, obs.fb, Year,  DoY, doy_rep)
+
+clonesample <- sample(unique(obs.fb$Clone), 20)
+plot_level_means(filter(retro.fb, Clone %in% clonesample), filter(obs.fb, Clone %in% clonesample), Clone,  DoY, doy_rep)
 
