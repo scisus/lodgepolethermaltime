@@ -107,17 +107,14 @@ obs.fb <- dplyr::select(retro.fb, i, sum_forcing, DoY, Site, Year, Provenance, C
 facs <- c("Site", "Provenance", "Year", "Clone")
 
 
-# fstats for observations ########
-# 
-
-
+## fstats for observations ########
 
 fstat_obs <- calculate_fstat_obs(obs.fb)
 
-# fstats for models #########
+## fstats for models #########
 
 fstat_mod <- calculate_fstat_mod(retro.fb)
-# figures ########
+## figures ########
 
 
 ggplot(fstat_mod, aes(x= F_statistic)) +
