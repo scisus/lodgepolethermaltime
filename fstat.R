@@ -34,9 +34,18 @@ calc_f_facs <- function(df, y) {
   fsite <- calc_f_stat(df, y, "Site")
   fprov <- calc_f_stat(df, y, "Provenance")
   fyear <- calc_f_stat(df, y, "Year")
-  # fclone <- calc_f_stat(df, y, "Clone") #sd is infinite where clone only observed once and fstat cannot be calculated for this factor
   
-  fstat <- data.frame(Site = fsite, Provenance = fprov, Year = fyear)
+  # sd is infinite when only one observation for a level exists. This is a problem for the fstat calculation for clones. so limit clone test to those clones with more than one observation.
+  clone_multiples <- df %>%
+    dplyr::group_by(Clone) %>%
+    dplyr::summarise(count = n()) %>%
+    dplyr::filter(count > 1) %>%
+    dplyr::select(Clone)
+  
+  dfclone <- dplyr::filter(df, Clone %in% clone_multiples$Clone)
+  fclone <- calc_f_stat(dfclone, y, "Clone") #sd is infinite where clone only observed once and fstat cannot be calculated for this factor
+  
+  fstat <- data.frame(Site = fsite, Provenance = fprov, Year = fyear, Clone = fclone)
   return(fstat)
 }
 
