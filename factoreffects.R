@@ -98,6 +98,29 @@ daypop <- add_delta_day(clim, daypop, "baseplussite", delta_day_site)
 daypop <- add_delta_day(clim, daypop, "baseplusprov", delta_day_prov)
 daypop <- add_delta_day(clim, daypop, "baseplusyear", delta_day_year)
 daypop <- add_delta_day(clim, daypop, "baseplusclone", delta_day_clone)
+
+# consider only m siteyear combinations
+daypop$SiteYear <- paste0(daypop$Site, daypop$Year)
+
+m = 30
+siteyearsample <- sample(unique(daypop$SiteYear), 30)
+daypop <- daypop %>%
+  dplyr::filter(SiteYear %in% siteyearsample)
+
+ggplot(daypop, aes(x=basedoy)) +
+  stat_histinterval() +
+  ggtitle("Baseline Day of Year")
+
+plot_day_shift <- function(df, fac, deltacol) {
+  
+  p <- ggplot(df, aes(x = {{deltacol}}, y = interaction(Site, Year))) +
+    stat_histinterval(alpha = 0.5) +
+    facet_wrap(fac)
+  print(p)
+}
+
+plot_day_shift(daypop, "Site", delta_day_site)
+plot_day_shift(daypop, "Provenance", delta_day_prov)
 ggplot(temp, aes(x = delta_prov_doy, y = Provenance)) +
   stat_histinterval(alpha = 0.5) +
   facet_wrap("Year")
