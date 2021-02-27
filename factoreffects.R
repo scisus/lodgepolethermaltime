@@ -36,67 +36,68 @@ fit %<>% recover_types(dat)
 basepars <- fit %>%
   tidybayes::spread_draws(mu, sigma, n=n, seed=seed)
 
-pars <- fit %>%
+poppars <- fit %>%
   tidybayes::spread_draws(alpha_site[Site], alpha_prov[Provenance], alpha_year[Year], alpha_clone[Clone], n = n, seed = seed) %>% # all factor combos
   dplyr::left_join(basepars)
 
-parsdat <- left_join(dat, pars) # only factor combos with data
+popparsdat <- left_join(dat, poppars) # only factor combos with data
 
-ggplot(parsdat, aes(x=mu)) +
+ggplot(popparsdat, aes(x=mu)) +
   stat_interval(.width = c(.90, 0.75, 0.5))
 
-ggplot(pars, aes(x=mu)) +
+ggplot(poppars, aes(x=mu)) +
   stat_histinterval(.width = c(0.90, 0.75, 0.5))
 
-pars$Site <- ordered(pars$Site, levels = matsite$Site)
-pars$Provenance <- ordered(pars$Provenance, levels = matprov$Provenance)
+poppars$Site <- ordered(poppars$Site, levels = matsite$Site)
+poppars$Provenance <- ordered(poppars$Provenance, levels = matprov$Provenance)
 
 basesd <- mean(basepars$sigma)
-ggplot(pars, aes(x = mu)) +
+ggplot(poppars, aes(x = mu)) +
   stat_histinterval(c()) 
 
-ggplot(pars, aes(x = alpha_site, y = Site, fill = stat(abs(x) < basesd))) +
+ggplot(poppars, aes(x = alpha_site, y = forcats::fct_rev(Site), fill = stat(abs(x) < basesd))) +
   stat_histinterval() +
   geom_vline(xintercept = c(-basesd, basesd), linetype = "dashed") +
   scale_fill_manual(values = c("gray80", "skyblue"))
 
-ggplot(pars, aes(x = alpha_prov, y = Provenance, fill = stat(abs(x) < basesd))) +
+ggplot(poppars, aes(x = alpha_prov, y = forcats::fct_rev(Provenance), fill = stat(abs(x) < basesd))) +
   stat_histinterval() +
   geom_vline(xintercept = c(-basesd, basesd), linetype = "dashed") +
   scale_fill_manual(values = c("gray80", "skyblue"))
 
-ggplot(pars, aes(x = alpha_year, y = Year, fill = stat(abs(x) < basesd))) +
+ggplot(poppars, aes(x = alpha_year, y = Year, fill = stat(abs(x) < basesd))) +
   stat_histinterval() +
   geom_vline(xintercept = c(-basesd, basesd), linetype = "dashed") +
   scale_fill_manual(values = c("gray80", "skyblue"))
 
 clonesample <- sample(unique(dat$Clone), 20)
-ggplot(filter(pars, Clone %in% clonesample), aes(x = alpha_clone, y = Clone, fill = stat(abs(x) < basesd))) +
+ggplot(filter(poppars, Clone %in% clonesample), aes(x = alpha_clone, y = Clone, fill = stat(abs(x) < basesd))) +
   stat_histinterval() +
   geom_vline(xintercept = c(-basesd, basesd), linetype = "dashed") +
   scale_fill_manual(values = c("gray80", "skyblue"))
 
-head(pars)
+head(poppars)
 
 # calculate delta_doy
-temp <- pars %>% 
-  mutate(baseplussite = alpha_site + mu, baseplusprov = alpha_prov + mu)
+daypop <- poppars %>% 
+  mutate(baseplussite = alpha_site + mu, baseplusprov = alpha_prov + mu, baseplusyear = alpha_year + mu, baseplusclone = alpha_clone + mu)
 
-temp <- forcing_to_doy(clim, temp, "sum_forcing", "baseplussite", "sitedoy")
-temp <- forcing_to_doy(clim, temp, "sum_forcing", "baseplusprov", "provdoy")
-temp <- forcing_to_doy(clim, temp, "sum_forcing", "mu", "basedoy")
+daypop <- forcing_to_doy(clim, daypop, "sum_forcing", "mu", "basedoy")
 
+#climdf must have "sum_forcing" column
+add_delta_day <- function(climdf, forcingdf, baseplus, deltacol) {
+  
+  daypop <- forcing_to_doy(climdf, forcingdf, "sum_forcing", baseplus, "doyplus") %>% # calculate day of year
+    mutate("{{deltacol}}" := doyplus - basedoy) %>% # calculate day of year difference
+    dplyr::select(-{{baseplus}}, -doyplus) # drop unneeded cols
+  
+  return(daypop)
+}
 
-temp <- temp %>%
-  mutate(delta_site_doy = basedoy - sitedoy, delta_prov_doy = basedoy - provdoy)
-
-ggplot(temp, aes(x=basedoy)) +
-  stat_histinterval()
-
-ggplot(temp, aes(x = delta_site_doy, y = Site)) +
-  stat_histinterval(alpha = 0.5) +
-  facet_wrap("Year")
-
+daypop <- add_delta_day(clim, daypop, "baseplussite", delta_day_site)
+daypop <- add_delta_day(clim, daypop, "baseplusprov", delta_day_prov)
+daypop <- add_delta_day(clim, daypop, "baseplusyear", delta_day_year)
+daypop <- add_delta_day(clim, daypop, "baseplusclone", delta_day_clone)
 ggplot(temp, aes(x = delta_prov_doy, y = Provenance)) +
   stat_histinterval(alpha = 0.5) +
   facet_wrap("Year")
