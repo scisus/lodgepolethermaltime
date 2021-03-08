@@ -173,4 +173,8 @@ generated quantities {
   , sigma);
   }
   
+  {
+  for (i in 1:k) 
+  log_lik[i] = normal_lpdf(sum_forcing[i] | mu  + alpha_siteyear[SiteYear[i]] + alpha_prov[Provenance[i]] + alpha_clone[Clone[i]], sigma);
+}
 }
