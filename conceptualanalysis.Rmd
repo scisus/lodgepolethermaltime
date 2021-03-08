@@ -280,33 +280,42 @@ phenbe <- rbind(male_begin, male_end, female_begin, female_end)
 #   tidyr::pivot_longer( cols=c("Year", "Site", "Provenance", "Clone"), names_to = "Factor", values_to = "Level")
 
 
-ggplot(phenbe, aes(x=Site)) +
+ggplot(phenbe, aes(x=forcats::fct_infreq(Site))) +
   geom_histogram(stat="count") +
   facet_grid(Sex ~ Side) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
 
-ggplot(phenbe, aes(x=Provenance)) +
+ggplot(phenbe, aes(x=forcats::fct_infreq(Provenance))) +
   geom_histogram(stat="count") +
   facet_grid(Sex ~ Side) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
 
-ggplot(phenbe, aes(x=Year)) +
+ggplot(phenbe, aes(x=forcats::fct_infreq(Year))) +
   geom_histogram(stat="count") +
   facet_grid(Sex ~ Side) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
 
-ggplot(phenbe, aes(x=Clone)) +
+ggplot(phenbe, aes(x=forcats::fct_infreq(Clone))) +
   geom_histogram(stat="count") +
   facet_grid(Sex ~ Side) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+
+ggplot(phenbe, aes(x = forcats::fct_infreq(interaction(Site, Year)))) +
+  geom_histogram(stat="count") +
+  facet_grid(Sex ~ Side) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+
 
 
 ```
 
-Looks like Clone, Orchard, and Site all need to have non-centering *within* factors. 
+Looks like Clone, Orchard, and Site all need to have non-centering *within* factors.
+
+If I include Site-Year, it will also need to have non-centering *within* factors - maybe cutoff around 50 or 60?
 
 - Site threshold: 250
 - Provenance threshold: 150
 - Clone threshold: 10
+- SiteYear threshold: 60
 
 Year *might* benefit from non-centering with a threshold around either 150 or 100
