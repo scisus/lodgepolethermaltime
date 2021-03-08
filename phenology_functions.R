@@ -37,13 +37,12 @@ select_data <- function(phendat, sex, event, keep_day = FALSE) {
       dplyr::select(sum_forcing, Site, Year, Provenance, Clone) 
   }
   
+  # add a column for Site_Year
+  phensub$SiteYear <- paste0(phensub$Site, phensub$Year)
+  
   return(phensub)
 }
 
-
-# set thresholds
-# - Site threshold: 250
-# - Provenance threshold: 150
 
 build_centering_index <- function(phensub, fac, threshold) {
   
@@ -75,11 +74,13 @@ fit_model <- function(phendat, sex, event, model = "phenology.stan", maxtreedept
   
   siteidx <- build_centering_index(phensub, "Site", 250)
   providx <- build_centering_index(phensub, "Provenance", 150)
-  yearidx <- build_centering_index(phensub, "Year", 150)
+#  yearidx <- build_centering_index(phensub, "Year", 150)
+ siteyearidx <- build_centering_index(phensub, "SiteYear", 100)
  # cloneidx <- build_centering_index(phensub, "Clone", 10)
   
   centering_indexes <- append(siteidx, providx) %>%
-    append(yearidx)
+    #append(yearidx) %>%
+    append(siteyearidx)
   
   # prepare data for stan
   
@@ -103,8 +104,9 @@ fit_model <- function(phendat, sex, event, model = "phenology.stan", maxtreedept
                                           sigma = rexp(1,1),
                                           sigma_site = rexp(1,1),
                                           sigma_year = rexp(1,1),
+                                          sigma_siteyear = rexp(1,1),
                                           sigma_prov = rexp(1,1),
-                                          sigma_clone = rexp(1,1))), 6),
+                                          sigma_clone = rexp(1,1))), 7),
                      control = list(max_treedepth = maxtreedepth, adapt_delta=0.8))
 
   # fit <- rstan::stan(file= model, chains=6, data=input, cores=7, 
