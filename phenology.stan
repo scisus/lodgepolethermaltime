@@ -1,8 +1,10 @@
 //
-// This Stan program defines  model, with a
+// This Stan program defines a phenology model, with a
 // vector of values 'sum_forcing' modeled as normally distributed
 // with mean 'mu' and standard deviation 'sigma'.
-//
+// Heterogenity is modeled with factors Site, Year, Site+Year, Provenance, and Clone.
+// Site, Site+Year, and Provenance are partially non-centered.
+// Clone is fully non-centered.
 
 // The input data is a vector 'y' of length 'k'.
 
