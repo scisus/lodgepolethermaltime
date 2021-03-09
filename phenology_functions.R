@@ -2,14 +2,14 @@
 # 
 
 # format data for model - only start and end dates
-filter_start_end <- function() {
+filter_start_end <- function(forcingname = "ristos") {
   
   phen <-  flowers::phenology %>% # phenology data
     filter(Phenophase_Derived==2) %>% # only include flowering days
     rename(state = Phenophase_Derived) 
 
   forcing <- read.csv("data/all_clim_PCIC.csv", header=TRUE, stringsAsFactors = FALSE) %>%
-      filter(forcing_type=="ristos") # only consider forcing units calculated based on work of Sarvas 1972
+      filter(forcing_type==forcingname) # ristos consider forcing units calculated based on work of Sarvas 1972
 
   spus <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv") %>%
       select(SPU_Name, Orchard) # provenance information for each orchard in phen
@@ -66,7 +66,7 @@ build_centering_index <- function(phensub, fac, threshold) {
 
 
 # Fit a model in Stan to phenology data, return the model fit object and save the model fit object to a file. Choose whether the model is for "MALE" or "FEMALE" strobili and whether the event is the "begin" or "end" of flowering. data is a dataframe of flowering data. id is an optional identifier appended to the file name.
-fit_model <- function(phendat, sex, event, model = "phenology.stan", maxtreedepth=10) {
+fit_model <- function(phendat, sex, event, model = "phenology.stan", maxtreedepth=10, appendname = NULL) {
   
   
   phensub <- select_data(phendat, sex, event)
@@ -112,7 +112,7 @@ fit_model <- function(phendat, sex, event, model = "phenology.stan", maxtreedept
   #                    control = list(max_treedepth = maxtreedepth))
   gc()
   
-  saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, ".rds", sep=''))
+  saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, "_", appendname, ".rds", sep=''))
   
   return(fit)
 }
