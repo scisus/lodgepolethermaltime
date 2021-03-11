@@ -37,7 +37,7 @@ llgdd <- loo::extract_log_lik(fbfitgdd, merge_chains = FALSE)
 # loo::waic(llseparate)
 # loo::waic(loo::extract_log_lik(fbfitgdd))
 
-loocombined <- loo::loo(llcombined, r_eff = relative_eff(exp(llcombined)), save_psis = TRUE, cores = 10)
+loocombined <- loo::loo(llcombined, r_eff = relative_eff(exp(llcombined)), save_psis = TRUE, cores = 10, moment_match = TRUE)
 looseparate <- loo::loo(llseparate, r_eff = relative_eff(exp(llseparate)), save_psis = TRUE, cores = 10)
 loogdd <- loo::loo(llgdd, r_eff = relative_eff(exp(llgdd)), save_psis = TRUE, cores = 10)
 
