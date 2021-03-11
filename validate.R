@@ -75,3 +75,16 @@ bayesplot::ppc_dens_overlay(dat$ristos, yrepseparate[sample(1:nrow(yrepseparate)
 bayesplot::ppc_dens_overlay(dat$gdd, yrepgdd[sample(1:nrow(yrepgdd), size = 500),]) + ggtitle("Separate - GDD")
 
 
+# r squared #######3
+r2combined <- rstantools::bayes_R2(yrepcombined, y=dat$ristos)
+r2separate <- rstantools::bayes_R2(yrepseparate, y=dat$ristos)
+r2gdd <- rstantools::bayes_R2(yrepgdd, y=dat$ristos)
+
+r2df <- data.frame(r2combined, r2separate, r2gdd) %>%
+  tidyr::pivot_longer(starts_with("r2"), names_to = "model", values_to = "r2")
+
+# combined model has best R2 by far
+ggplot(r2df, aes(x = r2, colour = model)) +
+  geom_density() +
+  ggtitle("Bayes R^2")
+
