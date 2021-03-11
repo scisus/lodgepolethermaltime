@@ -55,5 +55,17 @@ ggplot(loodat, aes(x=i, y=pareto_k, colour = Site)) +
   geom_hline(yintercept = c(0.5, 0.7), lty=2, colour = "darkgray") +
   facet_wrap("model")
 
+### loo PIT (probability interval transform) #######3
 
+parscombined <- fbfitcombined@model_pars
+yrepcombined <- rstan::extract(fbfitcombined, pars = 'sum_forcing_rep')$sum_forcing_rep %>% as.matrix()
+bayesplot::ppc_loo_pit_overlay(dat$ristos, yrepcombined, lw = weights(loocombined$psis_object)) + ggtitle("Combined - Ristos")
+
+parsseparate <- fbfitseparate@model_pars
+yrepseparate <- rstan::extract(fbfitseparate, pars = 'sum_forcing_rep')$sum_forcing_rep %>% as.matrix()
+bayesplot::ppc_loo_pit_overlay(dat$ristos, yrepseparate, lw = weights(looseparate$psis_object)) + ggtitle("Separate - Ristos")
+
+parsgdd <- fbfitgdd@model_pars
+yrepgdd <- rstan::extract(fbfitgdd, pars = 'sum_forcing_rep')$sum_forcing_rep %>% as.matrix()
+bayesplot::ppc_loo_pit_overlay(dat$gdd, yrepgdd, lw = weights(loogdd$psis_object)) + ggtitle("Separate - GDD")
 
