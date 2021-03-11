@@ -1,4 +1,4 @@
-# validate and compare models with loo and waic
+# validate and compare models with efficient approximate leave one out cross validation using pareto smoothed importance sampling
 
 library(rstan)
 library(loo)
