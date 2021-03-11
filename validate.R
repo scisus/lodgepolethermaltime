@@ -69,3 +69,9 @@ parsgdd <- fbfitgdd@model_pars
 yrepgdd <- rstan::extract(fbfitgdd, pars = 'sum_forcing_rep')$sum_forcing_rep %>% as.matrix()
 bayesplot::ppc_loo_pit_overlay(dat$gdd, yrepgdd, lw = weights(loogdd$psis_object)) + ggtitle("Separate - GDD")
 
+### y vs yrep ####
+bayesplot::ppc_dens_overlay(dat$ristos, yrepcombined[sample(1:nrow(yrepcombined), size = 500),]) + ggtitle("Combined - Ristos")
+bayesplot::ppc_dens_overlay(dat$ristos, yrepseparate[sample(1:nrow(yrepseparate), size = 500),]) + ggtitle("Separate - Ristos")
+bayesplot::ppc_dens_overlay(dat$gdd, yrepgdd[sample(1:nrow(yrepgdd), size = 500),]) + ggtitle("Separate - GDD")
+
+
