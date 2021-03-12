@@ -116,3 +116,55 @@ fit_model <- function(phendat, sex, event, model = "phenology.stan", maxtreedept
   
   return(fit)
 }
+
+# Fit a model in Stan to phenology data, return the model fit object and save the model fit object to a file. Choose whether the model is for "MALE" or "FEMALE" strobili and whether the event is the "begin" or "end" of flowering. data is a dataframe of flowering data. id is an optional identifier appended to the file name.
+prepare_data_for_stan <- function(phendat, sex, event, kfold = FALSE) {
+  
+
+  phensub <- select_data(phendat, sex, event)
+ 
+  # factor levels are very unbalanced, so I'm non-centering some levels
+  
+  siteidx <- build_centering_index(phensub, "Site", 250)
+  providx <- build_centering_index(phensub, "Provenance", 150)
+  yearidx <- build_centering_index(phensub, "Year", 150)
+  # cloneidx <- build_centering_index(phensub, "Clone", 10)
+  
+  centering_indexes <- append(siteidx, providx) %>%
+    append(yearidx)
+  
+  # prepare data for stan
+  
+  base_data <- tidybayes::compose_data(phensub, .n_name=tidybayes::n_prefix(prefix="k"))
+  
+  input <- append(base_data, centering_indexes)
+  
+  # add event-specific prior
+  if (event == "begin") {
+    input <- c(input, mu_mean=335, mu_sigma = 50)
+  } 
+  
+  if (event == "end") {
+    input <- c(input, mu_mean=555, mu_sigma = 90)
+  } 
+  
+  
+  fit <- rstan::stan(file= model, chains=6, data=input, iter=3500, cores=7,
+                     pars=c("alpha_ncp_site", "alpha_cp_site", "alpha_ncp_prov", "alpha_cp_prov", "z_alpha_clone"), include=FALSE,
+                     init = rep(list(list(mu = abs(rnorm(1,100,50)), # stop stan from sampling impossible negative numbers
+                                          sigma = rexp(1,1),
+                                          sigma_site = rexp(1,1),
+                                          sigma_year = rexp(1,1),
+                                          sigma_prov = rexp(1,1),
+                                          sigma_clone = rexp(1,1))), 6),
+                     control = list(max_treedepth = maxtreedepth, adapt_delta=0.8))
+  
+  # fit <- rstan::stan(file= model, chains=6, data=input, cores=7, 
+  #                    pars=c("alpha_ncp_site", "alpha_cp_site", "alpha_ncp_prov", "alpha_cp_prov", "z_alpha_clone"), include=FALSE, 
+  #                    control = list(max_treedepth = maxtreedepth))
+  gc()
+  
+  saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, "_", appendname, ".rds", sep=''))
+  
+  return(fit)
+}
