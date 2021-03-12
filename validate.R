@@ -97,4 +97,3 @@ ggplot(r2df, aes(x = r2, colour = model)) +
   geom_density() +
   ggtitle("Bayes R^2")
 
-# kfold validation ####
