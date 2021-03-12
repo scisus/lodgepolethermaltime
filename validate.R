@@ -42,7 +42,10 @@ dat$paretokseparate <- looseparate$diagnostics$pareto_k
 dat$paretokgdd <- loogdd$diagnostics$pareto_k
 
 loodat <- pivot_longer(dat, starts_with("pareto"), names_to = "model", values_to = "pareto_k") %>%
-  pivot_longer(cols = c("gdd", "ristos"), names_to = "forcingtype", values_to = "sum_forcing")
+  pivot_longer(cols = c("gdd", "ristos"), names_to = "forcingtype", values_to = "sum_forcing") %>%
+  filter(!(forcingtype == "ristos" & model == "paretokgdd")) %>%
+  filter(!(forcingtype == "gdd" & model == "paretokcombined")) %>%
+  filter(!(forcingtype == "gdd" & model == "paretokseparate"))
 
 ggplot(loodat, aes(x=i, y=pareto_k, colour = Site)) +
   geom_point(shape = 3) +
