@@ -38,8 +38,8 @@ loogdd <- rstan:loo(fbfitgdd, save_psis = TRUE, cores = 4)
 loo_compare(loocombined, looseparate, loogdd)
 
 dat$paretokcombined <-loocombined$diagnostics$pareto_k
-dat$paretoseparate <- looseparate$diagnostics$pareto_k
-dat$paretogdd <- loogdd$diagnostics$pareto_k
+dat$paretokseparate <- looseparate$diagnostics$pareto_k
+dat$paretokgdd <- loogdd$diagnostics$pareto_k
 
 loodat <- pivot_longer(dat, starts_with("pareto"), names_to = "model", values_to = "pareto_k") %>%
   pivot_longer(cols = c("gdd", "ristos"), names_to = "forcingtype", values_to = "sum_forcing")
