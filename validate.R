@@ -52,7 +52,19 @@ ggplot(loodat, aes(x=i, y=pareto_k, colour = Site)) +
   geom_hline(yintercept = c(0.5, 0.7), lty=2, colour = "darkgray") +
   facet_wrap("model")
 
-### loo PIT (probability interval transform) #######3
+### a closer look at "bad" points
+loodatbad <- dplyr::filter(loodat, pareto_k >= 0.7)
+view(loodatbad)
+
+loodatbad %>% group_by(i) %>%
+  summarise(occurs = n())
+# 3 points go wrong in more than one model
+
+ggplot(loodat, aes(x=sum_forcing, y=pareto_k, colour = pareto_k >=0.5)) +
+  geom_point(shape = 3) +
+  facet_wrap("model", scales = "free_x") 
+
+### loo PIT (probability interval transform) #######
 
 parscombined <- fbfitcombined@model_pars
 yrepcombined <- rstan::extract(fbfitcombined, pars = 'sum_forcing_rep')$sum_forcing_rep %>% as.matrix()
