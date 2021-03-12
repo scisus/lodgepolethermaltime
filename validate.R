@@ -22,24 +22,18 @@ dat <- filter_start_end(forcingname = "gdd") %>%
   full_join(ristodat) %>%
   rename(ristos = sum_forcing)
   
-  
-
 fbfitcombined <- readRDS('2021-03-03FEMALE_beginSY.rds')
 fbfitseparate <- readRDS('2021-03-09FEMALE_begin.rds')
 fbfitgdd <- readRDS('2021-03-09FEMALE_begin_gdd.rds')
 
-llcombined <- loo::extract_log_lik(fbfitcombined, merge_chains = FALSE) # pull log likelihoods for waic & loo calculations
-llseparate <- loo::extract_log_lik(fbfitseparate, merge_chains = FALSE)
-llgdd <- loo::extract_log_lik(fbfitgdd, merge_chains = FALSE)
+# loo calculations ##########
 
-# use loo instead, too many p_waic estimates > 0.5
-# loo::waic(llcombined) 
-# loo::waic(llseparate)
-# loo::waic(loo::extract_log_lik(fbfitgdd))
+# too many p_waic estimates > 0.5 to use waic
 
-loocombined <- loo::loo(llcombined, r_eff = relative_eff(exp(llcombined)), save_psis = TRUE, cores = 10, moment_match = TRUE)
-looseparate <- loo::loo(llseparate, r_eff = relative_eff(exp(llseparate)), save_psis = TRUE, cores = 10)
-loogdd <- loo::loo(llgdd, r_eff = relative_eff(exp(llgdd)), save_psis = TRUE, cores = 10)
+
+loocombined <- rstan::loo(fbfitcombined, save_psis = TRUE, cores = 4)
+looseparate <- rstan::loo(fbfitseparate, save_psis = TRUE, cores = 4)
+loogdd <- rstan:loo(fbfitgdd, save_psis = TRUE, cores = 4)
 
 loo_compare(loocombined, looseparate, loogdd)
 
