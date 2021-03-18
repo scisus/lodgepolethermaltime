@@ -2,13 +2,13 @@
 # 
 
 # format data for model - only start and end dates
-filter_start_end <- function(forcingname = "ristos") {
+filter_start_end <- function(forcingname = "ristos", clim = "data/all_clim_PCIC.csv") {
   
   phen <-  flowers::phenology %>% # phenology data
     filter(Phenophase_Derived==2) %>% # only include flowering days
     rename(state = Phenophase_Derived) 
 
-  forcing <- read.csv("data/all_clim_PCIC.csv", header=TRUE, stringsAsFactors = FALSE) %>%
+  forcing <- read.csv(clim, header=TRUE, stringsAsFactors = FALSE) %>%
       filter(forcing_type==forcingname) # ristos consider forcing units calculated based on work of Sarvas 1972
 
   spus <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv") %>%
