@@ -77,10 +77,11 @@ retrodict <- function(modelfile, dat, climate) {
   return(retrodiction)
 }
 
+
 # calculate HPDIs for each group, determine Day of Year associated with HPDIs, and calculate whether group observations are within intervals for day and sum_forcing
-intervalate <- function(retrodictions, climate, dat) {
+intervalate <- function(retrodictions, climate, dat, group = i) {
   intervals <- retrodictions %>%
-    group_by(i) %>%
+    group_by({{group}}) %>%
     median_hdi(sum_forcing_rep, .width=c(0.50, 0.75, 0.90)) %>%
     rename(sum_forcing_rep_median = sum_forcing_rep) %>%
     full_join(dat) 
