@@ -88,4 +88,44 @@ ggplot(r2df, aes(x = r2, colour = model)) +
   geom_density() +
   ggtitle("Bayes R^2")
 
+# kfold validation ####
+# kfold validation ####
+# 
 
+#roaches$fold <- kfold_split_random(K = 10, N = nrow(roaches))
+phenbe <- filter_start_end()
+dat <- select_data(phenbe, "FEMALE", "begin", keep_day = TRUE) 
+group <- group_by(dat, Site, Year, Provenance) %>% group_indices()
+dat$fold <- loo::kfold_split_stratified(K = 10, x = group)
+
+# Prepare a matrix with the number of post-warmup iterations by number of observations:
+log_pd_kfold <- matrix(nrow = 1750, ncol = nrow(dat))
+
+# Loop over the folds
+
+# training data set - exclude fold # k
+data_train <- dat[dat$fold != k]
+data_test <- dat[dat$fold == k]
+for(k in 1:10){
+  data_train <- list(y = roaches$y[roaches$fold != k],
+                     x = as.matrix(roaches[roaches$fold != k,
+                                           c("roach1", "treatment", "senior")]),
+                     N = nrow(roaches[roaches$fold != k,]),
+                     K = 3,
+                     offset = roaches$offset[roaches$fold != k],
+                     beta_prior_scale = 2.5,
+                     alpha_prior_scale = 5.0
+  )
+  data_test <- list(y = roaches$y[roaches$fold == k],
+                    x = as.matrix(roaches[roaches$fold == k,
+                                          c("roach1", "treatment", "senior")]),
+                    N = nrow(roaches[roaches$fold == k,]),
+                    K = 3,
+                    offset = roaches$offset[roaches$fold == k],
+                    beta_prior_scale = 2.5,
+                    alpha_prior_scale = 5.0
+  )
+  fit <- sampling(stanmodel, data = data_train, seed = seed, refresh = 0)
+  gen_test <- gqs(stanmodel, draws = as.matrix(fit), data= data_test)
+  log_pd_kfold[, roaches$fold == k] <- extract_log_lik(gen_test)
+}
