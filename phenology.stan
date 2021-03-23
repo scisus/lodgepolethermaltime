@@ -151,9 +151,9 @@ model {
 }
 
 
-// Simulate a full observation from the current value of the parameters
+// Simulate a full observation and the log likelihood from the current value of the parameters
 generated quantities {
-  real sum_forcing_rep[k];
+ real sum_forcing_rep[k];
   vector[k] log_lik;
   
   // reconstruct partially non-centered parameters
@@ -163,12 +163,13 @@ generated quantities {
   alpha_clone = mu_clone + z_alpha_clone * sigma_clone;
   //alpha_year = mu_year + z_alpha_year * sigma_year;
   
+  //yrep
   { 
   for (i in 1:k)
   sum_forcing_rep[i] = normal_rng(mu + alpha_site[Site[i]] + alpha_year[Year[i]] + alpha_prov[Provenance[i]] + alpha_clone[Clone[i]]
   , sigma);
   }
-  
+  //ll
   {
   for (i in 1:k) 
   log_lik[i] = normal_lpdf(sum_forcing[i] | mu  + alpha_site[Site[i]] + alpha_year[Year[i]] + alpha_prov[Provenance[i]] + alpha_clone[Clone[i]], sigma);
