@@ -7,6 +7,7 @@
 // The input data is a vector 'y' of length 'k'.
 // Heterogeneity is a function of 4 factors - Site, Provenance, Year, and Clone
 
+
 data {
   int<lower=1> k; // number of observations
   vector[k] sum_forcing; // observations
@@ -154,6 +155,7 @@ model {
 // Simulate a full observation from the current value of the parameters
 generated quantities {
   real sum_forcing_rep[k];
+  vector[k] log_lik;
 
   // reconstruct partially non-centered parameters
   vector[k_Clone] alpha_clone;
@@ -163,8 +165,14 @@ generated quantities {
   //alpha_year = mu_year + z_alpha_year * sigma_year;
 
   { // Don't save tempvars
+
   for (i in 1:k)
   sum_forcing_rep[i] = normal_rng(mu + alpha_site[Site[i]] + alpha_year[Year[i]] + alpha_prov[Provenance[i]] + alpha_clone[Clone[i]]
   , sigma);
   }
+
+  {
+  for (i in 1:k)
+  log_lik[i] = normal_lpdf(sum_forcing[i] | mu  + alpha_site[Site[i]] + alpha_year[Year[i]] + alpha_prov[Provenance[i]] + alpha_clone[Clone[i]], sigma);
+}
 }

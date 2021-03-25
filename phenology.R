@@ -12,7 +12,7 @@ source('calculate_forcingunits.R')
 source('phenology_functions.R')
 
 # choose only phenology data that is the start or end date
-phenbe <- filter_start_end() 
+phenbe <- filter_start_end(forcingname = "gdd") 
 
 
 
@@ -23,7 +23,7 @@ phenbe <- filter_start_end()
 
 
 # fit models
-female_begin <- fit_model(phendat = phenbe, sex = "FEMALE", event = "begin")
+female_begin <- fit_model(phendat = phenbe, sex = "FEMALE", event = "begin", appendname = "gdd")
 female_end <- fit_model(phendat = phenbe, sex = "FEMALE", event = "end")
 
 male_begin <- fit_model(phendat=phenbe, sex="MALE", event = "begin")

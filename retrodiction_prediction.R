@@ -1,4 +1,5 @@
-# retrodictions: what does the model say our observations should have been?
+# retrodictions: what does the model say our observations should have been? There are 4 separate models - one each for male and female begin and end of flowering
+# this script uses *a lot* of ram. Can reduce by running for each dataset and model separately.
 
 library(dplyr)
 library(rstan)
@@ -8,8 +9,6 @@ library(magrittr)
 source('phenology_functions.R')
 source('retrodiction_functions.R')
 
-# If you need to work with smaller sample size
-
 # Read in Data #############
 # climate data
 clim <- read.csv("data/all_clim_PCIC.csv") %>% # read in climate data
@@ -18,6 +17,7 @@ clim <- read.csv("data/all_clim_PCIC.csv") %>% # read in climate data
 # phenology data
 phenbe <- filter_start_end() # reduce to first and last day of observations
 
+# separate observations for each of the four models
 fbdat <- select_data(phenbe, "FEMALE", "begin", keep_day = TRUE) 
 fbdat$i <- 1:nrow(fbdat)
 
@@ -56,13 +56,13 @@ interval.me <- intervalate(retro.me, clim, medat)
 
 
 tab.fb <- retrotable(interval.fb)
-knitr::kable(tab.fb, caption = "FEMALE begin")
+knitr::kable(tab.fb, caption = "FEMALE begin", digits = 2)
 tab.fe <- retrotable(interval.fe)
-knitr::kable(tab.fe, caption = "FEMALE end")
+knitr::kable(tab.fe, caption = "FEMALE end", digits = 2)
 tab.mb <- retrotable(interval.mb)
-knitr::kable(tab.mb, caption = "MALE begin")
+knitr::kable(tab.mb, caption = "MALE begin", digits = 2)
 tab.me <- retrotable(interval.me)
-knitr::kable(tab.me, caption = "MALE end")
+knitr::kable(tab.me, caption = "MALE end", digits = 2)
 
 
 ########### PLOT RETRODICTIONS ##################
@@ -220,9 +220,80 @@ ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
   theme_dark() +
   facet_wrap("Year")
 
+# fstat and group means ########
 
+facs <- c("Site", "Provenance", "Year", "Clone")
+
+## fstats for observations ########
+
+fstat_obs.fb <- calculate_fstat_obs(fbdat)
+fstat_obs.fe <- calculate_fstat_obs(fedat)
+fstat_obs.mb <- calculate_fstat_obs(mbdat)
+fstat_obs.me <- calculate_fstat_obs(medat)
+
+## fstats for models #########
+
+options(dplyr.summarise.inform = FALSE) # prevent dplyr from printing thousands of messages
+
+fstat_mod.fb <- calculate_fstat_mod(retro.fb)
+fstat_mod.fe <- calculate_fstat_mod(retro.fe)
+fstat_mod.mb <- calculate_fstat_mod(retro.mb)
+fstat_mod.me <- calculate_fstat_mod(retro.me)
+
+plot_fstats <- function(df, model) {
   
+  plot <- ggplot(df, aes(x= F_statistic)) +
+    geom_histogram(bins = 50) +
+    facet_grid(factors ~ y, scales = "free") +
+    geom_vline(data = fstat_obs, aes(xintercept = F_statistic)) +
+    ggtitle(model)
+  
+  print(plot)
+}
 
+
+plot_fstats(fstat_mod.fb, "Female begin")
+plot_fstats(fstat_mod.fe, "Female end")
+plot_fstats(fstat_mod.mb, "Male begin")
+plot_fstats(fstat_mod.me, "Male end")
+
+# Female begin looks good, but all the rest show mismatches (though never for clone). Suggests model isn't capturing heterogenity
+# 
+# level means ########
+
+# plot level means of y (an outcome) calculated from the data (observations df with factor and y column) and for each draw in the model (mcmc dataframe with .draw, factor, and y_rep column). 
+
+
+#forcing
+
+plot_factorlevel_means <- function(retrodictions, obs, y, y_rep) {
+  
+  siteplot <- plot_level_means(retrodictions, obs, Site, {{y}}, {{y_rep}})
+  print(siteplot)
+  
+  provplot <- plot_level_means(retrodictions, obs, Provenance, {{y}}, {{y_rep}})
+  print(provplot)
+  
+  yearplot <- plot_level_means(retrodictions, obs, Year, {{y}}, {{y_rep}})
+  print(yearplot)
+  
+  clonesample <- sample(unique(obs$Clone), 20)
+  cloneplot <- plot_level_means(filter(retrodictions, Clone %in% clonesample), filter(obs, Clone %in% clonesample), Clone, {{y}}, {{y_rep}})
+  print(cloneplot)
+  
+}
+
+# forcing
+plot_factorlevel_means(retro.fb, fbdat, sum_forcing, sum_forcing_rep)
+plot_factorlevel_means(retro.fe, fedat, sum_forcing, sum_forcing_rep)
+plot_factorlevel_means(retro.mb, mbdat, sum_forcing, sum_forcing_rep)
+plot_factorlevel_means(retro.me, medat, sum_forcing, sum_forcing_rep)
+
+#doy
+plot_factorlevel_means(retro.fb, fbdat, DoY, doy_rep)
+plot_factorlevel_means(retro.fe, fedat, DoY, doy_rep)
+plot_factorlevel_means(retro.mb, mbdat, DoY, doy_rep)
+plot_factorlevel_means(retro.me, medat, DoY, doy_rep)
 # calculate predictions #############
 
 # superpopulations
