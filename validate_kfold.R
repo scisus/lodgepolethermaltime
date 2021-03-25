@@ -32,8 +32,7 @@ kfoldmodel <- rstan::stan_model('phenology_kfold.stan') # because of limitations
 # Loop over the folds
 
 
-for (i in 1:2) {
-  i <- 1
+for (i in 1:10) {
   data_train <- dat[dat$fold != i,] %>%
     prepare_data_for_stan(event = "begin")
   data_test <- dat[dat$fold == i,] %>%
