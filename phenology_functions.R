@@ -25,7 +25,7 @@ filter_start_end <- function(forcingname = "ristos") {
 }
 
 # select data for stan models - separate by sex and event. can keep day of year if you want, but dropped by default
-select_data <- function(phendat, sex, event, keep_day = FALSE, kfold = FALSE) {
+select_data <- function(phendat, sex, event, keep_day = FALSE) {
   
   phensub <- phendat %>%
     dplyr::filter(if (event == "begin") Sex == sex & DoY == First_RF else Sex == sex & DoY == Last_RF) 
