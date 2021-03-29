@@ -34,6 +34,7 @@ for (i in 1:10) {
     prepare_data_for_stan(event = "begin")
   data_test <- dat[dat$fold == i,] %>%
     prepare_data_for_stan(event = "begin")
+  fit <- sample_stan_model(stanmodel, data_train, kfold = TRUE, test = FALSE) 
   fit <- rstan::sampling(stanmodel, data = data_train, 
                   init = rep(list(list(mu = abs(rnorm(1,100,50)),
                                        sigma = rexp(1,1),
