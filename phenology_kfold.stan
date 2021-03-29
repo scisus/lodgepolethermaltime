@@ -54,10 +54,10 @@ parameters {
   
   // factor offsets 
   
-  vector[k_Site] alpha_site;
-  vector[k_Provenance] alpha_prov;
-  vector[k_Year] alpha_year;
-  vector[k_Clone] alpha_clone;
+  vector[k_Site] delta_site;
+  vector[k_Provenance] delta_prov;
+  vector[k_Year] delta_year;
+  vector[k_Clone] delta_clone;
 
 }
 
@@ -73,6 +73,6 @@ generated quantities {
   //ll
   {
     for (i in 1:k) 
-    log_lik[i] = normal_lpdf(sum_forcing[i] | mu  + alpha_site[Site[i]] + alpha_year[Year[i]] + alpha_prov[Provenance[i]] + alpha_clone[Clone[i]], sigma);
+    log_lik[i] = normal_lpdf(sum_forcing[i] | mu  + delta_site[Site[i]] + delta_year[Year[i]] + delta_prov[Provenance[i]] + delta_clone[Clone[i]], sigma);
   }
 }
