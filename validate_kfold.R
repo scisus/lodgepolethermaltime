@@ -6,17 +6,14 @@ library(loo)
 
 source('phenology_functions.R')
 
-#roaches$fold <- kfold_split_random(K = 10, N = nrow(roaches))
-
 # phenology data
 phenbe <- filter_start_end()
 dat <- select_data(phenbe, "FEMALE", "begin", keep_day = TRUE) 
 
 # add fold markers and stratify by Site+Year+Provenance
 group <- group_by(dat, Site, Year, Provenance) %>% group_indices()
-#group <- group_by(dat, Clone) %>% group_indices()
 dat$fold <- loo::kfold_split_stratified(K = 10, x = group)
-#dat$fold <- loo::kfold_split_random(K=10, N = nrow(dat))
+
 #dat$fold <- loo::kfold_split_grouped(K=10, x=group)
 
 # Prepare a matrix with the number of post-warmup iterations by number of observations:
