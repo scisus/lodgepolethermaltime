@@ -1,4 +1,4 @@
-# Fit a thermal time model to my phenology data
+# Fit a thermal time model to lodgepole pine flowering phenology data
 
 library(dplyr)
 library(flowers)
@@ -8,25 +8,20 @@ library(tidybayes)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
-source('calculate_forcingunits.R')
+#source('calculate_forcingunits.R') #check if this is necessary here
 source('phenology_functions.R')
 
-# choose only phenology data that is the start or end date
-phenbe <- filter_start_end(forcingname = "gdd") 
+# pull only phenology data that is the start or end date from the flowers package
+phenbe <- filter_start_end() 
 
-
-
-# set thresholds
-# - Site threshold: 250
-# - Provenance threshold: 150
-# - Clone threshold: 10
-
+# compile model
+phenologymodel <- rstan::stan_model("phenology.stan")
 
 # fit models
-female_begin <- fit_model(phendat = phenbe, sex = "FEMALE", event = "begin", appendname = "gdd")
-female_end <- fit_model(phendat = phenbe, sex = "FEMALE", event = "end")
+female_begin <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "begin", compiledmodel = phenologymodel)
+ female_end <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "end", compiledmodel = phenologymodel)
 
-male_begin <- fit_model(phendat=phenbe, sex="MALE", event = "begin")
-male_end <- fit_model(phendat = phenbe, sex="MALE", event = "end")
+male_begin <- munge_and_fit(phendat = phenbe, sex = "MALE", event = "begin", compiledmodel = phenologymodel)
+male_end <- munge_and_fit(phendat = phenbe, sex = "MALE", event = "end", compiledmodel = phenologymodel)
 
 
