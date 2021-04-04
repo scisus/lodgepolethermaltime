@@ -2,6 +2,7 @@
 # 
 library(tidybayes)
 library(ggplot2)
+library(magrittr)
 
 source('phenology_functions.R')
 source('retrodiction_functions.R')
@@ -21,7 +22,7 @@ phenbe <- filter_start_end() # reduce to first and last day of observations
 
 # separate observations for each of the four models
 dat <- select_data(phenbe, "FEMALE", "begin", keep_day = TRUE) 
-dat$i <- 1:nrow(fbdat)
+dat$i <- 1:nrow(dat)
 
 seed = 618
 n = 50
