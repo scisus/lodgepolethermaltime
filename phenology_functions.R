@@ -191,7 +191,8 @@ sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NUL
   gc() # don't eat all the RAM
   
   if (kfold == FALSE & test == FALSE) { # save the model fit unless you're doing kfold
- saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, "_", appendname, ".rds", sep=''))
+    appelle <- paste0("_", appendname)
+ saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, appelle, ".rds", sep=''))
   }
   
   return(fit)
