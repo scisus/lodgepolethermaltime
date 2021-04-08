@@ -8,7 +8,39 @@ source('phenology_functions.R')
 
 # phenology data
 phenbe <- filter_start_end()
-dat <- select_data(phenbe, "FEMALE", "begin", keep_day = TRUE) 
+
+# sex and event characters
+prepare_data_for_kfold <- function(phensub, sex, event, group_type, groups) {
+  dat <- select_data(phensub, sex, event) 
+  
+  # add fold markers and stratify by Site+Year+Provenance
+  group <- group_by(dat, Site, Year, Provenance) %>% group_indices()
+  dat$fold <- loo::kfold_split_stratified(K = 10, x = group)
+}
+
+# add fold to dataframe
+add_folds <- function(phensub, fold_type, k = 10, ...) {
+  group <- group_by(phensub, ...) %>% 
+    group_indices()
+  
+  if (fold_type == "stratified") {
+    fold <- loo::kfold_split_stratified(K=k, x = group)
+  }
+
+  if (fold_type == "grouped") {
+    fold <- loo::kfold_split_grouped(K=k, x = group)
+  }
+  return(fold)
+}
+
+#modify add folds function for k = length(levels) or 10, whichever is smaller
+
+dat$fold_strat <- add_folds(phensub=dat, fold_type = "stratified", k=10, Site, Year, Provenance)
+dat$fold_site <- add_folds(dat, "grouped", k = length(unique(dat$Site)), Site)
+dat$fold_
+
+
+dat <- select_data(phenbe, "FEMALE", "begin") 
 
 # add fold markers and stratify by Site+Year+Provenance
 group <- group_by(dat, Site, Year, Provenance) %>% group_indices()
@@ -33,6 +65,7 @@ for (i in 1:10) {
   fit <- sample_stan_model(stanmodel, data_train, kfold = TRUE, test = FALSE) 
   gen_test <- rstan::gqs(kfoldmodel, draws = as.matrix(fit), data = data_test)
   log_pd_kfold[, dat$fold == i] <- loo::extract_log_lik(gen_test)
+  gc()
 }
 
 elpd_kfold <- loo::elpd(log_pd_kfold)
