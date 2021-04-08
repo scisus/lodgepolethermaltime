@@ -19,7 +19,7 @@ phenologymodel <- rstan::stan_model("phenology.stan")
 
 # fit models
 female_begin <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "begin", compiledmodel = phenologymodel)
- female_end <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "end", compiledmodel = phenologymodel)
+female_end <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "end", compiledmodel = phenologymodel)
 
 male_begin <- munge_and_fit(phendat = phenbe, sex = "MALE", event = "begin", compiledmodel = phenologymodel)
 male_end <- munge_and_fit(phendat = phenbe, sex = "MALE", event = "end", compiledmodel = phenologymodel)
