@@ -3,9 +3,12 @@
 library(dplyr)
 library(purrr)
 library(rstan)
+library(bayesplot)
 
-fbfit <- readRDS('2021-03-09FEMALE_begin.rds')
+fbfit <- readRDS('2021-03-29FEMALE_begin_.rds')
 fbfitsy <- readRDS('2021-03-03FEMALE_beginSY.rds')
+fbfitby <- readRDS('2021-04-08FEMALE_begin_balancedyears.rds')
+fbfititrxn <- readRDS('2021-04-08FEMALE_begin_balancedyearsinteraction_hnprior.rds')
 fefit <- readRDS('2021-01-07FEMALE_end.rds')
 mbfit <- readRDS('2021-01-07MALE_begin.rds')
 mefit <- readRDS('2021-01-07MALE_end.rds')
@@ -14,7 +17,11 @@ mefit <- readRDS('2021-01-07MALE_end.rds')
 
 
 library(shinystan)
-shinystan::launch_shinystan(fbfitsy)
+shinystan::launch_shinystan(fbfititrxn)
+
+# parallel coordinates plot, mostly useful with divergences
+np <- bayesplot::nuts_params(fbfititrxn)
+bayesplot::mcmc_parcoord(fbfititrxn, pars = vars(starts_with("delta_site"), starts_with("delta_prov"), starts_with("delta_year"), starts_with("sigma"), starts_with("mu")), np=np, transform = function(x) {(x - mean(x)) / sd(x)})
 
 
  # format for Rhat and ESS calculations
