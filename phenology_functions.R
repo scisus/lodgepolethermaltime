@@ -24,18 +24,18 @@ filter_start_end <- function(forcingname = "ristos", clim = "data/all_clim_PCIC.
   return(phenbe)
 }
 
-# select data for stan models - separate by sex and event. can keep day of year if you want, but dropped by default
-select_data <- function(phendat, sex, event, keep_day = FALSE) {
+# select data for stan models - separate by sex and event. can keep day of year if you want, but dropped by default. factors is a vector string of factors you'll be passing to the model and keep_day is an option for if you want to keep Day of Year in the dataframe
+select_data <- function(phendat, sex, event, factors, keep_day = FALSE) {
   
   phensub <- phendat %>%
     dplyr::filter(if (event == "begin") Sex == sex & DoY == First_RF else Sex == sex & DoY == Last_RF) 
   
   if (keep_day == TRUE) {
     phensub <- phensub %>%
-      dplyr::select(sum_forcing, DoY, Site, Year, Provenance, Clone)
+      dplyr::select(sum_forcing, DoY, all_of(factors))
   } else {
     phensub <- phensub %>%
-      dplyr::select(sum_forcing, Site, Year, Provenance, Clone) 
+      dplyr::select(sum_forcing, all_of(factors)) 
   }
   
   return(phensub)
@@ -199,10 +199,11 @@ sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NUL
 }
 
 
-#choose data, prepare it, and fit a model
+#choose data, prepare it, and fit a model. set nice defaults for typical model runs.
 munge_and_fit <- function(phendat, sex, event, 
                                   compiledmodel, appendname = NULL,
-                                  factor_threshold_list = list(Site = 250, Provenance = 150, Year = 150), 
+                          factors = c("Site", "Provenance", "Year", "Clone"),
+                                  factor_threshold_list = list(Site = 250, Provenance = 150), 
                                   expars = c("delta_ncp_site", "delta_cp_site",
                                              "delta_ncp_prov", "delta_cp_prov",
                                              "z_delta_clone"), 
@@ -211,10 +212,11 @@ munge_and_fit <- function(phendat, sex, event,
                                                        sigma_site = rexp(1,1), 
                                                        sigma_year = rexp(1,1), 
                                                        sigma_prov = rexp(1,1), 
-                                                       sigma_clone = rexp(1,1))), 6),
+                                                       sigma_clone = rexp(1,1),
+                                                       sigma_siteyear = rexp(1,1))), 6),
                                   control = NULL, test = FALSE, kfold = FALSE) {
   # subset data by sex and event
-  phensub <- select_data(phendat, sex = sex, event = event)
+  phensub <- select_data(phendat, sex = sex, event = event, factors = factors)
   
   # add indexes and turn data into a list for stan
   input <- prepare_data_for_stan(phensub = phensub, factor_threshold_list = factor_threshold_list, event = event)
