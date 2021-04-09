@@ -199,7 +199,8 @@ sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NUL
 }
 
 
-#choose data, prepare it, and fit a model. set nice defaults for typical model runs.
+#choose data, prepare it, and fit a model. 
+#phendat is a dataframe with a columns Sex (containing MALE or FEMALE), FirstRF, and LastRF (Day of year recorded flowering) and factor level for the model. Sex is "MALE" or "FEMALE". compiled model is a stan model compiled with rstan::stan_model. appendname is a string to append to the end of the file name. factors is a vector of columns in phendat that serve as factors in your model. The factor_threshold_list is a list of key-value pairs matching a factor to a threshold used for centering or non-centering. Expars is a list of parameters calculated in the model that should not be returned. Init chooses initial values that aren't impossible so stan doesn't complain.
 munge_and_fit <- function(phendat, sex, event, 
                                   compiledmodel, appendname = NULL,
                           factors = c("Site", "Provenance", "Year", "Clone"),
@@ -212,9 +213,8 @@ munge_and_fit <- function(phendat, sex, event,
                                                        sigma_site = rexp(1,1), 
                                                        sigma_year = rexp(1,1), 
                                                        sigma_prov = rexp(1,1), 
-                                                       sigma_clone = rexp(1,1),
-                                                       sigma_siteyear = rexp(1,1))), 6),
-                                  control = NULL, test = FALSE, kfold = FALSE) {
+                                                       sigma_clone = rexp(1,1))), 6),
+                                  control = NULL, test = FALSE) {
   # subset data by sex and event
   phensub <- select_data(phendat, sex = sex, event = event, factors = factors)
   

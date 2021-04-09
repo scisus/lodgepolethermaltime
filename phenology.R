@@ -17,11 +17,34 @@ phenbe <- filter_start_end()
 # compile model
 phenologymodel <- rstan::stan_model("phenology.stan")
 
-# fit models
-female_begin <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "begin", compiledmodel = phenologymodel)
-female_end <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "end", compiledmodel = phenologymodel)
+# set options for models
+factors <- c("Site", "Provenance", "Year", "Clone")
+factor_threshold_list <- list(Site = 250, Provenance = 150)
+expars <- c("delta_ncp_site", "delta_cp_site",
+           "delta_ncp_prov", "delta_cp_prov",
+           "z_delta_clone")
+init <- rep(list(list(mu = abs(rnorm(1,100,50)), 
+                     sigma = rexp(1,1), 
+                     sigma_site = rexp(1,1), 
+                     sigma_year = rexp(1,1), 
+                     sigma_prov = rexp(1,1), 
+                     sigma_clone = rexp(1,1))), 6)
 
-male_begin <- munge_and_fit(phendat = phenbe, sex = "MALE", event = "begin", compiledmodel = phenologymodel)
-male_end <- munge_and_fit(phendat = phenbe, sex = "MALE", event = "end", compiledmodel = phenologymodel)
+# fit models
+female_begin <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "begin", compiledmodel = phenologymodel, 
+                              factors = factors, factor_threshold_list = factor_threshold_list, 
+                              expars = expars, init = init)
+
+female_end <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "end", compiledmodel = phenologymodel, 
+                            factors = factors, factor_threshold_list = factor_threshold_list, 
+                            expars = expars, init = init)
+
+male_begin <- munge_and_fit(phendat = phenbe, sex = "MALE", event = "begin", compiledmodel = phenologymodel, 
+                            factors = factors, factor_threshold_list = factor_threshold_list, 
+                            expars = expars, init = init)
+
+male_end <- munge_and_fit(phendat = phenbe, sex = "MALE", event = "end", compiledmodel = phenologymodel, 
+                          factors = factors, factor_threshold_list = factor_threshold_list, 
+                          expars = expars, init = init)
 
 
