@@ -46,6 +46,10 @@ kfoldmodel_full <- rstan::stan_model('phenology_kfold.stan') # because of limita
 stanmodel_base <- rstan::stan_model('phenology_mean.stan')
 kfoldmodel_base <- rstan::stan_model('phenology_mean_kfold.stan')
 
+# base + site
+stanmodel_site <- rstan::stan_model('phenology_site.stan')
+kfoldmodel_site <- rstan::stan_model('phenology_site_kfold.stan')
+
 # create a log likelihood matrix to feed to `loo::elpd`.
 # 
 # for a set of observations in phenology `dat`, loop over all folds `k`
@@ -119,6 +123,16 @@ loop_kfold_parallel <- function(dat, datfold, event, fitmodel, kfoldmodel, k, co
 #############
 
 fullstrat <- loop_kfold(dat, datfold=dat$fold_strat, event = "begin", fitmodel = stanmodel_full, kfoldmodel = kfoldmodel_full, k=10)
+basestrat <- loop_kfold(dat, datfold=dat$fold_strat, event = "begin", fitmodel = stanmodel_base, kfoldmodel = kfoldmodel_base, k=10)
+sitestrat <- loop_kfold(dat, datfold=dat$fold_strat, event = "begin", fitmodel = stanmodel_site, kfoldmodel = kfoldmodel_site, k=10)
 
-elpd_kfold <- loo::elpd(log_pd_kfold)
-(elpd_kfold)
+elpd_kfold_fullstrat <- loo::elpd(fullstrat)
+(elpd_kfold_fullstrat)
+elpd_kfold_basestrat <- loo::elpd(basestrat)
+(elpd_kfold_basestrat) 
+elpd_kfold_sitestrat <- loo::elpd(sitestrat)
+(elpd_kfold_sitestrat)
+
+
+loo_compare(elpd_kfold_fullstrat, elpd_kfold_basestrat, elpd_kfold_sitestrat)
+
