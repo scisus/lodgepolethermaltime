@@ -137,7 +137,7 @@ build_factor_centering_indexes <- function(phensub, factor_threshold_list) {
 # Fit a model in Stan to phenology data, return the model fit object and save the model fit object to a file. Choose whether the model is for "MALE" or "FEMALE" strobili and whether the event is the "begin" or "end" of flowering. data is a dataframe of flowering data. id is an optional identifier appended to the file name.
 
 
-prepare_data_for_stan <- function(phensub, factor_threshold_list = list(Site = 250, Provenance = 150, Year = 150), event) {
+prepare_data_for_stan <- function(phensub, factor_threshold_list, event) {
   
   base_data <- tidybayes::compose_data(phensub, .n_name=tidybayes::n_prefix(prefix="k")) # format data for stan
   
