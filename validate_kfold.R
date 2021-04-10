@@ -70,9 +70,9 @@ loop_kfold <- function(dat, datfold, event, fitmodel, kfoldmodel, k, iter = 1750
   
   for (i in 1:k) {
     data_train <- dat[datfold != i,] %>%
-      prepare_data_for_stan(event = "begin", factor_threshold_list = list(Site = 250, Provenance = 150))
+      prepare_data_for_stan(event = event, factor_threshold_list = list(Site = 250, Provenance = 150))
     data_test <- dat[datfold == i,] %>%
-      prepare_data_for_stan(event = "begin", factor_threshold_list = list(Site = 250, Provenance = 150))
+      prepare_data_for_stan(event = event, factor_threshold_list = list(Site = 250, Provenance = 150))
     fit <- sample_stan_model(fitmodel, data_train, kfold = TRUE, test = FALSE) 
     gen_test <- rstan::gqs(kfoldmodel, draws = as.matrix(fit), data = data_test)
     log_pd_kfold[, datfold == i] <- loo::extract_log_lik(gen_test)
@@ -105,9 +105,9 @@ loop_kfold_parallel <- function(dat, datfold, event, fitmodel, kfoldmodel, k, co
   
   for (i in 1:k) {
     data_train <- dat[datfold != i,] %>%
-      prepare_data_for_stan(event = "begin", factor_threshold_list = list(Site = 250, Provenance = 150))
+      prepare_data_for_stan(event = event, factor_threshold_list = list(Site = 250, Provenance = 150))
     data_test <- dat[datfold == i,] %>%
-      prepare_data_for_stan(event = "begin", factor_threshold_list = list(Site = 250, Provenance = 150))
+      prepare_data_for_stan(event = event, factor_threshold_list = list(Site = 250, Provenance = 150))
     fit <- sample_stan_model(fitmodel, data_train, kfold = TRUE, test = FALSE) 
     gen_test <- rstan::gqs(kfoldmodel, draws = as.matrix(fit), data = data_test)
     log_pd_kfold[, datfold == i] <- loo::extract_log_lik(gen_test)
