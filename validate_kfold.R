@@ -82,17 +82,42 @@ loop_kfold <- function(dat, datfold, event, fitmodel, kfoldmodel, k, iter = 1750
   return(log_pd_kfold)
 }
 
+# rewrite loop_kfold as a ||izable function ########
+one_loop <- function(fold) {
+    
+    data_train <- dat[datfold != fold,] %>%
+      prepare_data_for_stan(event = "begin", factor_threshold_list = list(Site = 250, Provenance = 150))
+    data_test <- dat[datfold == fold,] %>%
+      prepare_data_for_stan(event = "begin", factor_threshold_list = list(Site = 250, Provenance = 150))
+    fit <- sample_stan_model(fitmodel, data_train, kfold = TRUE, test = FALSE) 
+    gen_test <- rstan::gqs(kfoldmodel, draws = as.matrix(fit), data = data_test)
+    log_pd_kfold[, datfold == fold] <- loo::extract_log_lik(gen_test)
+    gc()
+  }
 
-for (i in 1:10) {
-  data_train <- dat[dat$fold != i,] %>%
-    prepare_data_for_stan(event = "begin")
-  data_test <- dat[dat$fold == i,] %>%
-    prepare_data_for_stan(event = "begin")
-  fit <- sample_stan_model(stanmodel, data_train, kfold = TRUE, test = FALSE) 
-  gen_test <- rstan::gqs(kfoldmodel, draws = as.matrix(fit), data = data_test)
-  log_pd_kfold[, dat$fold == i] <- loo::extract_log_lik(gen_test)
-  gc()
+loop_kfold_parallel <- function(dat, datfold, event, fitmodel, kfoldmodel, k, cores, iter = 1750, chains = 6) {
+  folds <- seq(1,k)
+  # Prepare a matrix with the number of post-warmup iterations by number of observations:
+  log_pd_kfold <- matrix(nrow = iter * chains, ncol = nrow(dat)) #iteration x chains
+  
+  # Loop over the folds
+  
+  
+  for (i in 1:k) {
+    data_train <- dat[datfold != i,] %>%
+      prepare_data_for_stan(event = "begin", factor_threshold_list = list(Site = 250, Provenance = 150))
+    data_test <- dat[datfold == i,] %>%
+      prepare_data_for_stan(event = "begin", factor_threshold_list = list(Site = 250, Provenance = 150))
+    fit <- sample_stan_model(fitmodel, data_train, kfold = TRUE, test = FALSE) 
+    gen_test <- rstan::gqs(kfoldmodel, draws = as.matrix(fit), data = data_test)
+    log_pd_kfold[, datfold == i] <- loo::extract_log_lik(gen_test)
+    gc()
+  }
+  
+  return(log_pd_kfold)
 }
+#############
+
 fullstrat <- loop_kfold(dat, datfold=dat$fold_strat, event = "begin", fitmodel = stanmodel_full, kfoldmodel = kfoldmodel_full, k=10)
 
 elpd_kfold <- loo::elpd(log_pd_kfold)
