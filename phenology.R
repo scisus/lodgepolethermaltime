@@ -15,7 +15,7 @@ source('phenology_functions.R')
 phenbe <- filter_start_end() 
 
 # compile model
-phenologymodel <- rstan::stan_model("phenology_mean.stan")
+phenologymodel <- rstan::stan_model("phenology.stan")
 
 # set options for models
 factors <- c("Site", "Provenance", "Year", "Clone")
@@ -31,7 +31,7 @@ init <- rep(list(list(mu = abs(rnorm(1,100,50)),
                      sigma_clone = rexp(1,1))), 6)
 
 # fit models
-female_begin <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "begin", appendname = "mean", compiledmodel = phenologymodel, 
+female_begin <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "begin", appendname = "site", compiledmodel = phenologymodel, 
                               factors = factors, factor_threshold_list = factor_threshold_list, 
                               expars = expars, init = init)
 
