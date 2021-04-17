@@ -38,11 +38,18 @@ model {
 // Simulate a full observation from the current value of the parameters
 generated quantities {
  real sum_forcing_rep[k];
+ vector[k] log_lik;
   
   //simulate
   { 
   for (i in 1:k)
   sum_forcing_rep[i] = normal_rng(mu, sigma);
+  }
+  
+  //ll
+  {
+    for (i in 1:k) 
+    log_lik[i] = normal_lpdf(sum_forcing[i] | mu, sigma);
   }
 
 }
