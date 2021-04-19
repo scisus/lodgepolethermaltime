@@ -37,7 +37,7 @@ add_folds <- function(phensub, fold_type, k = 10, ...) {
 # event is a string indicating whether the phenological event is the "begin" or "end" of flowering.
 # feeds the correct priors to stan
 # loop can/should be parallelized
-loop_kfold <- function(dat, datfold, event, fitmodel, kfoldmodel, iter = 1750, chains = 6) {
+loop_kfold <- function(dat, datfold, event, fitmodel, kfoldmodel, iter = 1750, chains = 6, control=NULL) {
   
   k <- length(unique(datfold))
   
@@ -54,7 +54,7 @@ loop_kfold <- function(dat, datfold, event, fitmodel, kfoldmodel, iter = 1750, c
       prepare_data_for_stan(event = event, factor_threshold_list = list(Site = 250, Provenance = 150))
     data_test <- dat[datfold == i,] %>%
       prepare_data_for_stan(event = event, factor_threshold_list = list(Site = 250, Provenance = 150))
-    fit <- sample_stan_model(fitmodel, data_train, kfold = TRUE, test = FALSE) 
+    fit <- sample_stan_model(fitmodel, data_train, kfold = TRUE, test = FALSE, control = control) 
     gen_test <- rstan::gqs(kfoldmodel, draws = as.matrix(fit), data = data_test)
     #log_pd_kfold_specific[, datfold == i] <- loo::extract_log_lik(gen_test, parameter_name = "log_lik_specific")
     log_pd_kfold_general[, datfold == i] <- loo::extract_log_lik(gen_test, parameter_name = "log_lik_general")
