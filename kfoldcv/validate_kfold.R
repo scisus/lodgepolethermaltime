@@ -1,4 +1,8 @@
-# kfold validation ####
+# kfoldcv validation ####
+
+# I tried to use k-fold cross validation to understand how my model performed relative to a simpler model and 
+# also to see how predictive ability varied for new levels of factors. However, I was unable to get it to work. 
+# Leaving data out when fitting the model makes it very difficult to fit.
 
 library(dplyr)
 library(rstan)
