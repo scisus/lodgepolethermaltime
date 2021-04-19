@@ -171,20 +171,20 @@ sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NUL
                            control = NULL, kfold = FALSE, test = FALSE) {
   
   # if the model is for kfold cross validation, then don't change the seed between runs.
-  if (kfold == FALSE) {
-    seed = sample.int(.Machine$integer.max, 1) } else {
-      seed = 1330 } 
+  # if (kfold == FALSE) {
+  #   seed = sample.int(.Machine$integer.max, 1) } else {
+  #     seed = 1330 } 
   
   if (test == TRUE) { # if you're testing the model, run just a few iterations.
     iter = 100
   } else {
-    iter = 3500
+    iter = 4000
   }
   
   fit <- rstan::sampling(object = compiledmodel, chains=6, data=input, iter=iter, cores=7,
                      pars=expars, include=FALSE,
                      init = init, # stop stan from sampling impossible negative numbers
-                     seed = seed,
+                     #seed = seed,
                      control = control)
     
     
