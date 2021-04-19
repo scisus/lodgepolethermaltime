@@ -1,4 +1,4 @@
-# Fit a thermal time model to my phenology data
+# Fit a thermal time model to lodgepole pine flowering phenology data
 
 library(dplyr)
 library(flowers)
@@ -8,25 +8,43 @@ library(tidybayes)
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
-source('calculate_forcingunits.R')
+#source('calculate_forcingunits.R') #check if this is necessary here
 source('phenology_functions.R')
 
-# choose only phenology data that is the start or end date
+# pull only phenology data that is the start or end date from the flowers package
 phenbe <- filter_start_end() 
 
+# compile model
+phenologymodel <- rstan::stan_model("phenology.stan")
 
-
-# set thresholds
-# - Site threshold: 250
-# - Provenance threshold: 150
-# - Clone threshold: 10
-
+# set options for models
+factors <- c("Site", "Provenance", "Year", "Clone")
+factor_threshold_list <- list(Site = 250, Provenance = 150)
+expars <- c("delta_ncp_site", "delta_cp_site",
+           "delta_ncp_prov", "delta_cp_prov",
+           "z_delta_clone")
+init <- rep(list(list(mu = abs(rnorm(1,100,50)), 
+                     sigma = rexp(1,1), 
+                     sigma_site = rexp(1,1), 
+                     sigma_year = rexp(1,1), 
+                     sigma_prov = rexp(1,1), 
+                     sigma_clone = rexp(1,1))), 6)
 
 # fit models
-female_begin <- fit_model(phendat = phenbe, sex = "FEMALE", event = "begin")
-female_end <- fit_model(phendat = phenbe, sex = "FEMALE", event = "end")
+female_begin <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "begin", compiledmodel = phenologymodel, 
+                              factors = factors, factor_threshold_list = factor_threshold_list, 
+                              expars = expars, init = init)
 
-male_begin <- fit_model(phendat=phenbe, sex="MALE", event = "begin")
-male_end <- fit_model(phendat = phenbe, sex="MALE", event = "end")
+female_end <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "end", compiledmodel = phenologymodel, 
+                            factors = factors, factor_threshold_list = factor_threshold_list, 
+                            expars = expars, init = init)
+
+male_begin <- munge_and_fit(phendat = phenbe, sex = "MALE", event = "begin", compiledmodel = phenologymodel, 
+                            factors = factors, factor_threshold_list = factor_threshold_list, 
+                            expars = expars, init = init)
+
+male_end <- munge_and_fit(phendat = phenbe, sex = "MALE", event = "end", compiledmodel = phenologymodel, 
+                          factors = factors, factor_threshold_list = factor_threshold_list, 
+                          expars = expars, init = init)
 
 

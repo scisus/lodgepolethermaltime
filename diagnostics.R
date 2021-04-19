@@ -4,7 +4,8 @@ library(dplyr)
 library(purrr)
 library(rstan)
 
-fbfit <- readRDS('2021-01-07FEMALE_begin.rds')
+fbfit <- readRDS('2021-03-09FEMALE_begin.rds')
+fbfitsy <- readRDS('2021-03-03FEMALE_beginSY.rds')
 fefit <- readRDS('2021-01-07FEMALE_end.rds')
 mbfit <- readRDS('2021-01-07MALE_begin.rds')
 mefit <- readRDS('2021-01-07MALE_end.rds')
@@ -12,11 +13,11 @@ mefit <- readRDS('2021-01-07MALE_end.rds')
 #fbpars <- data.frame(rstan::extract(fbfit))
 
 
-# library(shinystan)
-# shinystan::launch_shinystan(fefit)
+library(shinystan)
+shinystan::launch_shinystan(fbfitsy)
 
 
-# format for Rhat and ESS calculations
+ # format for Rhat and ESS calculations
 sims <- list(fbsims = as.array(fbfit), fesims = as.array(fefit), mbsims = as.array(mbfit), mesims = as.array(mefit))
 
 # calculate minimum effective sample size (bulk and tail) for a two-dimensional array whose rows are equal to the number of iterations of the Markov Chain(s) and whose columns are equal to the number of Markov Chains (preferably more than one). 
