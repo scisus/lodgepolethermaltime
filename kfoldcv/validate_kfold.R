@@ -63,7 +63,7 @@ loop_kfold <- function(dat, datfold, event, fitmodel, kfoldmodel, iter = 1750, c
   }
   
   #return(list(specific = log_pd_kfold_specific, general = log_pd_kfold_general))
-  return(general = log_pd_kfold_general)
+  return(log_pd_kfold_general)
 }
 
 # data #####
