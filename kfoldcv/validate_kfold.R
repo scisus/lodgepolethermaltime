@@ -70,17 +70,16 @@ loop_kfold <- function(dat, datfold, event, fitmodel, kfoldmodel, iter = 1750, c
 # phenology data
 phenbe <- filter_start_end()
 
-dat <- select_data(phenbe, "FEMALE", "begin", factors = c("Site", "Year", "Provenance", "Clone")) 
+dat <- select_data(phenbe, "MALE", "begin", factors = c("Site", "Year", "Provenance", "Clone")) 
 
 # script ######
 
 # identify folds
-dat$fold <- loo::kfold_split_random(K = 40, N = nrow(dat))
-dat$fold_strat <- add_folds(phensub=dat, fold_type = "stratified", k=30, Site, Provenance)
-dat$fold_group <- add_folds(phensub=dat, fold_type = "grouped", k = 10, Year, Clone)
+ dat$fold <- loo::kfold_split_random(K = 30, N = nrow(dat))
+ dat$fold_strat <- add_folds(phensub=dat, fold_type = "stratified", k=10, Site, Provenance, Year)
+ dat$fold_clone <- add_folds(phensub = dat, fold_type = "grouped", k=20, Clone)
+# dat$fold_group <- add_folds(phensub=dat, fold_type = "grouped", k = 10, Year, Clone)
 
-dat$fold_pg <- 1 
-dat$fold_pg[which(dat$Site != "PGTIS")] <- 2
 
 # model prep
 
@@ -89,7 +88,7 @@ stanmodel_full <- rstan::stan_model('phenology.stan') # model to be fit in stan 
 kfoldmodel_full <- rstan::stan_model('kfoldcv/phenology_kfold.stan') # because of limitations in gqs around [transformed parameters](https://github.com/stan-dev/rstan/issues/714), pare down the stan model to only generate the log likelihood and declare only parameters necessary for that calculation
 
 # base model
-stanmodel_base <- rstan::stan_model('kfoldcv/phenology_mean.stan')
+#stanmodel_base <- rstan::stan_model('kfoldcv/phenology_mean.stan')
 
 # # base + factor
 # stanmodel_site <- rstan::stan_model('kfoldcv/phenology_site.stan')
@@ -101,12 +100,14 @@ stanmodel_base <- rstan::stan_model('kfoldcv/phenology_mean.stan')
 #############
 # random
 
-fullrand <- loop_kfold(dat, datfold = dat$fold, event="begin", fitmodel = stanmodel_full, kfoldmodel = kfoldmodel_full, k=40)
+fullrand <- loop_kfold(dat, datfold = dat$fold, event="begin", fitmodel = stanmodel_full, kfoldmodel = kfoldmodel_full)
 # stratified
-fullstrat <- loop_kfold(dat, datfold=dat$fold_strat, event = "begin", fitmodel = stanmodel_full, kfoldmodel = kfoldmodel_full, k=10)
+fullstrat <- loop_kfold(dat, datfold=dat$fold_strat, event = "begin", fitmodel = stanmodel_full, kfoldmodel = kfoldmodel_full, iter=2000)
 
-# STOP
-basestrat <- loop_kfold(dat, datfold=dat$fold_strat, event = "begin", fitmodel = stanmodel_base, kfoldmodel = stanmodel_base, k=10)
+#pggroup <- loop_kfold(dat, datfold=dat$fold_pg, event = "begin", fitmodel = stanmodel_full, kfoldmodel = kfoldmodel_full)
+clonegroup <- loop_kfold(dat, datfold = dat$fold_clone, event="begin", fitmode = stanmodel_full, kfoldmodel = kfoldmodel_full, control = list(max_treedepth = 12))
+loo::elpd(clonegroup)
+basestrat <- loop_kfold(dat, datfold=dat$fold_strat, event = "begin", fitmodel = stanmodel_base, kfoldmodel = stanmodel_base)
 
 elpd_kfold_fullstrat_specific <- loo::elpd(fullstrat[[1]])
 elpd_kfold_fullstrat_general <- loo::elpd(fullstrat[[2]])
