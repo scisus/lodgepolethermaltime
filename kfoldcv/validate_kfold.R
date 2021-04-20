@@ -2,7 +2,7 @@
 
 # I tried to use k-fold cross validation to understand how my model performed relative to a simpler model and 
 # also to see how predictive ability varied for new levels of factors. However, I was unable to get it to work. 
-# Leaving data out when fitting the model makes it very difficult to fit.
+# Leaving data out to create the training set makes it impossible to fit the model. Honestly, this isn't a good sign. Suggests my model is quite fragile and likely mis-specified.
 
 library(dplyr)
 library(rstan)
@@ -108,12 +108,12 @@ fullrand <- loop_kfold(dat, datfold = dat$fold, event="begin", fitmodel = stanmo
 fullstrat <- loop_kfold(dat, datfold=dat$fold_strat, event = "begin", fitmodel = stanmodel_full, kfoldmodel = kfoldmodel_full, iter=2000)
 
 #pggroup <- loop_kfold(dat, datfold=dat$fold_pg, event = "begin", fitmodel = stanmodel_full, kfoldmodel = kfoldmodel_full)
-clonegroup <- loop_kfold(dat, datfold = dat$fold_clone, event="begin", fitmode = stanmodel_full, kfoldmodel = kfoldmodel_full, control = list(max_treedepth = 12))
+clonegroup <- loop_kfold(dat, datfold = dat$fold_clone, event="begin", fitmodel = stanmodel_full, kfoldmodel = kfoldmodel_full, iter=2000)
 loo::elpd(clonegroup)
 basestrat <- loop_kfold(dat, datfold=dat$fold_strat, event = "begin", fitmodel = stanmodel_base, kfoldmodel = stanmodel_base)
 
 elpd_kfold_fullstrat_specific <- loo::elpd(fullstrat[[1]])
-elpd_kfold_fullstrat_general <- loo::elpd(fullstrat[[2]])
+elpd_kfold_fullstrat <- loo::elpd(fullstrat)
 
 loo_compare(elpd_kfold_fullstrat_specific, elpd_kfold_fullstrat_general)
 
