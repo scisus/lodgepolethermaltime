@@ -26,10 +26,10 @@ functions {
 }
 
 data {
-  int<lower=1> k; // number of observations
+  int<lower=1> k; // total number of observations
   vector[k] sum_forcing; // observations
   int<lower=0, upper=3> censorship[k]; // censorship code (0 uncensored, 1 left, 2 right, 3 no flowering obs)
-  
+
   real<lower=0> mu_mean; // mean for prior on overall mean
   real<lower=0> mu_sigma; // sigma for prior on overall mean (measurement variability)
   
@@ -126,17 +126,12 @@ model {
   alpha_cp_site ~ normal(mu_site, sigma_site); //centered hierarchical model
   
   alpha_year ~ normal(mu_year, sigma_year);
-  // alpha_ncp_year ~ normal(0,1);
-  // alpha_cp_year ~ normal(mu_year, sigma_year);
-  //z_alpha_year ~ normal(0,1); //non-centered year
   
   // alpha_prov ~ normal(mu_prov, sigma_prov);
   alpha_ncp_prov ~ normal(0,1); // non-centered hierarchical model
   alpha_cp_prov ~ normal(mu_prov, sigma_prov); //centered hierarchical model
   
   z_alpha_clone ~ normal(0, 1); // non-centered clone
-  // alpha_ncp_clone ~ normal(0,1); // non-centered hierarchical model
-  // alpha_cp_clone ~ normal(mu_clone, sigma_clone); //centered hierarchical model
   
   mu ~ normal(mu_mean, mu_sigma);
   
@@ -144,10 +139,11 @@ model {
   // (mu_clone + z_alpha_clone[Clone] * sigma_clone),
   // sigma);
   
+  forcing_mu = mu + alpha_site[Site] + alpha_year[Year] +  alpha_prov[Provenance] +
+  (mu_clone + z_alpha_clone[Clone] * sigma_clone);
+  
   for (n in 1:k) {
-    sftrue[n] = mu + alpha_site[Site[n]] + alpha_year[Year[n]] +  alpha_prov[Provenance[n]] +
-  (mu_clone + z_alpha_clone[Clone[n]] * sigma_clone);
-    sum_forcing[n] ~ censored_normal(sftrue[n], sigma, censorship[n]);
+    sum_forcing[n] ~ censored_normal(forcing_mu[n], sigma, censorship[n]);
   }
   
 
@@ -163,17 +159,17 @@ model {
 
 
 // Simulate a full observation from the current value of the parameters
-generated quantities {
-  real sum_forcing_rep[k];
-  
-  // reconstruct non-centered parameters
-  vector[k_Clone] alpha_clone;
-
-  alpha_clone = mu_clone + z_alpha_clone * sigma_clone;
-  
-  { // Don't save tempvars
-  for (i in 1:k)
-  sum_forcing_rep[i] = normal_rng(mu + alpha_site[Site[i]] + alpha_year[Year[i]] + alpha_prov[Provenance[i]] + alpha_clone[Clone[i]]
-  , sigma);
-  }
-}
+// generated quantities {
+//   real sum_forcing_rep[k];
+//   
+//   // reconstruct non-centered parameters
+//   vector[k_Clone] alpha_clone;
+// 
+//   alpha_clone = mu_clone + z_alpha_clone * sigma_clone;
+//   
+//   { // Don't save tempvars
+//   for (i in 1:k)
+//   sum_forcing_rep[i] = normal_rng(mu + alpha_site[Site[i]] + alpha_year[Year[i]] + alpha_prov[Provenance[i]] + alpha_clone[Clone[i]]
+//   , sigma);
+//   }
+// }
