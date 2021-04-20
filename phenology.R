@@ -5,10 +5,10 @@ library(flowers)
 library(rstan)
 #library(tidybayes)
 
-rstan_options(auto_write = TRUE)
+#rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
-source('calculate_forcingunits.R')
+#source('calculate_forcingunits.R')
 source('phenology_functions.R')
 
 # calculate censorship codes. 0 for uncensored, 1 for left censored, 2 for right censored, and 3 for no flowering record
