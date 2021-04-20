@@ -3,7 +3,7 @@
 library(dplyr)
 library(flowers)
 library(rstan)
-library(tidybayes)
+#library(tidybayes)
 
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
@@ -47,16 +47,12 @@ naall <- censorbegin[(is.na(censorbegin$censorship)),] #test no nas
 
 censorbegin %>%
   group_by(Site, Sex) %>%
-  summarise(sum(censorship)/n())
+  summarise(percent_censored = sum(100*censorship)/n())
 
 # choose only phenology data that is the start or end date
 phenbe <- filter_start_end() 
-foo <- select_data(phenbe, sex = "FEMALE", event = "begin") %>%
-  left_join(censorbegin)
 
-phena <- foo[which(is.na(foo$censorship)),]
-
-
+foo <- stan_model("foo.stan")
 # set thresholds
 # - Site threshold: 250
 # - Provenance threshold: 150
@@ -64,6 +60,8 @@ phena <- foo[which(is.na(foo$censorship)),]
 
 
 # fit models
+# 
+
 female_begin <- fit_model(phendat = phenbe,  censorship = censorbegin, sex = "FEMALE", event = "begin")
 female_end <- fit_model(phendat = phenbe, sex = "FEMALE", event = "end")
 
