@@ -56,19 +56,11 @@ data {
   
   // provenances
   
-  int<lower=0, upper=k_Provenance> k_ncp_Provenance;          // Number of noncentered sites
+  int<lower=0, upper=k_Provenance> k_ncp_Provenance;          // Number of noncentered provenances
   int<lower=1, upper=k_Provenance> ncp_idx_Provenance[k_ncp_Provenance]; // Index of noncentered Provenances
   
   int<lower=0, upper=k_Provenance> k_cp_Provenance;           // Number of centered Provenances
   int<lower=1, upper=k_Provenance> cp_idx_Provenance[k_cp_Provenance];   // Index of noncentered Provenances
-  
-  // year
-  
-  // int<lower=0, upper=k_Year> k_ncp_Year;          // Number of noncentered Years
-  // int<lower=1, upper=k_Year> ncp_idx_Year[k_ncp_Year]; // Index of noncentered Years
-  // 
-  // int<lower=0, upper=k_Year> k_cp_Year;           // Number of centered Years
-  // int<lower=1, upper=k_Year> cp_idx_Year[k_cp_Year];   // Index of noncentered Years
 }
 
 
@@ -76,22 +68,15 @@ parameters {
   real<lower=0> mu; //population location. accumulated forcing cannot be negative.
   real<lower=0> sigma; //population scale
   
-  //vector[k_Site] alpha_site; // site effect
   vector[k_ncp_Site] alpha_ncp_site; //non-centered site parameters
   vector[k_cp_Site] alpha_cp_site; //centered site parameters
   
   vector[k_Year] alpha_year; //year effect
-    // vector[k_ncp_Year] alpha_ncp_year; //non-centered year parameters
-    // vector[k_cp_Year] alpha_cp_year; //centered year parameters
-    //vector[k_Year] z_alpha_year; // noncentered year effect
-  
-  //vector[k_Provenance] alpha_prov; //provenance effect
+
   vector[k_ncp_Provenance] alpha_ncp_prov; //non-centered Provenance parameters
   vector[k_cp_Provenance] alpha_cp_prov; //centered Provenance parameters
   
   vector[k_Clone] z_alpha_clone; //clone effect
-  // vector[k_ncp_Clone] alpha_ncp_clone; //non-centered Clone parameters
-  // vector[k_cp_Clone] alpha_cp_clone; //centered Clone parameters
   
   real sigma_site; // site effect variance
   real sigma_year; // year effect variance
@@ -101,14 +86,13 @@ parameters {
   real mu_site; // site effect mean
   real mu_year; // year effect mean
   real mu_prov; // provenance effect mean
-  real mu_clone; //clone effect mean
+  real mu_clone; // clone effect mean
 }
 
 transformed parameters {
   // recenter individual parameters
   vector[k_Site] alpha_site;
   vector[k_Provenance] alpha_prov;
-  //vector[k_Year] alpha_year;
   
   //site
   alpha_site[ncp_idx_Site] = mu_site + sigma_site * alpha_ncp_site;
@@ -117,10 +101,7 @@ transformed parameters {
   //provenance
   alpha_prov[ncp_idx_Provenance] = mu_prov + sigma_prov * alpha_ncp_prov;
   alpha_prov[cp_idx_Provenance] = alpha_cp_prov;
-  
-  //year
-  // alpha_year[ncp_idx_Year] = mu_year + sigma_year * alpha_ncp_year;
-  // alpha_year[cp_idx_Year] = alpha_cp_year;
+
 }
 
 // The model to be estimated. We model the output
@@ -128,7 +109,7 @@ transformed parameters {
 // and standard deviation 'sigma'.
 model {
   // prior model
-  real sftrue[k];
+  vector[k] forcing_mu;
   sigma ~ exponential(1);
   // these are half normals
   sigma_site ~ normal(0, 5);
