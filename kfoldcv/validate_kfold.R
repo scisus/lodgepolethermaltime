@@ -33,21 +33,20 @@ add_folds <- function(phensub, fold_type, k = 10, ...) {
 # fit a model `fitmodel` to all phenology observations except ones in the left out fold
 # then
 # compute log pointwise predictive densities for the left out fold using `kfoldmodel`
-# store and return the predictive density for observations of left out fold
-# setting iterations and chains does not change them 
+# store and return the predictive density for observations of left out fold in a matrix of iter/2 * chains (total samples after warmup) x nrow(dat) (# of datapoints)
 # fitmodel and kfoldmodel should be the same, but rstan::gqs fumbles when there are transformed parameters in the model
 # kfoldmodel allows you to re-specify your model sans extraneous parameter calculations and transformations for feeding into gqs.
 # kfoldmodel *must* have a generated quantities block that calculates a vector log_lik
 # event is a string indicating whether the phenological event is the "begin" or "end" of flowering.
 # feeds the correct priors to stan
 # loop can/should be parallelized
-loop_kfold <- function(dat, datfold, event, fitmodel, kfoldmodel, iter = 1750, chains = 6, control=NULL) {
+loop_kfold <- function(dat, datfold, event, fitmodel, kfoldmodel, iter = 4000, chains = 6, control=NULL) {
   
   k <- length(unique(datfold))
   
   # Prepare a matrix with the total number of post-warmup iterations (rows) by number of observations (cols):
   #log_pd_kfold_specific <- matrix(nrow = iter * chains, ncol = nrow(dat)) 
-  log_pd_kfold_general <- matrix(nrow = iter * chains, ncol = nrow(dat))
+  log_pd_kfold_general <- matrix(nrow = iter/2 * chains, ncol = nrow(dat))
   
   # Loop over the folds
   
@@ -58,7 +57,7 @@ loop_kfold <- function(dat, datfold, event, fitmodel, kfoldmodel, iter = 1750, c
       prepare_data_for_stan(event = event, factor_threshold_list = list(Site = 250, Provenance = 150))
     data_test <- dat[datfold == i,] %>%
       prepare_data_for_stan(event = event, factor_threshold_list = list(Site = 250, Provenance = 150))
-    fit <- sample_stan_model(fitmodel, data_train, kfold = TRUE, test = FALSE, control = control) 
+    fit <- sample_stan_model(fitmodel, data_train, iter = iter, control = control, kfold = TRUE, test = FALSE) 
     gen_test <- rstan::gqs(kfoldmodel, draws = as.matrix(fit), data = data_test)
     #log_pd_kfold_specific[, datfold == i] <- loo::extract_log_lik(gen_test, parameter_name = "log_lik_specific")
     log_pd_kfold_general[, datfold == i] <- loo::extract_log_lik(gen_test, parameter_name = "log_lik_general")

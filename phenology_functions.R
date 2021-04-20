@@ -158,17 +158,57 @@ prepare_data_for_stan <- function(phensub, factor_threshold_list, event) {
 }
   
  
+# sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NULL, 
+#                            expars = c("alpha_ncp_site", "alpha_cp_site", 
+#                                       "alpha_ncp_prov", "alpha_cp_prov", 
+#                                       "z_alpha_clone"), 
+#                            init = rep(list(list(mu = abs(rnorm(1,100,50)), 
+#                                                 sigma = rexp(1,1), 
+#                                                 sigma_site = rexp(1,1), 
+#                                                 sigma_year = rexp(1,1), 
+#                                                 sigma_prov = rexp(1,1), 
+#                                                 sigma_clone = rexp(1,1))), 6),
+#                            control = NULL, kfold = FALSE, test = FALSE) {
+#   
+#   # if the model is for kfold cross validation, then don't change the seed between runs.
+#   # if (kfold == FALSE) {
+#   #   seed = sample.int(.Machine$integer.max, 1) } else {
+#   #     seed = 1330 } 
+#   
+#   if (test == TRUE) { # if you're testing the model, run just a few iterations.
+#     iter = 100
+#   } else {
+#     iter = 4000
+#   }
+#   
+#   fit <- rstan::sampling(object = compiledmodel, chains=6, data=input, iter=iter, cores=7,
+#                      pars=expars, include=FALSE,
+#                      init = init, # stop stan from sampling impossible negative numbers
+#                      #seed = seed,
+#                      control = control)
+#     
+#     
+#   gc() # don't eat all the RAM
+#   
+#   if (kfold == FALSE & test == FALSE) { # save the model fit unless you're doing kfold
+#  saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, appendname, ".rds", sep=''))
+#   }
+#   
+#   return(fit)
+# }
+
+## set iterations
 sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NULL, 
-                           expars = c("alpha_ncp_site", "alpha_cp_site", 
-                                      "alpha_ncp_prov", "alpha_cp_prov", 
-                                      "z_alpha_clone"), 
-                           init = rep(list(list(mu = abs(rnorm(1,100,50)), 
-                                                sigma = rexp(1,1), 
-                                                sigma_site = rexp(1,1), 
-                                                sigma_year = rexp(1,1), 
-                                                sigma_prov = rexp(1,1), 
-                                                sigma_clone = rexp(1,1))), 6),
-                           control = NULL, kfold = FALSE, test = FALSE) {
+                              expars = c("alpha_ncp_site", "alpha_cp_site", 
+                                         "alpha_ncp_prov", "alpha_cp_prov", 
+                                         "z_alpha_clone"), 
+                              init = rep(list(list(mu = abs(rnorm(1,100,50)), 
+                                                   sigma = rexp(1,1), 
+                                                   sigma_site = rexp(1,1), 
+                                                   sigma_year = rexp(1,1), 
+                                                   sigma_prov = rexp(1,1), 
+                                                   sigma_clone = rexp(1,1))), 6),
+                              iter = 3500, control = NULL, kfold = FALSE, test = FALSE) {
   
   # if the model is for kfold cross validation, then don't change the seed between runs.
   # if (kfold == FALSE) {
@@ -178,20 +218,20 @@ sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NUL
   if (test == TRUE) { # if you're testing the model, run just a few iterations.
     iter = 100
   } else {
-    iter = 4000
+    iter = iter
   }
   
   fit <- rstan::sampling(object = compiledmodel, chains=6, data=input, iter=iter, cores=7,
-                     pars=expars, include=FALSE,
-                     init = init, # stop stan from sampling impossible negative numbers
-                     #seed = seed,
-                     control = control)
-    
-    
+                         pars=expars, include=FALSE,
+                         init = init, # stop stan from sampling impossible negative numbers
+                         #seed = seed,
+                         control = control)
+  
+  
   gc() # don't eat all the RAM
   
   if (kfold == FALSE & test == FALSE) { # save the model fit unless you're doing kfold
- saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, appendname, ".rds", sep=''))
+    saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, appendname, ".rds", sep=''))
   }
   
   return(fit)
