@@ -61,16 +61,22 @@ phenbe <- filter_start_end()
 # set thresholds
 # - Site threshold: 250
 # - Provenance threshold: 150
-# - Clone threshold: 10
 
 
 # fit models
 # 
 
-female_begin <- fit_model(phendat = phenbe,  censorship = censorbegin, sex = "FEMALE", event = "begin")
+female_begin <- fit_model(phendat = phenbe, sex = "FEMALE", censorship = censorbegin, event = "begin")
+nuts <- bayesplot::nuts_params(female_begin)
+draws <- as.array(female_begin)
+bayesplot::mcmc_parcoord(draws, pars = vars("mu", "sigma", starts_with("mu_"), starts_with("sigma_"), contains("alpha_site")), np=nuts, transform = function(x) {(x - mean(x)) / sd(x)})
+#female_begin_censored <- fit_model(phendat = censored, sex = "FEMALE", event = "begin")
+
+library(shinystan)
+launch_shinystan(female_begin)
 female_end <- fit_model(phendat = phenbe, sex = "FEMALE", event = "end")
 
-male_begin <- fit_model(phendat=phenbe, sex="MALE", event = "begin")
+male_begin <- fit_model(phendat=phenbe, censored = censorbegin, sex = "MALE", event = "begin")
 male_end <- fit_model(phendat = phenbe, sex="MALE", event = "end")
 
 
