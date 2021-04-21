@@ -32,9 +32,9 @@ walshbegin <- phen %>%
   group_by(Source, Sex, Year, Site, Orchard) %>%
   mutate(first_group_obs = min(DoY)) %>%
   ungroup() %>%
-  group_by(Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
-  summarize(censorship = case_when(unique(First_RF) == min(DoY) ~ 1,
-                                   unique(First_RF) > min(DoY) ~ 0,
+  group_by(Source, Index, Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
+  summarize(censored = case_when(unique(First_RF) == first_group_obs ~ 1,
+                                   unique(First_RF) > first_group_obs ~ 0,
                                    is.na(unique(First_RF)) ~ 3))
 
 
