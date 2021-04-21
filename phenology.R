@@ -19,11 +19,11 @@ phen <-  flowers::phenology
 wagnerbegin <- phen %>% 
   filter(Source == "Rita Wagner") %>%
   group_by(Source, Index, Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
-  summarize(censorship = case_when(unique(First_RF) == min(DoY) ~ 1,
+  summarize(censored = case_when(unique(First_RF) == min(DoY) ~ 1,
             unique(First_RF) > min(DoY) ~ 0,
             is.na(unique(First_RF)) ~ 3))
 
-nawag <- wagnerbegin[(is.na(wagnerbegin$censorship)),] #test no nas
+nawag <- wagnerbegin[(is.na(wagnerbegin$censored)),] #test no nas
 
 
 
@@ -37,22 +37,27 @@ walshbegin <- phen %>%
                                    unique(First_RF) > min(DoY) ~ 0,
                                    is.na(unique(First_RF)) ~ 3))
 
-nawal <- walshbegin[(is.na(walshbegin$censorship)),] #test no nas
+
+
+nawal <- walshbegin[(is.na(walshbegin$censored)),] #test no nas
 
 censorbegin <- full_join(wagnerbegin, walshbegin) %>%
   ungroup() %>%
   mutate(Year = as.character(Year), Clone = as.character(Clone)) 
 
-naall <- censorbegin[(is.na(censorbegin$censorship)),] #test no nas
+naall <- censorbegin[(is.na(censorbegin$censored)),] #test no nas
+
 
 censorbegin %>%
   group_by(Site, Sex) %>%
-  summarise(percent_censored = sum(100*censorship)/n())
+  summarise(percent_censored = sum(100*censored)/n())
+
+#nocensor <- filter(censorbegin, censored == 0)
 
 # choose only phenology data that is the start or end date
-phenbe <- filter_start_end() 
+phenbe <- filter_start_end()
 
-foo <- stan_model("foo.stan")
+
 # set thresholds
 # - Site threshold: 250
 # - Provenance threshold: 150
