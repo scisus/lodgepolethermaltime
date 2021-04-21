@@ -75,20 +75,19 @@ build_centering_index <- function(phensub, fac, threshold) {
 
 
 # Fit a model in Stan to phenology data, return the model fit object and save the model fit object to a file. Choose whether the model is for "MALE" or "FEMALE" strobili and whether the event is the "begin" or "end" of flowering. data is a dataframe of flowering data. id is an optional identifier appended to the file name.
-fit_model <- function(phendat, censorship, sex, event, model = "phenology.stan", maxtreedepth=10) {
+fit_model <- function(phendat, sex, event, censorship, model = "phenology.stan", maxtreedepth=10) {
   
   
   phensub <- select_data(phendat, censorship, sex, event)
-  #centering_indexes <- build_centering_indexes(phensub) 
   # factor levels are very unbalanced, so I'm non-centering some levels
   
   siteidx <- build_centering_index(phensub, "Site", 250)
   providx <- build_centering_index(phensub, "Provenance", 150)
-  yearidx <- build_centering_index(phensub, "Year", 150)
+  #yearidx <- build_centering_index(phensub, "Year", 150)
  # cloneidx <- build_centering_index(phensub, "Clone", 10)
   
-  centering_indexes <- append(siteidx, providx) %>%
-    append(yearidx)
+  centering_indexes <- append(siteidx, providx)# %>%
+   # append(yearidx)
   
   # prepare data for stan
   
