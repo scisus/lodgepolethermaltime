@@ -6,25 +6,25 @@
 
 // The input data is a vector 'y' of length 'k'.
 
-functions {
-  // from example by Christiaan van Dorp [https://tbz533.blogspot.com/2019/07/neat-encoding-of-censored-data-in-stan.html]
-    real censored_normal_lpdf(real x, real mu, real sigma, int cc) {
-        real ll;
-        if ( cc == 0 ) { // uncensored
-            ll = normal_lpdf(x | mu, sigma);
-        } else if ( cc == 1 ) { // left-censored
-            ll = normal_lcdf(x | mu, sigma);
-        } else if ( cc == 2 ) { // right-censored
-            ll = normal_lccdf(x | mu, sigma);
-        } else if ( cc == 3 ) { // missing data
-            ll = 0.0;
-        } else { // any other censoring code is invalid
-            reject("invalid censoring code in censored_normal_lpdf");
-        }
-        return ll;
-    }
-}
-
+// functions {
+  //   // from example by Christiaan van Dorp [https://tbz533.blogspot.com/2019/07/neat-encoding-of-censored-data-in-stan.html]
+  //     real censored_normal_lpdf(real x, real mu, real sigma, int cc) {
+    //         real ll;
+    //         if ( cc == 0 ) { // uncensored
+    //             ll = normal_lpdf(x | mu, sigma);
+    //         } else if ( cc == 1 ) { // left-censored
+    //             ll = normal_lcdf(x | mu, sigma);
+    //         } else if ( cc == 2 ) { // right-censored
+    //             ll = normal_lccdf(x | mu, sigma);
+    //         } else if ( cc == 3 ) { // missing data
+    //             ll = 0.0;
+    //         } else { // any other censoring code is invalid
+    //             reject("invalid censoring code in censored_normal_lpdf");
+    //         }
+    //         return ll;
+    //     }
+    // }
+    
 data {
   int<lower=1> k; // total number of observations
   vector[k] sum_forcing; // observations
@@ -155,6 +155,20 @@ model {
 //         Observations[n] ~ censored_normal(mu, sigma, CensorCodes[n]);
 //     }
 // }
+      forcing_mu = mu + alpha_site[Site] + alpha_year[Year] +  alpha_prov[Provenance] +
+      (mu_clone + z_alpha_clone[Clone] * sigma_clone);
+      for (n in 1:k) {
+        if (censored[n] == 0) {
+          sum_forcing[n] ~ normal(forcing_mu[n], sigma);
+        } else if (censored[n] == 1) {
+          target += normal_lcdf(sum_forcing[n] | forcing_mu[n], sigma_cens);
+        }
+        
+      }
+      
+      // sum_forcing ~ normal(mu + alpha_site[Site] + alpha_year[Year] +  alpha_prov[Provenance] +
+      // (mu_clone + z_alpha_clone[Clone] * sigma_clone),
+      // sigma);
 }
 
 
