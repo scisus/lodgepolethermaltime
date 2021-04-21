@@ -30,14 +30,20 @@ select_data <- function(phendat, censorship, sex, event, keep_day = FALSE) {
   phensub <- phendat %>%
     dplyr::filter(if (event == "begin") Sex == sex & DoY == First_RF else Sex == sex & DoY == Last_RF) 
   
-  phensub <- merge(phensub, censorship)
+  censorship <- censorship %>%
+    dplyr::filter(Sex == sex) %>%
+    dplyr::filter(censored != 3)
+  
+  phensub <- dplyr::left_join(phensub, censorship)
   
   if (keep_day == TRUE) {
     phensub <- phensub %>%
-      dplyr::select(sum_forcing, DoY, Site, Year, Provenance, Clone, censorship)
+    dplyr::select(sum_forcing, DoY, Site, Year, Provenance, Clone, censored)
+    #dplyr::select(sum_forcing, DoY, Site, Year, Provenance, Clone)
   } else {
     phensub <- phensub %>%
-      dplyr::select(sum_forcing, Site, Year, Provenance, Clone, censorship) 
+      dplyr::select(sum_forcing, Site, Year, Provenance, Clone, censored)
+      #dplyr::select(sum_forcing, Site, Year, Provenance, Clone) 
   }
   
   return(phensub)
