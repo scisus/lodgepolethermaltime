@@ -12,11 +12,11 @@ options(mc.cores = parallel::detectCores())
 source('phenology_functions.R')
 
 # calculate censorship codes. 0 for uncensored, 1 for left censored, 2 for right censored, and 3 for no flowering record
-phen <-  flowers::phenology 
+phen <-  flowers::phenology
 
 # Wagner censorship
 
-wagnerbegin <- phen %>% 
+wagnerbegin <- phen %>%
   filter(Source == "Rita Wagner") %>%
   group_by(Source, Index, Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
   summarize(censored = case_when(unique(First_RF) == min(DoY) ~ 1,
@@ -43,7 +43,7 @@ nawal <- walshbegin[(is.na(walshbegin$censored)),] #test no nas
 
 censorbegin <- full_join(wagnerbegin, walshbegin) %>%
   ungroup() %>%
-  mutate(Year = as.character(Year), Clone = as.character(Clone)) 
+  mutate(Year = as.character(Year), Clone = as.character(Clone))
 
 naall <- censorbegin[(is.na(censorbegin$censored)),] #test no nas
 
@@ -64,16 +64,27 @@ phenbe <- filter_start_end()
 
 
 # fit models
-# 
+#
+library(ggplot2)
+library(ggbeeswarm)
+ggplot(filter(phenbe, Site == "Tolko"), aes(x = Year, y = DoY)) +
+         geom_beeswarm()
+ggplot(filter(phenbe, Site == "Tolko"), aes(x=Year, y = sum_forcing)) +
+         geom_beeswarm()
+female_begin <- fit_model(phendat = phenbe, sex = "FEMALE", censorship = censorbegin, event = "begin", maxtreedepth = 10)
 
-female_begin <- fit_model(phendat = phenbe, sex = "FEMALE", censorship = censorbegin, event = "begin")
-nuts <- bayesplot::nuts_params(female_begin)
-draws <- as.array(female_begin)
+fb <- readRDS("2021-04-21FEMALE_begin.rds")
+nuts <- bayesplot::nuts_params(fb)
+draws <- as.array(fb)
 bayesplot::mcmc_parcoord(draws, pars = vars("mu", "sigma", starts_with("mu_"), starts_with("sigma_"), contains("alpha_site")), np=nuts, transform = function(x) {(x - mean(x)) / sd(x)})
+bayesplot::mcmc_intervals(draws, pars = vars(starts_with("mu_"), starts_with("sigma_"), contains("delta_site"), "sigma"))
+bayesplot::mcmc_intervals(draws, pars = vars( contains("year")))
+bayesplot::mcmc_areas(draws, pars = vars(contains("sigma_")))
+bayesplot::mcmc_areas(draws, pars = vars(contains("mu_")))
 #female_begin_censored <- fit_model(phendat = censored, sex = "FEMALE", event = "begin")
 
 library(shinystan)
-launch_shinystan(female_begin)
+launch_shinystan(fb)
 female_end <- fit_model(phendat = phenbe, sex = "FEMALE", event = "end")
 
 male_begin <- fit_model(phendat=phenbe, censored = censorbegin, sex = "MALE", event = "begin")
