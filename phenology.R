@@ -12,8 +12,36 @@ options(mc.cores = parallel::detectCores())
 source('phenology_functions.R')
 
 # calculate censorship codes. 0 for uncensored, 1 for left censored, 2 for right censored, and 3 for no flowering record
-phen <-  flowers::phenology
+phen <-  flowers::phenology %>%
+  mutate(period = Last_RF - First_RF)
 
+beta <- -1 * abs(rnorm(100, 0, 1))
+summary(beta)
+alpha <- rnorm(100, 0, 1)
+summary(alpha)
+
+days <- sample(seq(from = 0, to = 16, by = 1), size = 100, replace = TRUE)
+p1 <- gtools::inv.logit(-2.8*0:16 + 0)
+p3 <- gtools::inv.logit(-2.8*0:16 + 2)
+p2 <- gtools::inv.logit(-2.8*0:16 - 2)
+p4 <- gtools::inv.logit(-0.1* 0:16 + 2)
+censor1 <- rbinom(n=100, size = 1, prob = 0.9)
+censor2 <- rbinom(n=100, size = 1, prob = 0.1)
+censor3 <- rbinom(n=100, size=1, prob= 2)
+censor4 <- rbinom(n=100, size=1, prob=p4)
+
+plot(days, censor1)
+plot(days, censor2)
+plot(days, censor3)
+plot(days, censor4)
+
+
+plot(0:16, p1, ylim = c(0,1))
+
+lines(p1)
+lines(p2)
+lines(p3)
+lines(p4)
 # Wagner censorship
 
 wagnerbegin <- phen %>%
