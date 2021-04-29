@@ -1,41 +1,41 @@
 # functions
-# 
+#
 
 # format data for model - only start and end dates
 filter_start_end <- function(forcingname = "ristos", clim = "data/all_clim_PCIC.csv") {
-  
+
   phen <-  flowers::phenology %>% # phenology data
     filter(Phenophase_Derived==2) %>% # only include flowering days
-    rename(state = Phenophase_Derived) 
-  
+    rename(state = Phenophase_Derived)
+
   forcing <- read.csv(clim, header=TRUE, stringsAsFactors = FALSE) %>%
     filter(forcing_type==forcingname) # ristos consider forcing units calculated based on work of Sarvas 1972
-  
+
   spus <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv") %>%
     select(SPU_Name, Orchard) # provenance information for each orchard in phen
-  
+
   phenbe <- dplyr::filter(phen, DoY == First_RF | DoY == Last_RF) %>%
     dplyr::left_join(forcing) %>%
     dplyr::left_join(spus) %>%
     dplyr::mutate(Year = as.character(Year), Clone = as.character(Clone)) %>%
     dplyr::rename(Provenance = SPU_Name) %>%
     distinct()
-  
+
   return(phenbe)
 }
 
 # select data for stan models - separate by sex and event. can keep day of year if you want, but dropped by default
 select_data <- function(phendat, censorship, sex, event, keep_day = FALSE) {
-  
+
   phensub <- phendat %>%
-    dplyr::filter(if (event == "begin") Sex == sex & DoY == First_RF else Sex == sex & DoY == Last_RF) 
-  
+    dplyr::filter(if (event == "begin") Sex == sex & DoY == First_RF else Sex == sex & DoY == Last_RF)
+
   censorship <- censorship %>%
     dplyr::filter(Sex == sex) %>%
     dplyr::filter(censored != 3)
-  
+
   phensub <- dplyr::left_join(phensub, censorship)
-  
+
   if (keep_day == TRUE) {
     phensub <- phensub %>%
     dplyr::select(sum_forcing, DoY, Site, Year, Provenance, Clone, censored)
@@ -43,9 +43,9 @@ select_data <- function(phendat, censorship, sex, event, keep_day = FALSE) {
   } else {
     phensub <- phensub %>%
       dplyr::select(sum_forcing, Site, Year, Provenance, Clone, censored)
-      #dplyr::select(sum_forcing, Site, Year, Provenance, Clone) 
+      #dplyr::select(sum_forcing, Site, Year, Provenance, Clone)
   }
-  
+
   return(phensub)
 }
 
@@ -55,21 +55,21 @@ select_data <- function(phendat, censorship, sex, event, keep_day = FALSE) {
 # - Provenance threshold: 150
 
 build_centering_index <- function(phensub, fac, threshold) {
-  
+
   # create an index for a factor for levels that should be modeled as centered or non-centered
   ncp_idx <- which(table(phensub[[fac]]) <= threshold)
   cp_idx <- which(table(phensub[[fac]]) > threshold)
-  
+
   # data for stan
   k_ncp <- length(ncp_idx) # number of non centered sites
   ncp_idx <- array(ncp_idx) # non-centered sites
-  
+
   k_cp <- length(cp_idx)
   cp_idx <- array(cp_idx)
-  
+
   standat <- list(k_ncp, ncp_idx, k_cp, cp_idx)
   names(standat) <- paste0(c("k_ncp_", "ncp_idx_", "k_cp_", "cp_idx_"), fac)
-  
+
   return(standat)
 }
 
@@ -102,11 +102,11 @@ fit_model <- function(phendat, sex, event, censorship, model = "phenology.stan",
 
   if (event == "end") {
     input <- c(input, mu_mean=555, mu_sigma = 90)
-  } 
-  
-  
-  fit <- rstan::stan(file= model, chains=6, data=input, iter=3500, cores=7,
-                     pars=c("alpha_ncp_site", "alpha_cp_site", "alpha_ncp_prov", "alpha_cp_prov", "z_alpha_clone"), include=FALSE,
+  }
+
+
+  fit <- rstan::stan(file= model, chains=6, data=input, iter=iter, warmup = warmup, cores=7,
+                     pars=c("alpha_ncp_site", "alpha_cp_site", "alpha_ncp_prov", "alpha_cp_prov", "z_alpha_clone", "alpha_ncp_year", "alpha_cp_year"), include=FALSE,
                      init = rep(list(list(mu = abs(rnorm(1,100,50)), # stop stan from sampling impossible negative numbers
                                           sigma = rexp(1,1),
                                           sigma_site = rexp(1,1),
@@ -115,12 +115,12 @@ fit_model <- function(phendat, sex, event, censorship, model = "phenology.stan",
                                           sigma_clone = rexp(1,1))), 6),
                      control = list(max_treedepth = maxtreedepth, adapt_delta=0.8))
 
-  # fit <- rstan::stan(file= model, chains=6, data=input, cores=7, 
-  #                    pars=c("alpha_ncp_site", "alpha_cp_site", "alpha_ncp_prov", "alpha_cp_prov", "z_alpha_clone"), include=FALSE, 
+  # fit <- rstan::stan(file= model, chains=6, data=input, cores=7,
+  #                    pars=c("alpha_ncp_site", "alpha_cp_site", "alpha_ncp_prov", "alpha_cp_prov", "z_alpha_clone"), include=FALSE,
   #                    control = list(max_treedepth = maxtreedepth))
   gc()
-  
+
   saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, ".rds", sep=''))
-  
+
   return(fit)
 }
