@@ -46,6 +46,7 @@ data {
       int<lower=1, upper=k_Clone> Clone[k];
 
       // indexing for non-centered and centered levels within factors
+
       // sites
 
       int<lower=0, upper=k_Site> k_ncp_Site;          // Number of noncentered sites
@@ -61,6 +62,14 @@ data {
 
       int<lower=0, upper=k_Provenance> k_cp_Provenance;           // Number of centered Provenances
       int<lower=1, upper=k_Provenance> cp_idx_Provenance[k_cp_Provenance];   // Index of noncentered Provenances
+
+      // years
+
+      int<lower=0, upper=k_Year> k_ncp_Year;          // Number of noncentered provenances
+      int<lower=1, upper=k_Year> ncp_idx_Year[k_ncp_Year]; // Index of noncentered Provenances
+
+      int<lower=0, upper=k_Year> k_cp_Year;           // Number of centered Provenances
+      int<lower=1, upper=k_Year> cp_idx_Year[k_cp_Year];   // Index of noncentered Provenances
 }
 
 
@@ -72,10 +81,13 @@ parameters {
       vector[k_ncp_Site] alpha_ncp_site; //non-centered site parameters
       vector[k_cp_Site] alpha_cp_site; //centered site parameters
 
-      vector[k_Year] alpha_year; //year effect
-
       vector[k_ncp_Provenance] alpha_ncp_prov; //non-centered Provenance parameters
       vector[k_cp_Provenance] alpha_cp_prov; //centered Provenance parameters
+
+      //vector[k_Year] alpha_year; //year effect
+      //vector[k_Year] z_alpha_year;
+      vector[k_ncp_Year] alpha_ncp_year; //non-centered Provenance parameters
+      vector[k_cp_Year] alpha_cp_year; //centered Provenance parameters
 
       vector[k_Clone] z_alpha_clone; //clone effect
 
@@ -94,6 +106,7 @@ transformed parameters {
       // recenter individual parameters
       vector[k_Site] alpha_site;
       vector[k_Provenance] alpha_prov;
+      vector[k_Year] alpha_year;
 
       //site
       alpha_site[ncp_idx_Site] = mu_site + sigma_site * alpha_ncp_site;
@@ -102,6 +115,10 @@ transformed parameters {
       //provenance
       alpha_prov[ncp_idx_Provenance] = mu_prov + sigma_prov * alpha_ncp_prov;
       alpha_prov[cp_idx_Provenance] = alpha_cp_prov;
+
+      //year
+      alpha_year[ncp_idx_Year] = mu_year + sigma_year * alpha_ncp_year;
+      alpha_year[cp_idx_Year] = alpha_cp_year;
 
 }
 
@@ -127,7 +144,10 @@ model {
       alpha_ncp_site ~ normal(0,1); // non-centered hierarchical model for site
       alpha_cp_site ~ normal(mu_site, sigma_site); //centered hierarchical model for site
 
-      alpha_year ~ normal(mu_year, sigma_year);
+     // z_alpha_year ~ normal(0, 1);
+
+      alpha_ncp_year ~ normal(0,1); // non-centered hierarchical model for site
+      alpha_cp_year ~ normal(mu_year, sigma_year); //centered hierarchical model for site
 
       // alpha_prov ~ normal(mu_prov, sigma_prov);
       alpha_ncp_prov ~ normal(0,1); // non-centered hierarchical model for provenance

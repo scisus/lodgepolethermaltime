@@ -75,31 +75,31 @@ build_centering_index <- function(phensub, fac, threshold) {
 
 
 # Fit a model in Stan to phenology data, return the model fit object and save the model fit object to a file. Choose whether the model is for "MALE" or "FEMALE" strobili and whether the event is the "begin" or "end" of flowering. data is a dataframe of flowering data. id is an optional identifier appended to the file name.
-fit_model <- function(phendat, sex, event, censorship, model = "phenology.stan", maxtreedepth=10) {
-  
-  
+fit_model <- function(phendat, sex, event, censorship, model = "phenology.stan", maxtreedepth=10, iter = 3500, warmup = floor(iter/2)) {
+
+
   phensub <- select_data(phendat, censorship, sex, event)
   # factor levels are very unbalanced, so I'm non-centering some levels
-  
+
   siteidx <- build_centering_index(phensub, "Site", 250)
   providx <- build_centering_index(phensub, "Provenance", 150)
-  #yearidx <- build_centering_index(phensub, "Year", 150)
+  yearidx <- build_centering_index(phensub, "Year", 180)
  # cloneidx <- build_centering_index(phensub, "Clone", 10)
-  
-  centering_indexes <- append(siteidx, providx)# %>%
-   # append(yearidx)
-  
+
+  centering_indexes <- append(siteidx, providx) %>%
+   append(yearidx)
+
   # prepare data for stan
-  
+
   base_data <- tidybayes::compose_data(phensub, .n_name=tidybayes::n_prefix(prefix="k"))
 
   input <- append(base_data, centering_indexes)
-  
+
   # add event-specific prior
   if (event == "begin") {
     input <- c(input, mu_mean=335, mu_sigma = 50)
-  } 
-  
+  }
+
   if (event == "end") {
     input <- c(input, mu_mean=555, mu_sigma = 90)
   } 
