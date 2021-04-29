@@ -62,22 +62,28 @@ phenbe <- filter_start_end()
 # - Site threshold: 250
 # - Provenance threshold: 150
 
+foo <- filter(phenbe, DoY == First_RF, Sex =="FEMALE")
+foom <- filter(phenbe, DoY == First_RF, Sex == "MALE")
+
+table(foom$Site, foom$Year)
+table(foom$Year)
 
 # fit models
 #
-library(ggplot2)
-library(ggbeeswarm)
-ggplot(filter(phenbe, Site == "Tolko"), aes(x = Year, y = DoY)) +
-         geom_beeswarm()
-ggplot(filter(phenbe, Site == "Tolko"), aes(x=Year, y = sum_forcing)) +
-         geom_beeswarm()
-female_begin <- fit_model(phendat = phenbe, sex = "FEMALE", censorship = censorbegin, event = "begin", maxtreedepth = 10)
+# library(ggplot2)
+# library(ggbeeswarm)
+# ggplot(filter(phenbe, Site == "Tolko"), aes(x = Year, y = DoY)) +
+#          geom_beeswarm()
+# ggplot(filter(phenbe, Site == "Tolko"), aes(x=Year, y = sum_forcing)) +
+#          geom_beeswarm()
+female_begin <- fit_model(phendat = phenbe, sex = "FEMALE", censorship = censorbegin, event = "begin", maxtreedepth = 12, iter = 4500, warmup = 1500)
+male_begin <- fit_model(phendat = phenbe, sex = "MALE", censorship = censorbegin, event = "begin", maxtreedepth = 12, iter = 4500, warmup = 1500)
 
-fb <- readRDS("2021-04-21FEMALE_begin.rds")
+fb <- readRDS("2021-04-29FEMALE_begin.rds")
 nuts <- bayesplot::nuts_params(fb)
 draws <- as.array(fb)
 bayesplot::mcmc_parcoord(draws, pars = vars("mu", "sigma", starts_with("mu_"), starts_with("sigma_"), contains("alpha_site")), np=nuts, transform = function(x) {(x - mean(x)) / sd(x)})
-bayesplot::mcmc_intervals(draws, pars = vars(starts_with("mu_"), starts_with("sigma_"), contains("delta_site"), "sigma"))
+bayesplot::mcmc_intervals(draws, pars = vars(starts_with("mu_"), starts_with("sigma_"), contains("alpha_site"), "sigma"))
 bayesplot::mcmc_intervals(draws, pars = vars( contains("year")))
 bayesplot::mcmc_areas(draws, pars = vars(contains("sigma_")))
 bayesplot::mcmc_areas(draws, pars = vars(contains("mu_")))
