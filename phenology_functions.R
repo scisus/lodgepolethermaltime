@@ -106,7 +106,7 @@ fit_model <- function(phendat, sex, event, censorship, model = "phenology.stan",
 
 
   fit <- rstan::stan(file= model, chains=6, data=input, iter=iter, warmup = warmup, cores=7,
-                     pars=c("alpha_ncp_site", "alpha_cp_site", "alpha_ncp_prov", "alpha_cp_prov", "z_alpha_clone", "alpha_ncp_year", "alpha_cp_year"), include=FALSE,
+                     pars=c("delta_ncp_site", "delta_cp_site", "delta_ncp_prov", "delta_cp_prov", "z_delta_clone", "delta_ncp_year", "delta_cp_year"), include=FALSE,
                      init = rep(list(list(mu = abs(rnorm(1,100,50)), # stop stan from sampling impossible negative numbers
                                           sigma = rexp(1,1),
                                           sigma_site = rexp(1,1),
@@ -116,7 +116,7 @@ fit_model <- function(phendat, sex, event, censorship, model = "phenology.stan",
                      control = list(max_treedepth = maxtreedepth, adapt_delta=0.8))
 
   # fit <- rstan::stan(file= model, chains=6, data=input, cores=7,
-  #                    pars=c("alpha_ncp_site", "alpha_cp_site", "alpha_ncp_prov", "alpha_cp_prov", "z_alpha_clone"), include=FALSE,
+  #                    pars=c("delta_ncp_site", "delta_cp_site", "delta_ncp_prov", "delta_cp_prov", "z_delta_clone"), include=FALSE,
   #                    control = list(max_treedepth = maxtreedepth))
   gc()
 
