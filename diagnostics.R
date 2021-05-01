@@ -38,7 +38,7 @@ minesses <- purrr::map(sims, miness) %>%
 # Goal is for ESS to be at least 100 for each chain. e.g. if 6 chains, you're in trouble if min ESS < 600.
 print(minesses)
 
-smaxrhat <- function(sims) {
+maxrhat <- function(sims) {
   rhats <- apply(sims, MARGIN = 3, FUN = rstan::Rhat)
   maxhat <- max(rhats)
   return(maxhat)
