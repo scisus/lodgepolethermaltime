@@ -78,18 +78,18 @@ parameters {
       real<lower=0> sigma; //population scale
       //real<lower=0> sigma_cens;
 
-      vector[k_ncp_Site] alpha_ncp_site; //non-centered site parameters
-      vector[k_cp_Site] alpha_cp_site; //centered site parameters
+      vector[k_ncp_Site] delta_ncp_site; //non-centered site parameters
+      vector[k_cp_Site] delta_cp_site; //centered site parameters
 
-      vector[k_ncp_Provenance] alpha_ncp_prov; //non-centered Provenance parameters
-      vector[k_cp_Provenance] alpha_cp_prov; //centered Provenance parameters
+      vector[k_ncp_Provenance] delta_ncp_prov; //non-centered Provenance parameters
+      vector[k_cp_Provenance] delta_cp_prov; //centered Provenance parameters
 
-      //vector[k_Year] alpha_year; //year effect
-      //vector[k_Year] z_alpha_year;
-      vector[k_ncp_Year] alpha_ncp_year; //non-centered Provenance parameters
-      vector[k_cp_Year] alpha_cp_year; //centered Provenance parameters
+      //vector[k_Year] delta_year; //year effect
+      //vector[k_Year] z_delta_year;
+      vector[k_ncp_Year] delta_ncp_year; //non-centered Provenance parameters
+      vector[k_cp_Year] delta_cp_year; //centered Provenance parameters
 
-      vector[k_Clone] z_alpha_clone; //clone effect
+      vector[k_Clone] z_delta_clone; //clone effect
 
       real sigma_site; // site effect variance
       real sigma_year; // year effect variance
@@ -104,21 +104,21 @@ parameters {
 
 transformed parameters {
       // recenter individual parameters
-      vector[k_Site] alpha_site;
-      vector[k_Provenance] alpha_prov;
-      vector[k_Year] alpha_year;
+      vector[k_Site] delta_site;
+      vector[k_Provenance] delta_prov;
+      vector[k_Year] delta_year;
 
       //site
-      alpha_site[ncp_idx_Site] = mu_site + sigma_site * alpha_ncp_site;
-      alpha_site[cp_idx_Site] = alpha_cp_site;
+      delta_site[ncp_idx_Site] = mu_site + sigma_site * delta_ncp_site;
+      delta_site[cp_idx_Site] = delta_cp_site;
 
       //provenance
-      alpha_prov[ncp_idx_Provenance] = mu_prov + sigma_prov * alpha_ncp_prov;
-      alpha_prov[cp_idx_Provenance] = alpha_cp_prov;
+      delta_prov[ncp_idx_Provenance] = mu_prov + sigma_prov * delta_ncp_prov;
+      delta_prov[cp_idx_Provenance] = delta_cp_prov;
 
       //year
-      alpha_year[ncp_idx_Year] = mu_year + sigma_year * alpha_ncp_year;
-      alpha_year[cp_idx_Year] = alpha_cp_year;
+      delta_year[ncp_idx_Year] = mu_year + sigma_year * delta_ncp_year;
+      delta_year[cp_idx_Year] = delta_cp_year;
 
 }
 
@@ -141,24 +141,24 @@ model {
       mu_prov ~ normal(0, 5);
       mu_clone ~ normal(0, 5);
 
-      alpha_ncp_site ~ normal(0,1); // non-centered hierarchical model for site
-      alpha_cp_site ~ normal(mu_site, sigma_site); //centered hierarchical model for site
+      delta_ncp_site ~ normal(0,1); // non-centered hierarchical model for site
+      delta_cp_site ~ normal(mu_site, sigma_site); //centered hierarchical model for site
 
-     // z_alpha_year ~ normal(0, 1);
+     // z_delta_year ~ normal(0, 1);
 
-      alpha_ncp_year ~ normal(0,1); // non-centered hierarchical model for site
-      alpha_cp_year ~ normal(mu_year, sigma_year); //centered hierarchical model for site
+      delta_ncp_year ~ normal(0,1); // non-centered hierarchical model for site
+      delta_cp_year ~ normal(mu_year, sigma_year); //centered hierarchical model for site
 
-      // alpha_prov ~ normal(mu_prov, sigma_prov);
-      alpha_ncp_prov ~ normal(0,1); // non-centered hierarchical model for provenance
-      alpha_cp_prov ~ normal(mu_prov, sigma_prov); //centered hierarchical model for provenance
+      // delta_prov ~ normal(mu_prov, sigma_prov);
+      delta_ncp_prov ~ normal(0,1); // non-centered hierarchical model for provenance
+      delta_cp_prov ~ normal(mu_prov, sigma_prov); //centered hierarchical model for provenance
 
-      z_alpha_clone ~ normal(0, 1); // non-centered clone
+      z_delta_clone ~ normal(0, 1); // non-centered clone
 
       mu ~ normal(mu_mean, mu_sigma);
 
-      forcing_mu = mu + alpha_site[Site] + alpha_year[Year] +  alpha_prov[Provenance] +
-      (mu_clone + z_alpha_clone[Clone] * sigma_clone);
+      forcing_mu = mu + delta_site[Site] + delta_year[Year] +  delta_prov[Provenance] +
+      (mu_clone + z_delta_clone[Clone] * sigma_clone);
 
       for (n in 1:k) {
         if (censored[n] == 0) {
@@ -169,8 +169,8 @@ model {
 
       }
 
-      // sum_forcing ~ normal(mu + alpha_site[Site] + alpha_year[Year] +  alpha_prov[Provenance] +
-      // (mu_clone + z_alpha_clone[Clone] * sigma_clone),
+      // sum_forcing ~ normal(mu + delta_site[Site] + delta_year[Year] +  delta_prov[Provenance] +
+      // (mu_clone + z_delta_clone[Clone] * sigma_clone),
       // sigma);
 
 
