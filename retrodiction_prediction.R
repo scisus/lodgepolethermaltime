@@ -77,7 +77,7 @@ datdf <- list("FEMALE begin" = fbdat, "FEMALE end" = fedat, "MALE begin" = mbdat
 
 lildf <- retrodf %>% 
   group_by(Sex, event) %>%
-  sample_n(size = 1e4)
+  sample_n(size = 1e5)
 
 # Forcing PAPER
 ggplot(lildf, aes(x=sum_forcing_rep, colour = "Model", fill="Model")) +
@@ -114,8 +114,8 @@ ggplot(lildf, aes(x=sum_forcing_rep, colour = "Model", fill="Model")) +
 #   facet_grid(event ~ Sex) + 
 #   geom_jitter(datdf)
 
-ggplot(lildf, aes(x = DoY, y = doy_rep, colour = Site, group=Year)) +
-  stat_pointinterval(alpha = 0.5, position = "jitter") +
+ggplot(lildf, aes(x = DoY, y = doy_rep, colour = Site, group=interaction(Year, i))) +
+  stat_pointinterval(alpha = 0.3, position = "jitter", pch=1) +
   facet_grid(event ~ Sex) +
   geom_abline(slope = 1, intercept=0) +
   scale_color_viridis_d() +
@@ -126,104 +126,19 @@ ggplot(lildf, aes(x = DoY, y = doy_rep, colour = Site, group=Year)) +
 
 
 
-# plot median observed vs. modeled
-# 
-medians_only <- intervals %>%
-  dplyr::filter(.width == 0.5) # no duplicate obs
-  
-ggplot(medians_only, aes(x = sum_forcing, y=sum_forcing_rep_median)) +
-  geom_point(pch=1, alpha = 0.5) +
-  ggtitle("Observed sum forcing vs. median modeled sum forcing") +
-  geom_abline(slope=1, intercept = 0) +
-  theme_bw()
-
-ggplot(medians_only, aes(x = DoY, y=doy_rep_median)) +
-  geom_point(pch=1, alpha = 0.5) +
-  ggtitle("Observed Day of Year vs. median Day of Year") +
-  geom_abline(slope=1, intercept = 0) +
-  theme_bw()
-
-
-# plot overall retrodiction #PAPER?
-ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
-  geom_line(stat="density", alpha = 0.1) +
-  geom_density(aes(x = sum_forcing, color="Observed")) +
-  scale_color_viridis_d() +
-  ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
-  ylab("") +
-  xlab("Accumulated Forcing") +
-  theme_dark() 
-
-ggplot(retrodiction, aes(x="", y=sum_forcing_rep, color = "Model")) +
-  ggbeeswarm::geom_quasirandom(data=fbdat, aes(x = "", y= sum_forcing, color = "Data"), pch=1, alpha = 0.75) +
-  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill=NA) +
-  theme_dark() +
-  scale_colour_viridis_d()
-
-ggplot(retrodiction, aes(x=as.factor(Year), y=sum_forcing_rep, colour = "Model")) +
-  ggbeeswarm::geom_quasirandom(data=fbdat, aes(x = as.factor(Year), y= sum_forcing, colour = "Data"), groupOnX = TRUE, pch=1) +
-  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill=NA) +
-  theme_dark() +
-  scale_colour_viridis_d() +
-  # scale_fill_viridis_d(alpha = 0.5) +
-  facet_wrap("Site", scales="free_x") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
-retro6 <- filter(retrodiction, Year == 2006)
-dat6 <- filter(fbdat, Year == 2006)
-
-ggplot(retro6, aes(x=Site, y=sum_forcing_rep, colour = "Model")) +
-  ggbeeswarm::geom_quasirandom(data=dat6, aes(x = Site, y= sum_forcing, colour = "Data"), groupOnX = TRUE, pch=1) +
-  geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill=NA) +
-  theme_dark() +
-  scale_colour_viridis_d() +
-  # scale_fill_viridis_d(alpha = 0.5) +
-  facet_wrap("Provenance", scales = "free_x") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
-
-ggplot(retrodiction, aes(x=sum_forcing, colour = "Observed")) +
-  stat_ecdf() +
-  stat_pointinterval(data = retrodiction, aes(x=sum_forcing_rep, y=0.5, colour = "Modeled"), point_interval = median_hdi, .width = c(0.5, 0.75, 0.95), size = c(10, 5, 1)) +
-  ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
-  ylab("") +
-  xlab("Accumulated Forcing") +
-  theme_dark() +
-  scale_colour_viridis_d() 
-
-ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
-  geom_line(stat="ecdf", alpha = 0.1) +
-  stat_ecdf(aes(x = sum_forcing, color="Observed")) +
-  scale_color_viridis_d() +
-  ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
-  ylab("") +
-  xlab("Accumulated Forcing") +
-  theme_dark() 
-
-# retrodictions by site
-ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
-  geom_line(stat="density", alpha = 0.1) +
-  geom_density(aes(x = sum_forcing, color="Observed")) +
-  scale_color_viridis_d() +
-  ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
-  ylab("") +
-  xlab("Accumulated Forcing") +
-  theme_dark() +
-  facet_wrap("Site")
-
-ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
-  geom_line(stat="density", alpha = 0.1) +
-  geom_density(aes(x = sum_forcing, color="Observed")) +
-  scale_color_viridis_d() +
-  ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
-  ylab("") +
-  xlab("Accumulated Forcing") +
-  theme_dark() +
-  facet_wrap("Year")
-
+# # plot median observed vs. modeled
+# # 
+# medians_only <- intervals %>%
+#   dplyr::filter(.width == 0.5) # no duplicate obs
+#   
+# ggplot(medians_only, aes(x = sum_forcing, y=sum_forcing_rep_median)) +
+#   geom_point(pch=1, alpha = 0.5) +
+#   ggtitle("Observed sum forcing vs. median modeled sum forcing") +
+#   geom_abline(slope=1, intercept = 0) +
+#   theme_bw()
 # fstat and group means ########
 
 facs <- c("Site", "Provenance", "Year", "Clone")
-
 ## fstats for observations ########
 
 fstat_obs.fb <- calculate_fstat_obs(fbdat)
@@ -250,76 +165,119 @@ plot_fstats <- function(df, model) {
   
   print(plot)
 }
-
-
-plot_fstats(fstat_mod.fb, "Female begin")
-plot_fstats(fstat_mod.fe, "Female end")
-plot_fstats(fstat_mod.mb, "Male begin")
-plot_fstats(fstat_mod.me, "Male end")
-
-# Female begin looks good, but all the rest show mismatches (though never for clone). Suggests model isn't capturing heterogenity
 # 
-# level means ########
-
-# plot level means of y (an outcome) calculated from the data (observations df with factor and y column) and for each draw in the model (mcmc dataframe with .draw, factor, and y_rep column). 
-
-
-#forcing
-
-plot_factorlevel_means <- function(retrodictions, obs, y, y_rep) {
-  
-  siteplot <- plot_level_means(retrodictions, obs, Site, {{y}}, {{y_rep}})
-  print(siteplot)
-  
-  provplot <- plot_level_means(retrodictions, obs, Provenance, {{y}}, {{y_rep}})
-  print(provplot)
-  
-  yearplot <- plot_level_means(retrodictions, obs, Year, {{y}}, {{y_rep}})
-  print(yearplot)
-  
-  clonesample <- sample(unique(obs$Clone), 20)
-  cloneplot <- plot_level_means(filter(retrodictions, Clone %in% clonesample), filter(obs, Clone %in% clonesample), Clone, {{y}}, {{y_rep}})
-  print(cloneplot)
-  
-}
-
-# forcing
-plot_factorlevel_means(retro.fb, fbdat, sum_forcing, sum_forcing_rep)
-plot_factorlevel_means(retro.fe, fedat, sum_forcing, sum_forcing_rep)
-plot_factorlevel_means(retro.mb, mbdat, sum_forcing, sum_forcing_rep)
-plot_factorlevel_means(retro.me, medat, sum_forcing, sum_forcing_rep)
-
-#doy
-plot_factorlevel_means(retro.fb, fbdat, DoY, doy_rep)
-plot_factorlevel_means(retro.fe, fedat, DoY, doy_rep)
-plot_factorlevel_means(retro.mb, mbdat, DoY, doy_rep)
-plot_factorlevel_means(retro.me, medat, DoY, doy_rep)
-# calculate predictions #############
-
-# superpopulations
+# ggplot(medians_only, aes(x = DoY, y=doy_rep_median)) +
+#   geom_point(pch=1, alpha = 0.5) +
+#   ggtitle("Observed Day of Year vs. median Day of Year") +
+#   geom_abline(slope=1, intercept = 0) +
+#   theme_bw()
 # 
 # 
-#all group level parameter values (excludes superpopulation parameters mu_* and sigma_*)
-fb_factors <- fbfit %>%
-  tidybayes::spread_draws(mu, sigma, alpha_site[Site], alpha_prov[Provenance], alpha_year[Year], alpha_clone[Clone], n = n, seed = seed)
+# # plot overall retrodiction #PAPER?
+# ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
+#   geom_line(stat="density", alpha = 0.1) +
+#   geom_density(aes(x = sum_forcing, color="Observed")) +
+#   scale_color_viridis_d() +
+#   ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
+#   ylab("") +
+#   xlab("Accumulated Forcing") +
+#   theme_dark() 
 # 
-fb_super <- fbfit %>%
-tidybayes::spread_draws(mu, sigma, mu_site, mu_prov, mu_year, mu_clone, sigma_site, sigma_prov, sigma_year, sigma_clone, n = n, seed = seed)
-
-alpha_site <- rnorm(nrow(fb_super), fb_super$mu_site, fb_super$sigma_site)
-alpha_prov <- rnorm(nrow(fb_super), fb_super$mu_prov, fb_super$sigma_prov)
-alpha_year <- rnorm(nrow(fb_super), fb_super$mu_year, fb_super$sigma_year)
-alpha_clone <- rnorm(nrow(fb_super), fb_super$mu_clone, fb_super$sigma_clone)
-
-sumf <- rnorm(nrow(fb_super)*30, mean = fb_super$mu + alpha_site + alpha_prov + alpha_year + alpha_clone, sd = fb_super$sigma) 
-sumf <- data.frame(sum_forcing = sumf)
-
-ggplot(fbdat, aes(x=sum_forcing, colour=Provenance)) +
-  geom_dots() +
-  stat_pointinterval(data=retrodiction, aes(x=sum_forcing_rep), .width = c(0.5, 0.95), inherit.aes = FALSE) +
-  stat_pointinterval(data=sumf, aes(x=sum_forcing, y = -0.25), .width = c(0.5, 0.95), inherit.aes = FALSE) +
-  theme_classic(base_size = 18) +
-  annotate("text", label = "retrodiction", x = 200, y = 0, hjust = 0, vjust = 0.3) +
-  annotate("text", label = "prediction", x = 200, y = -0.25, hjust = 0, vjust = 0.3) +
-  scale_y_continuous(breaks = NULL) +
-  ggtitle("Observations, retrodictions, predictions")
+# ggplot(retrodiction, aes(x="", y=sum_forcing_rep, color = "Model")) +
+#   ggbeeswarm::geom_quasirandom(data=fbdat, aes(x = "", y= sum_forcing, color = "Data"), pch=1, alpha = 0.75) +
+#   geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill=NA) +
+#   theme_dark() +
+#   scale_colour_viridis_d()
+# 
+# ggplot(retrodiction, aes(x=as.factor(Year), y=sum_forcing_rep, colour = "Model")) +
+#   ggbeeswarm::geom_quasirandom(data=fbdat, aes(x = as.factor(Year), y= sum_forcing, colour = "Data"), groupOnX = TRUE, pch=1) +
+#   geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill=NA) +
+#   theme_dark() +
+#   scale_colour_viridis_d() +
+#   # scale_fill_viridis_d(alpha = 0.5) +
+#   facet_wrap("Site", scales="free_x") +
+#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+# 
+# retro6 <- filter(retrodiction, Year == 2006)
+# dat6 <- filter(fbdat, Year == 2006)
+# 
+# ggplot(retro6, aes(x=Site, y=sum_forcing_rep, colour = "Model")) +
+#   ggbeeswarm::geom_quasirandom(data=dat6, aes(x = Site, y= sum_forcing, colour = "Data"), groupOnX = TRUE, pch=1) +
+#   geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), fill=NA) +
+#   theme_dark() +
+#   scale_colour_viridis_d() +
+#   # scale_fill_viridis_d(alpha = 0.5) +
+#   facet_wrap("Provenance", scales = "free_x") +
+#   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+# 
+# ggplot(retrodiction, aes(x=sum_forcing, colour = "Observed")) +
+#   stat_ecdf() +
+#   stat_pointinterval(data = retrodiction, aes(x=sum_forcing_rep, y=0.5, colour = "Modeled"), point_interval = median_hdi, .width = c(0.5, 0.75, 0.95), size = c(10, 5, 1)) +
+#   ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
+#   ylab("") +
+#   xlab("Accumulated Forcing") +
+#   theme_dark() +
+#   scale_colour_viridis_d() 
+# 
+# ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
+#   geom_line(stat="ecdf", alpha = 0.1) +
+#   stat_ecdf(aes(x = sum_forcing, color="Observed")) +
+#   scale_color_viridis_d() +
+#   ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
+#   ylab("") +
+#   xlab("Accumulated Forcing") +
+#   theme_dark() 
+# 
+# # retrodictions by site
+# ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
+#   geom_line(stat="density", alpha = 0.1) +
+#   geom_density(aes(x = sum_forcing, color="Observed")) +
+#   scale_color_viridis_d() +
+#   ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
+#   ylab("") +
+#   xlab("Accumulated Forcing") +
+#   theme_dark() +
+#   facet_wrap("Site")
+# 
+# ggplot(retrodiction, aes(x=sum_forcing_rep, group = .draw, colour="Modeled")) +
+#   geom_line(stat="density", alpha = 0.1) +
+#   geom_density(aes(x = sum_forcing, color="Observed")) +
+#   scale_color_viridis_d() +
+#   ggtitle("Retrodictions: receptivity begin", subtitle = "Actual observations and modeled observations") +
+#   ylab("") +
+#   xlab("Accumulated Forcing") +
+#   theme_dark() +
+#   facet_wrap("Year")
+# 
+# 
+#   
+# 
+# # calculate predictions #############
+# 
+# # superpopulations
+# # 
+# # 
+# #all group level parameter values (excludes superpopulation parameters mu_* and sigma_*)
+# fb_factors <- fbfit %>%
+#   tidybayes::spread_draws(mu, sigma, alpha_site[Site], alpha_prov[Provenance], alpha_year[Year], alpha_clone[Clone], n = n, seed = seed)
+# # 
+# fb_super <- fbfit %>%
+# tidybayes::spread_draws(mu, sigma, mu_site, mu_prov, mu_year, mu_clone, sigma_site, sigma_prov, sigma_year, sigma_clone, n = n, seed = seed)
+# 
+# alpha_site <- rnorm(nrow(fb_super), fb_super$mu_site, fb_super$sigma_site)
+# alpha_prov <- rnorm(nrow(fb_super), fb_super$mu_prov, fb_super$sigma_prov)
+# alpha_year <- rnorm(nrow(fb_super), fb_super$mu_year, fb_super$sigma_year)
+# alpha_clone <- rnorm(nrow(fb_super), fb_super$mu_clone, fb_super$sigma_clone)
+# 
+# sumf <- rnorm(nrow(fb_super)*30, mean = fb_super$mu + alpha_site + alpha_prov + alpha_year + alpha_clone, sd = fb_super$sigma) 
+# sumf <- data.frame(sum_forcing = sumf)
+# 
+# ggplot(fbdat, aes(x=sum_forcing, colour=Provenance)) +
+#   geom_dots() +
+#   stat_pointinterval(data=retrodiction, aes(x=sum_forcing_rep), .width = c(0.5, 0.95), inherit.aes = FALSE) +
+#   stat_pointinterval(data=sumf, aes(x=sum_forcing, y = -0.25), .width = c(0.5, 0.95), inherit.aes = FALSE) +
+#   theme_classic(base_size = 18) +
+#   annotate("text", label = "retrodiction", x = 200, y = 0, hjust = 0, vjust = 0.3) +
+#   annotate("text", label = "prediction", x = 200, y = -0.25, hjust = 0, vjust = 0.3) +
+#   scale_y_continuous(breaks = NULL) +
+#   ggtitle("Observations, retrodictions, predictions")

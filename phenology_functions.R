@@ -1,43 +1,51 @@
 # functions
-# 
+#
 
 # format data for model - only start and end dates
 filter_start_end <- function(forcingname = "ristos", clim = "data/all_clim_PCIC.csv") {
-  
+
   phen <-  flowers::phenology %>% # phenology data
     filter(Phenophase_Derived==2) %>% # only include flowering days
-    rename(state = Phenophase_Derived) 
+    rename(state = Phenophase_Derived)
 
   forcing <- read.csv(clim, header=TRUE, stringsAsFactors = FALSE) %>%
       filter(forcing_type==forcingname) # ristos consider forcing units calculated based on work of Sarvas 1972
 
   spus <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv") %>%
-      select(SPU_Name, Orchard) # provenance information for each orchard in phen
-  
+    select(SPU_Name, Orchard) # provenance information for each orchard in phen
+
   phenbe <- dplyr::filter(phen, DoY == First_RF | DoY == Last_RF) %>%
     dplyr::left_join(forcing) %>%
     dplyr::left_join(spus) %>%
     dplyr::mutate(Year = as.character(Year), Clone = as.character(Clone)) %>%
     dplyr::rename(Provenance = SPU_Name) %>%
     distinct()
-  
+
   return(phenbe)
 }
 
 # select data for stan models - separate by sex and event. can keep day of year if you want, but dropped by default. factors is a vector string of factors you'll be passing to the model and keep_day is an option for if you want to keep Day of Year in the dataframe
-select_data <- function(phendat, sex, event, factors, keep_day = FALSE) {
-  
+select_data <- function(phendat, sex, event, censorship, factors, keep_day = FALSE) {
+
   phensub <- phendat %>%
-    dplyr::filter(if (event == "begin") Sex == sex & DoY == First_RF else Sex == sex & DoY == Last_RF) 
-  
+    dplyr::filter(if (event == "begin") Sex == sex & DoY == First_RF else Sex == sex & DoY == Last_RF)
+
+  censorship <- censorship %>%
+    dplyr::filter(Sex == sex) %>%
+    dplyr::filter(censored != 3)
+
+  phensub <- dplyr::left_join(phensub, censorship)
+
   if (keep_day == TRUE) {
     phensub <- phensub %>%
-      dplyr::select(sum_forcing, DoY, all_of(factors))
+      dplyr::select(sum_forcing, DoY, all_of(factors), censored)
+    #dplyr::select(sum_forcing, DoY, Site, Year, Provenance, Clone)
   } else {
     phensub <- phensub %>%
-      dplyr::select(sum_forcing, all_of(factors)) 
+      dplyr::select(sum_forcing, all_of(factors), censored) 
+      #dplyr::select(sum_forcing, Site, Year, Provenance, Clone)
   }
-  
+
   return(phensub)
 }
 
@@ -45,21 +53,21 @@ select_data <- function(phendat, sex, event, factors, keep_day = FALSE) {
 
 # create an index to assign each level of a factor to be centered or non-centered based on a frequency threshold - levels that have more occurrences than the threshold are centered and those at or below are non-centered
 create_centering_index <- function(phensub, fac, threshold) {
-  
+
   # create an index for a factor for levels that should be modeled as centered or non-centered
   ncp_idx <- which(table(phensub[[fac]]) <= threshold)
   cp_idx <- which(table(phensub[[fac]]) > threshold)
-  
+
   # data for stan
   k_ncp <- length(ncp_idx) # number of non centered sites
   ncp_idx <- array(ncp_idx) # non-centered sites
-  
+
   k_cp <- length(cp_idx)
   cp_idx <- array(cp_idx)
-  
+
   standat <- list(k_ncp, ncp_idx, k_cp, cp_idx)
   names(standat) <- paste0(c("k_ncp_", "ncp_idx_", "k_cp_", "cp_idx_"), fac)
-  
+
   return(standat)
 }
 
@@ -67,17 +75,18 @@ create_centering_index <- function(phensub, fac, threshold) {
 build_factor_centering_indexes <- function(phensub, factor_threshold_list) {
   
   assertthat::assert_that(is.list(factor_threshold_list), msg = "factor_thresholds must be a list with entries factor name = threshold, e.g. list(Site = 20, Provenance = 50)")
-  
+
   nfac <- length(factor_threshold_list)
-  
+
+#  phensub <- select_data(phendat, censorship, sex, event)
   centering_indexes <- list() 
   for (i in 1:nfac) {
     indexes <- create_centering_index(phensub = phensub, fac = names(factor_threshold_list)[i], threshold = factor_threshold_list[[i]])
     centering_indexes <- append(centering_indexes, indexes)
   }
-  
+
   assertthat::assert_that(length(centering_indexes) == 4*nfac, msg = "You should have 4 entries in the list for each factor, but something has gone wrong. Check build_factor_centering_indexes")
-  
+
   return(centering_indexes)
 }
 
@@ -148,15 +157,17 @@ prepare_data_for_stan <- function(phensub, factor_threshold_list, event) {
   # add event-specific prior. These are determined in the conceptual analysis
   if (event == "begin") {
     input <- c(input, mu_mean=335, mu_sigma = 50)
-  } 
-  
+  }
+
   if (event == "end") {
     input <- c(input, mu_mean=555, mu_sigma = 90)
-  } 
-  
+  }
+
   return(input)
 }
-  
+
+#  fit <- rstan::stan(file= model, chains=6, data=input, iter=iter, warmup = warmup, cores=7,
+                     pars=c("delta_ncp_site", "delta_cp_site", "delta_ncp_prov", "delta_cp_prov", "z_delta_clone", "delta_ncp_year", "delta_cp_year"), include=FALSE,
  
 # sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NULL, 
 #                            expars = c("alpha_ncp_site", "alpha_cp_site", 
@@ -214,7 +225,7 @@ sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NUL
   # if (kfold == FALSE) {
   #   seed = sample.int(.Machine$integer.max, 1) } else {
   #     seed = 1330 } 
-  
+
   if (test == TRUE) { # if you're testing the model, run just a few iterations.
     iter = 100
   } else {
@@ -233,7 +244,7 @@ sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NUL
   if (kfold == FALSE & test == FALSE) { # save the model fit unless you're doing kfold
     saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, appendname, ".rds", sep=''))
   }
-  
+
   return(fit)
 }
 
