@@ -6,14 +6,14 @@ library(rstan)
 
 fbfit <- readRDS('2021-04-29FEMALE_begin.rds')
 fefit <- readRDS('2021-01-07FEMALE_end.rds')
-mbfit <- readRDS('2021-01-07MALE_begin.rds')
+mbfit <- readRDS('2021-04-29MALE_begin_censored.rds')
 mefit <- readRDS('2021-01-07MALE_end.rds')
 
 #fbpars <- data.frame(rstan::extract(fbfit))
 
 
 library(shinystan)
-shinystan::launch_shinystan(fbfit)
+shinystan::launch_shinystan(mbfit)
 
 
 # format for Rhat and ESS calculations
