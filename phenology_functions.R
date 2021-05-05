@@ -124,13 +124,13 @@ create_centering_index <- function(phensub, fac, threshold) {
 
 # Build centering vs noncentering indexes for all factors that are partially decentered. Uses create_index. dat is a phenology dataset as a dataframe, factors are a list of factors from dat that should be centered or decentered based on a threshold, e.g. list(Site = 20, Provenance = 50). Thresholds are determined in the conceptualanalysis.
 build_factor_centering_indexes <- function(phensub, factor_threshold_list) {
-  
-  assertthat::assert_that(is.list(factor_threshold_list), msg = "factor_thresholds must be a list with entries factor name = threshold, e.g. list(Site = 20, Provenance = 50)")
+
+  assertthat::assert_that(is.list(factor_threshold_list), msg = "factor_thresholds must be a list with entries like factor name = threshold, e.g. list(Site = 20, Provenance = 50)")
 
   nfac <- length(factor_threshold_list)
 
 #  phensub <- select_data(phendat, censorship, sex, event)
-  centering_indexes <- list() 
+  centering_indexes <- list()
   for (i in 1:nfac) {
     indexes <- create_centering_index(phensub = phensub, fac = names(factor_threshold_list)[i], threshold = factor_threshold_list[[i]])
     centering_indexes <- append(centering_indexes, indexes)
