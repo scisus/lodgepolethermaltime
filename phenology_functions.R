@@ -142,57 +142,6 @@ build_factor_centering_indexes <- function(phensub, factor_threshold_list) {
 }
 
 
-# Fit a model in Stan to phenology data, return the model fit object and save the model fit object to a file. Choose whether the model is for "MALE" or "FEMALE" strobili and whether the event is the "begin" or "end" of flowering. data is a dataframe of flowering data. id is an optional identifier appended to the file name.
-# fit_model <- function(phendat, sex, event, model = "phenology.stan", maxtreedepth=10, appendname = NULL) {
-#
-#
-#   phensub <- select_data(phendat, sex, event)
-#   #centering_indexes <- build_centering_indexes(phensub)
-#   # factor levels are very unbalanced, so I'm non-centering some levels
-#
-#   siteidx <- build_centering_index(phensub, "Site", 250)
-#   providx <- build_centering_index(phensub, "Provenance", 150)
-#   yearidx <- build_centering_index(phensub, "Year", 150)
-#  # cloneidx <- build_centering_index(phensub, "Clone", 10)
-#
-#   centering_indexes <- append(siteidx, providx) %>%
-#     append(yearidx)
-#
-#   # prepare data for stan
-#
-#   base_data <- tidybayes::compose_data(phensub, .n_name=tidybayes::n_prefix(prefix="k"))
-#
-#   input <- append(base_data, centering_indexes)
-#
-#   # add event-specific prior
-#   if (event == "begin") {
-#     input <- c(input, mu_mean=335, mu_sigma = 50)
-#   }
-#
-#   if (event == "end") {
-#     input <- c(input, mu_mean=555, mu_sigma = 90)
-#   }
-#
-#
-#   fit <- rstan::stan(file= model, chains=6, data=input, iter=3500, cores=7,
-#                      pars=c("alpha_ncp_site", "alpha_cp_site", "alpha_ncp_prov", "alpha_cp_prov", "z_alpha_clone"), include=FALSE,
-#                      init = rep(list(list(mu = abs(rnorm(1,100,50)), # stop stan from sampling impossible negative numbers
-#                                           sigma = rexp(1,1),
-#                                           sigma_site = rexp(1,1),
-#                                           sigma_year = rexp(1,1),
-#                                           sigma_prov = rexp(1,1),
-#                                           sigma_clone = rexp(1,1))), 6),
-#                      control = list(max_treedepth = maxtreedepth, adapt_delta=0.8))
-#
-#   # fit <- rstan::stan(file= model, chains=6, data=input, cores=7,
-#   #                    pars=c("alpha_ncp_site", "alpha_cp_site", "alpha_ncp_prov", "alpha_cp_prov", "z_alpha_clone"), include=FALSE,
-#   #                    control = list(max_treedepth = maxtreedepth))
-#   gc()
-#
-#   saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, "_", appendname, ".rds", sep=''))
-#
-#   return(fit)
-# }
 
 # Fit a model in Stan to phenology data, return the model fit object and save the model fit object to a file. Choose whether the model is for "MALE" or "FEMALE" strobili and whether the event is the "begin" or "end" of flowering. data is a dataframe of flowering data. id is an optional identifier appended to the file name.
 
@@ -216,48 +165,6 @@ prepare_data_for_stan <- function(phensub, factor_threshold_list, event) {
 
   return(input)
 }
-
-#  fit <- rstan::stan(file= model, chains=6, data=input, iter=iter, warmup = warmup, cores=7,
-                    # pars=c("delta_ncp_site", "delta_cp_site", "delta_ncp_prov", "delta_cp_prov", # "z_delta_clone", "delta_ncp_year", "delta_cp_year"), include=FALSE,
-
-# sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NULL,
-#                            expars = c("alpha_ncp_site", "alpha_cp_site",
-#                                       "alpha_ncp_prov", "alpha_cp_prov",
-#                                       "z_alpha_clone"),
-#                            init = rep(list(list(mu = abs(rnorm(1,100,50)),
-#                                                 sigma = rexp(1,1),
-#                                                 sigma_site = rexp(1,1),
-#                                                 sigma_year = rexp(1,1),
-#                                                 sigma_prov = rexp(1,1),
-#                                                 sigma_clone = rexp(1,1))), 6),
-#                            control = NULL, kfold = FALSE, test = FALSE) {
-#
-#   # if the model is for kfold cross validation, then don't change the seed between runs.
-#   # if (kfold == FALSE) {
-#   #   seed = sample.int(.Machine$integer.max, 1) } else {
-#   #     seed = 1330 }
-#
-#   if (test == TRUE) { # if you're testing the model, run just a few iterations.
-#     iter = 100
-#   } else {
-#     iter = 4000
-#   }
-#
-#   fit <- rstan::sampling(object = compiledmodel, chains=6, data=input, iter=iter, cores=7,
-#                      pars=expars, include=FALSE,
-#                      init = init, # stop stan from sampling impossible negative numbers
-#                      #seed = seed,
-#                      control = control)
-#
-#
-#   gc() # don't eat all the RAM
-#
-#   if (kfold == FALSE & test == FALSE) { # save the model fit unless you're doing kfold
-#  saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, appendname, ".rds", sep=''))
-#   }
-#
-#   return(fit)
-# }
 
 ## set iterations
 sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NULL,
