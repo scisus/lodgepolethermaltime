@@ -65,11 +65,11 @@ data {
 
       // years
 
-      int<lower=0, upper=k_Year> k_ncp_Year;          // Number of noncentered provenances
-      int<lower=1, upper=k_Year> ncp_idx_Year[k_ncp_Year]; // Index of noncentered Provenances
+      int<lower=0, upper=k_Year> k_ncp_Year;          // Number of noncentered years
+      int<lower=1, upper=k_Year> ncp_idx_Year[k_ncp_Year]; // Index of noncentered years
 
-      int<lower=0, upper=k_Year> k_cp_Year;           // Number of centered Provenances
-      int<lower=1, upper=k_Year> cp_idx_Year[k_cp_Year];   // Index of noncentered Provenances
+      int<lower=0, upper=k_Year> k_cp_Year;           // Number of centered years
+      int<lower=1, upper=k_Year> cp_idx_Year[k_cp_Year];   // Index of noncentered years
 }
 
 
@@ -86,8 +86,8 @@ parameters {
 
       //vector[k_Year] delta_year; //year effect
       //vector[k_Year] z_delta_year;
-      vector[k_ncp_Year] delta_ncp_year; //non-centered Provenance parameters
-      vector[k_cp_Year] delta_cp_year; //centered Provenance parameters
+      vector[k_ncp_Year] delta_ncp_year; //non-centered year parameters
+      vector[k_cp_Year] delta_cp_year; //centered year parameters
 
       vector[k_Clone] z_delta_clone; //clone effect
 
