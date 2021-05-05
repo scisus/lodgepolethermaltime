@@ -3,7 +3,7 @@
 library(dplyr)
 library(flowers)
 library(rstan)
-#library(tidybayes)
+library(tidybayes)
 
 #rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
@@ -17,7 +17,7 @@ censorbegin <- add_censor_indicator()
 phenbe <- filter_start_end()
 
 # compile model
-phenologymodel <- rstan::stan_model("phenology_censored.stan")
+phenologymodel <- rstan::stan_model("phenology.stan", auto_write = FALSE)
 
 
 # set options for models
@@ -25,6 +25,7 @@ factors <- c("Site", "Provenance", "Year", "Clone")
 factor_threshold_list <- list(Site = 250, Provenance = 150, Year = 181)
 expars <- c("delta_ncp_site", "delta_cp_site",
            "delta_ncp_prov", "delta_cp_prov",
+           "delta_ncp_year", "delta_cp_year",
            "z_delta_clone")
 init <- rep(list(list(mu = abs(rnorm(1,100,50)),
                      sigma = rexp(1,1),
@@ -34,7 +35,7 @@ init <- rep(list(list(mu = abs(rnorm(1,100,50)),
                      sigma_clone = rexp(1,1))), 6)
 
 # fit models
-female_begin <- munge_and_fit(phendat = phenbe, censordat = censorbegin, sex = "FEMALE", event = "begin", appendname = "site", compiledmodel = phenologymodel,
+female_begin <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "begin", appendname = "_non-centered_year", compiledmodel = phenologymodel,
                               factors = factors, factor_threshold_list = factor_threshold_list,
                               expars = expars, init = init)
 
