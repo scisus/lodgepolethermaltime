@@ -1,7 +1,50 @@
 # functions
 #
+# calculate censorship codes. 0 for uncensored, 1 for left censored, 2 for right censored, and 3 for no flowering record. Returns a dataframe with identifying information for each observation and a censorship code. only for start (left censoring) rn.
+add_censor_indicator <- function() {
+  phen <-  flowers::phenology
 
-# format data for model - only start and end dates
+  # Wagner censorship
+  wagnerbegin <- phen %>%
+    filter(Source == "Rita Wagner") %>%
+    group_by(Source, Index, Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
+    summarize(censored = case_when(unique(First_RF) == min(DoY) ~ 1,
+                                   unique(First_RF) > min(DoY) ~ 0,
+                                   is.na(unique(First_RF)) ~ 3))
+
+  nawag <- wagnerbegin[(is.na(wagnerbegin$censored)),] #test no nas
+
+
+
+  walshbegin <- phen %>%
+    filter(Source == "Chris Walsh") %>%
+    group_by(Source, Sex, Year, Site, Orchard) %>%
+    mutate(first_group_obs = min(DoY)) %>%
+    ungroup() %>%
+    group_by(Source, Index, Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
+    summarize(censored = case_when(unique(First_RF) == first_group_obs ~ 1,
+                                   unique(First_RF) > first_group_obs ~ 0,
+                                   is.na(unique(First_RF)) ~ 3))
+
+
+
+  nawal <- walshbegin[(is.na(walshbegin$censored)),] #test no nas
+
+  censorbegin <- full_join(wagnerbegin, walshbegin) %>%
+    ungroup() %>%
+    mutate(Year = as.character(Year), Clone = as.character(Clone))
+
+  naall <- censorbegin[(is.na(censorbegin$censored)),] #test no nas
+
+
+  censorbegin %>%
+    group_by(Site, Sex) %>%
+    summarise(percent_censored = sum(100*censored)/n())
+
+  return(censorbegin)
+}
+
+# format data for model. Include only start and end dates and match them with forcing units
 filter_start_end <- function(forcingname = "ristos", clim = "data/all_clim_PCIC.csv") {
 
   phen <-  flowers::phenology %>% # phenology data

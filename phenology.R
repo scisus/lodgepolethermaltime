@@ -11,48 +11,8 @@ options(mc.cores = parallel::detectCores())
 #source('calculate_forcingunits.R')
 source('phenology_functions.R')
 
-# calculate censorship codes. 0 for uncensored, 1 for left censored, 2 for right censored, and 3 for no flowering record
-phen <-  flowers::phenology
 
-# Wagner censorship
-
-wagnerbegin <- phen %>%
-  filter(Source == "Rita Wagner") %>%
-  group_by(Source, Index, Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
-  summarize(censored = case_when(unique(First_RF) == min(DoY) ~ 1,
-            unique(First_RF) > min(DoY) ~ 0,
-            is.na(unique(First_RF)) ~ 3))
-
-nawag <- wagnerbegin[(is.na(wagnerbegin$censored)),] #test no nas
-
-
-
-walshbegin <- phen %>%
-  filter(Source == "Chris Walsh") %>%
-  group_by(Source, Sex, Year, Site, Orchard) %>%
-  mutate(first_group_obs = min(DoY)) %>%
-  ungroup() %>%
-  group_by(Source, Index, Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
-  summarize(censored = case_when(unique(First_RF) == first_group_obs ~ 1,
-                                   unique(First_RF) > first_group_obs ~ 0,
-                                   is.na(unique(First_RF)) ~ 3))
-
-
-
-nawal <- walshbegin[(is.na(walshbegin$censored)),] #test no nas
-
-censorbegin <- full_join(wagnerbegin, walshbegin) %>%
-  ungroup() %>%
-  mutate(Year = as.character(Year), Clone = as.character(Clone))
-
-naall <- censorbegin[(is.na(censorbegin$censored)),] #test no nas
-
-
-censorbegin %>%
-  group_by(Site, Sex) %>%
-  summarise(percent_censored = sum(100*censored)/n())
-
-#nocensor <- filter(censorbegin, censored == 0)
+censorbegin <- add_censor_indicator()
 
 phenbe <- filter_start_end()
 
