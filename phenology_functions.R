@@ -68,25 +68,33 @@ filter_start_end <- function(forcingname = "ristos", clim = "data/all_clim_PCIC.
 }
 
 # select data for stan models - separate by sex and event. can keep day of year if you want, but dropped by default. factors is a vector string of factors you'll be passing to the model and keep_day is an option for if you want to keep Day of Year in the dataframe
-select_data <- function(phendat, sex, event, censorship, factors, keep_day = FALSE) {
+select_data <- function(phendat, censordat = NULL, factors, sex, event, keep_day = FALSE) {
+  # checks
+  assertthat::assert_that(sex %in% c("MALE", "FEMALE"), msg = "Sex should be MALE or FEMALE")
+  assertthat::assert_that(event %in% c("begin", "end"), msg = "event should be begin or end")
 
+  # filter for event and sex
   phensub <- phendat %>%
     dplyr::filter(if (event == "begin") Sex == sex & DoY == First_RF else Sex == sex & DoY == Last_RF)
 
-  censorship <- censorship %>%
-    dplyr::filter(Sex == sex) %>%
-    dplyr::filter(censored != 3)
+  if (is.null(censordat)) {
+    phensub <- phensub
 
-  phensub <- dplyr::left_join(phensub, censorship)
+  } else {
+    factors <- c(factors, "censored")
+    censorship <- censordat %>%
+      dplyr::filter(Sex == sex) %>%
+      dplyr::filter(censored != 3) # this will need to be updated when I'm considering things that aren't just left censored
+
+    phensub <- dplyr::left_join(phensub, censorship)
+  }
 
   if (keep_day == TRUE) {
     phensub <- phensub %>%
-      dplyr::select(sum_forcing, DoY, all_of(factors), censored)
-    #dplyr::select(sum_forcing, DoY, Site, Year, Provenance, Clone)
+      dplyr::select(sum_forcing, DoY, all_of(factors))
   } else {
     phensub <- phensub %>%
-      dplyr::select(sum_forcing, all_of(factors), censored) 
-      #dplyr::select(sum_forcing, Site, Year, Provenance, Clone)
+      dplyr::select(sum_forcing, all_of(factors))
   }
 
   return(phensub)
@@ -136,36 +144,36 @@ build_factor_centering_indexes <- function(phensub, factor_threshold_list) {
 
 # Fit a model in Stan to phenology data, return the model fit object and save the model fit object to a file. Choose whether the model is for "MALE" or "FEMALE" strobili and whether the event is the "begin" or "end" of flowering. data is a dataframe of flowering data. id is an optional identifier appended to the file name.
 # fit_model <- function(phendat, sex, event, model = "phenology.stan", maxtreedepth=10, appendname = NULL) {
-#   
-#   
+#
+#
 #   phensub <- select_data(phendat, sex, event)
-#   #centering_indexes <- build_centering_indexes(phensub) 
+#   #centering_indexes <- build_centering_indexes(phensub)
 #   # factor levels are very unbalanced, so I'm non-centering some levels
-#   
+#
 #   siteidx <- build_centering_index(phensub, "Site", 250)
 #   providx <- build_centering_index(phensub, "Provenance", 150)
 #   yearidx <- build_centering_index(phensub, "Year", 150)
 #  # cloneidx <- build_centering_index(phensub, "Clone", 10)
-#   
+#
 #   centering_indexes <- append(siteidx, providx) %>%
 #     append(yearidx)
-#   
+#
 #   # prepare data for stan
-#   
+#
 #   base_data <- tidybayes::compose_data(phensub, .n_name=tidybayes::n_prefix(prefix="k"))
-# 
+#
 #   input <- append(base_data, centering_indexes)
-#   
+#
 #   # add event-specific prior
 #   if (event == "begin") {
 #     input <- c(input, mu_mean=335, mu_sigma = 50)
-#   } 
-#   
+#   }
+#
 #   if (event == "end") {
 #     input <- c(input, mu_mean=555, mu_sigma = 90)
-#   } 
-#   
-#   
+#   }
+#
+#
 #   fit <- rstan::stan(file= model, chains=6, data=input, iter=3500, cores=7,
 #                      pars=c("alpha_ncp_site", "alpha_cp_site", "alpha_ncp_prov", "alpha_cp_prov", "z_alpha_clone"), include=FALSE,
 #                      init = rep(list(list(mu = abs(rnorm(1,100,50)), # stop stan from sampling impossible negative numbers
@@ -175,14 +183,14 @@ build_factor_centering_indexes <- function(phensub, factor_threshold_list) {
 #                                           sigma_prov = rexp(1,1),
 #                                           sigma_clone = rexp(1,1))), 6),
 #                      control = list(max_treedepth = maxtreedepth, adapt_delta=0.8))
-# 
-#   # fit <- rstan::stan(file= model, chains=6, data=input, cores=7, 
-#   #                    pars=c("alpha_ncp_site", "alpha_cp_site", "alpha_ncp_prov", "alpha_cp_prov", "z_alpha_clone"), include=FALSE, 
+#
+#   # fit <- rstan::stan(file= model, chains=6, data=input, cores=7,
+#   #                    pars=c("alpha_ncp_site", "alpha_cp_site", "alpha_ncp_prov", "alpha_cp_prov", "z_alpha_clone"), include=FALSE,
 #   #                    control = list(max_treedepth = maxtreedepth))
 #   gc()
-#   
+#
 #   saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, "_", appendname, ".rds", sep=''))
-#   
+#
 #   return(fit)
 # }
 
@@ -190,13 +198,13 @@ build_factor_centering_indexes <- function(phensub, factor_threshold_list) {
 
 
 prepare_data_for_stan <- function(phensub, factor_threshold_list, event) {
-  
+
   base_data <- tidybayes::compose_data(phensub, .n_name=tidybayes::n_prefix(prefix="k")) # format data for stan
-  
+
   indexes_for_partially_centered_factors <- build_factor_centering_indexes(phensub, factor_threshold_list = factor_threshold_list) # create indexes for factors with some levels centered and others noncentered
-  
+
   input <- append(base_data, indexes_for_partially_centered_factors) # combine centering indices with the rest of the data for stan
-  
+
   # add event-specific prior. These are determined in the conceptual analysis
   if (event == "begin") {
     input <- c(input, mu_mean=335, mu_sigma = 50)
@@ -210,80 +218,81 @@ prepare_data_for_stan <- function(phensub, factor_threshold_list, event) {
 }
 
 #  fit <- rstan::stan(file= model, chains=6, data=input, iter=iter, warmup = warmup, cores=7,
-                     pars=c("delta_ncp_site", "delta_cp_site", "delta_ncp_prov", "delta_cp_prov", "z_delta_clone", "delta_ncp_year", "delta_cp_year"), include=FALSE,
- 
-# sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NULL, 
-#                            expars = c("alpha_ncp_site", "alpha_cp_site", 
-#                                       "alpha_ncp_prov", "alpha_cp_prov", 
-#                                       "z_alpha_clone"), 
-#                            init = rep(list(list(mu = abs(rnorm(1,100,50)), 
-#                                                 sigma = rexp(1,1), 
-#                                                 sigma_site = rexp(1,1), 
-#                                                 sigma_year = rexp(1,1), 
-#                                                 sigma_prov = rexp(1,1), 
+                    # pars=c("delta_ncp_site", "delta_cp_site", "delta_ncp_prov", "delta_cp_prov", # "z_delta_clone", "delta_ncp_year", "delta_cp_year"), include=FALSE,
+
+# sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NULL,
+#                            expars = c("alpha_ncp_site", "alpha_cp_site",
+#                                       "alpha_ncp_prov", "alpha_cp_prov",
+#                                       "z_alpha_clone"),
+#                            init = rep(list(list(mu = abs(rnorm(1,100,50)),
+#                                                 sigma = rexp(1,1),
+#                                                 sigma_site = rexp(1,1),
+#                                                 sigma_year = rexp(1,1),
+#                                                 sigma_prov = rexp(1,1),
 #                                                 sigma_clone = rexp(1,1))), 6),
 #                            control = NULL, kfold = FALSE, test = FALSE) {
-#   
+#
 #   # if the model is for kfold cross validation, then don't change the seed between runs.
 #   # if (kfold == FALSE) {
 #   #   seed = sample.int(.Machine$integer.max, 1) } else {
-#   #     seed = 1330 } 
-#   
+#   #     seed = 1330 }
+#
 #   if (test == TRUE) { # if you're testing the model, run just a few iterations.
 #     iter = 100
 #   } else {
 #     iter = 4000
 #   }
-#   
+#
 #   fit <- rstan::sampling(object = compiledmodel, chains=6, data=input, iter=iter, cores=7,
 #                      pars=expars, include=FALSE,
 #                      init = init, # stop stan from sampling impossible negative numbers
 #                      #seed = seed,
 #                      control = control)
-#     
-#     
+#
+#
 #   gc() # don't eat all the RAM
-#   
+#
 #   if (kfold == FALSE & test == FALSE) { # save the model fit unless you're doing kfold
 #  saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, appendname, ".rds", sep=''))
 #   }
-#   
+#
 #   return(fit)
 # }
 
 ## set iterations
-sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NULL, 
-                              expars = c("alpha_ncp_site", "alpha_cp_site", 
-                                         "alpha_ncp_prov", "alpha_cp_prov", 
-                                         "z_alpha_clone"), 
-                              init = rep(list(list(mu = abs(rnorm(1,100,50)), 
-                                                   sigma = rexp(1,1), 
-                                                   sigma_site = rexp(1,1), 
-                                                   sigma_year = rexp(1,1), 
-                                                   sigma_prov = rexp(1,1), 
+sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NULL,
+                              expars = c("alpha_ncp_site", "alpha_cp_site",
+                                         "alpha_ncp_prov", "alpha_cp_prov",
+                                         "z_alpha_clone"),
+                              init = rep(list(list(mu = abs(rnorm(1,100,50)),
+                                                   sigma = rexp(1,1),
+                                                   sigma_site = rexp(1,1),
+                                                   sigma_year = rexp(1,1),
+                                                   sigma_prov = rexp(1,1),
                                                    sigma_clone = rexp(1,1))), 6),
-                              iter = 3500, control = NULL, kfold = FALSE, test = FALSE) {
-  
+                              iter = 3500, warmup = floor(iter/2), control = NULL, kfold = FALSE, test = FALSE) {
+
   # if the model is for kfold cross validation, then don't change the seed between runs.
   # if (kfold == FALSE) {
   #   seed = sample.int(.Machine$integer.max, 1) } else {
-  #     seed = 1330 } 
+  #     seed = 1330 }
 
   if (test == TRUE) { # if you're testing the model, run just a few iterations.
     iter = 100
   } else {
     iter = iter
   }
-  
+
   fit <- rstan::sampling(object = compiledmodel, chains=6, data=input, iter=iter, cores=7,
                          pars=expars, include=FALSE,
                          init = init, # stop stan from sampling impossible negative numbers
                          #seed = seed,
+                         warmup = warmup,
                          control = control)
-  
-  
+
+
   gc() # don't eat all the RAM
-  
+
   if (kfold == FALSE & test == FALSE) { # save the model fit unless you're doing kfold
     saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, appendname, ".rds", sep=''))
   }
@@ -292,31 +301,31 @@ sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NUL
 }
 
 
-#choose data, prepare it, and fit a model. 
+#choose data, prepare it, and fit a model.
 #phendat is a dataframe with a columns Sex (containing MALE or FEMALE), FirstRF, and LastRF (Day of year recorded flowering) and factor level for the model. Sex is "MALE" or "FEMALE". compiled model is a stan model compiled with rstan::stan_model. appendname is a string to append to the end of the file name. factors is a vector of columns in phendat that serve as factors in your model. The factor_threshold_list is a list of key-value pairs matching a factor to a threshold used for centering or non-centering. Expars is a list of parameters calculated in the model that should not be returned. Init chooses initial values that aren't impossible so stan doesn't complain.
-munge_and_fit <- function(phendat, sex, event, 
+munge_and_fit <- function(phendat, censordat = NULL, sex, event,
                                   compiledmodel, appendname = NULL,
                           factors = c("Site", "Provenance", "Year", "Clone"),
-                                  factor_threshold_list = list(Site = 250, Provenance = 150), 
+                                  factor_threshold_list = list(Site = 250, Provenance = 150),
                                   expars = c("delta_ncp_site", "delta_cp_site",
                                              "delta_ncp_prov", "delta_cp_prov",
-                                             "z_delta_clone"), 
-                                  init = rep(list(list(mu = abs(rnorm(1,100,50)), 
-                                                       sigma = rexp(1,1), 
-                                                       sigma_site = rexp(1,1), 
-                                                       sigma_year = rexp(1,1), 
-                                                       sigma_prov = rexp(1,1), 
+                                             "z_delta_clone"),
+                                  init = rep(list(list(mu = abs(rnorm(1,100,50)),
+                                                       sigma = rexp(1,1),
+                                                       sigma_site = rexp(1,1),
+                                                       sigma_year = rexp(1,1),
+                                                       sigma_prov = rexp(1,1),
                                                        sigma_clone = rexp(1,1))), 6),
                                   control = NULL, test = FALSE) {
   # subset data by sex and event
-  phensub <- select_data(phendat, sex = sex, event = event, factors = factors)
-  
+  phensub <- select_data(phendat, censordat = censordat, factors = factors, sex = sex, event = event)
+
   # add indexes and turn data into a list for stan
   input <- prepare_data_for_stan(phensub = phensub, factor_threshold_list = factor_threshold_list, event = event)
-  
-  
+
+
   # fit stan model
-  
+
   fit <- sample_stan_model(compiledmodel = compiledmodel, input = input, sex=sex, event = event, appendname = appendname, expars = expars, init = init, control = control, test = test, kfold = FALSE)
-  
+
 }
