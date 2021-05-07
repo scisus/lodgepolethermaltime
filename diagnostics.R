@@ -13,11 +13,11 @@ mefit <- readRDS('2021-01-07MALE_end.rds')
 #fbpars <- data.frame(rstan::extract(fbfit))
 
 
-fb <- readRDS("2021-04-29FEMALE_begin.rds")
+fb <- readRDS("2021-05-06FEMALE_begin.rds")
 nuts <- bayesplot::nuts_params(fb)
 draws <- as.array(fb)
-bayesplot::mcmc_parcoord(draws, pars = vars("mu", "sigma", starts_with("mu_"), starts_with("sigma_"), contains("alpha_site")), np=nuts, transform = function(x) {(x - mean(x)) / sd(x)})
-bayesplot::mcmc_intervals(draws, pars = vars(starts_with("mu_"), starts_with("sigma_"), contains("alpha_site"), "sigma"))
+#bayesplot::mcmc_parcoord(draws, pars = vars("mu", "sigma", starts_with("mu_"), starts_with("sigma_"), contains("alpha_site")), np=nuts, transform = function(x) {(x - mean(x)) / sd(x)})
+bayesplot::mcmc_intervals(draws, pars = vars(starts_with("mu_"), starts_with("sigma_"), contains("delta_site"), "sigma"))
 bayesplot::mcmc_intervals(draws, pars = vars( contains("year")))
 bayesplot::mcmc_areas(draws, pars = vars(contains("sigma_")))
 bayesplot::mcmc_areas(draws, pars = vars(contains("mu_")))
@@ -30,7 +30,7 @@ launch_shinystan(fb)
  # format for Rhat and ESS calculations
 #sims <- list(fbsims = as.array(fbfit), fesims = as.array(fefit), mbsims = as.array(mbfit), mesims = as.array(mefit))
 #
-sims <- list(fbsims = as.array(fbfit))
+sims <- list(fbsims = as.array(fb))
 
 # calculate minimum effective sample size (bulk and tail) for a two-dimensional array whose rows are equal to the number of iterations of the Markov Chain(s) and whose columns are equal to the number of Markov Chains (preferably more than one).
 miness <- function(sims) {
