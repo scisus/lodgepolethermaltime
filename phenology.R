@@ -17,7 +17,7 @@ censorbegin <- add_censor_indicator()
 phenbe <- filter_start_end()
 
 # compile model
-phenologymodel <- rstan::stan_model("phenology.stan", auto_write = FALSE)
+phenologymodel <- rstan::stan_model("phenology_censored.stan", auto_write = FALSE)
 
 
 # set options for models
@@ -34,10 +34,17 @@ init <- rep(list(list(mu = abs(rnorm(1,100,50)),
                      sigma_prov = rexp(1,1),
                      sigma_clone = rexp(1,1))), 6)
 
+# options for censored data models
+# warmup = 1500, iter = 4500, control = list(max_treedepth = 12),
+
 # fit models
-female_begin <- munge_and_fit(phendat = phenbe, sex = "FEMALE", event = "begin", appendname = "_non-centered_year", compiledmodel = phenologymodel,
+fbdat <- select_data(phenbe, censordat = censorbegin, factors = factors, sex = "FEMALE", event = "begin")
+fbinput <- prepare_data_for_stan(fbdat, factor_threshold_list = factor_threshold_list, event = "begin")
+fbfit <- sample_stan_model(phenologymodel, input = fbinput, sex = "FEMALE", event = "begin", warmup = 1500, iter = 4500, control = list(max_treedepth = 12), expars=expars)
+
+female_begin <- munge_and_fit(phendat = phenbe, censordat = censorbegin, sex = "FEMALE", event = "begin", appendname = "_censored", compiledmodel = phenologymodel,
                               factors = factors, factor_threshold_list = factor_threshold_list,
-                              expars = expars, init = init)
+                              expars = expars, init = init, control = list(max_treedepth = 11), iter = 4500, warmup = 2000)
 
 #female_begin <- fit_model(phendat = phenbe, sex = "FEMALE", censorship = censorbegin, event = "begin", maxtreedepth = 12, iter = 4500, warmup = 1500)
 #male_begin <- fit_model(phendat = phenbe, sex = "MALE", censorship = censorbegin, event = "begin", maxtreedepth = 12, iter = 4500, warmup = 1500)
