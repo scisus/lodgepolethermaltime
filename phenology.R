@@ -39,8 +39,10 @@ init <- rep(list(list(mu = abs(rnorm(1,100,50)),
 
 # fit models
 fbdat <- select_data(phenbe, censordat = censorbegin, factors = factors, sex = "FEMALE", event = "begin")
+dat <- select_data(phenbe, factors = factors, sex = "FEMALE", event = "begin")
 fbinput <- prepare_data_for_stan(fbdat, factor_threshold_list = factor_threshold_list, event = "begin")
-fbfit <- sample_stan_model(phenologymodel, input = fbinput, sex = "FEMALE", event = "begin", warmup = 1500, iter = 4500, control = list(max_treedepth = 12), expars=expars)
+fbfit <- sample_stan_model(phenologymodel, input = fbinput, sex = "FEMALE", event = "begin", expars=expars)
+#, warmup = 1500, iter = 4500, control = list(max_treedepth = 12),
 
 female_begin <- munge_and_fit(phendat = phenbe, censordat = censorbegin, sex = "FEMALE", event = "begin", appendname = "_censored", compiledmodel = phenologymodel,
                               factors = factors, factor_threshold_list = factor_threshold_list,
