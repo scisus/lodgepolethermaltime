@@ -8,9 +8,10 @@ add_censor_indicator <- function() {
   wagnerbegin <- phen %>%
     filter(Source == "Rita Wagner") %>%
     group_by(Source, Index, Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
-    summarize(censored = case_when(unique(First_RF) == min(DoY) ~ 1,
+    mutate(censored = case_when(unique(First_RF) == min(DoY) ~ 1,
                                    unique(First_RF) > min(DoY) ~ 0,
-                                   is.na(unique(First_RF)) ~ 3))
+                                   is.na(unique(First_RF)) ~ 3)) %>%
+    filter(DoY == First_RF, Phenophase_Derived == 2)
 
   nawag <- wagnerbegin[(is.na(wagnerbegin$censored)),] #test no nas
 
@@ -22,11 +23,10 @@ add_censor_indicator <- function() {
     mutate(first_group_obs = min(DoY)) %>%
     ungroup() %>%
     group_by(Source, Index, Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
-    summarize(censored = case_when(unique(First_RF) == first_group_obs ~ 1,
+    mutate(censored = case_when(unique(First_RF) == first_group_obs ~ 1,
                                    unique(First_RF) > first_group_obs ~ 0,
-                                   is.na(unique(First_RF)) ~ 3))
-
-
+                                   is.na(unique(First_RF)) ~ 3)) %>%
+    filter(DoY == First_RF, Phenophase_Derived == 2)
 
   nawal <- walshbegin[(is.na(walshbegin$censored)),] #test no nas
 
