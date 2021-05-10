@@ -144,7 +144,7 @@ model {
       delta_ncp_site ~ normal(0,1); // non-centered hierarchical model for site
       delta_cp_site ~ normal(mu_site, sigma_site); //centered hierarchical model for site
 
-     // z_delta_year ~ normal(0, 1);
+      //delta_year ~ normal(mu_year, sigma_year);
 
       delta_ncp_year ~ normal(0,1); // non-centered hierarchical model for site
       delta_cp_year ~ normal(mu_year, sigma_year); //centered hierarchical model for site
@@ -162,7 +162,7 @@ model {
 
       for (n in 1:k) {
         if (censored[n] == 0) {
-          sum_forcing[n] ~ normal(forcing_mu[n], sigma);
+           sum_forcing[n] ~ normal(forcing_mu[n], sigma);
         } else if (censored[n] == 1) {
           target += normal_lcdf(sum_forcing[n] | forcing_mu[n], sigma);
         }
