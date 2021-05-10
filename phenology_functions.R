@@ -8,10 +8,9 @@ add_censor_indicator <- function() {
   wagnerbegin <- phen %>%
     filter(Source == "Rita Wagner") %>%
     group_by(Source, Index, Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
-    mutate(censored = case_when(unique(First_RF) == min(DoY) ~ 1,
+    summarise(censored = case_when(unique(First_RF) == min(DoY) ~ 1,
                                    unique(First_RF) > min(DoY) ~ 0,
-                                   is.na(unique(First_RF)) ~ 3)) %>%
-    filter(DoY == First_RF, Phenophase_Derived == 2)
+                                   is.na(unique(First_RF)) ~ 3))
 
   nawag <- wagnerbegin[(is.na(wagnerbegin$censored)),] #test no nas
 
@@ -19,14 +18,15 @@ add_censor_indicator <- function() {
 
   walshbegin <- phen %>%
     filter(Source == "Chris Walsh") %>%
+    distinct() %>%
     group_by(Source, Sex, Year, Site, Orchard) %>%
     mutate(first_group_obs = min(DoY)) %>%
     ungroup() %>%
     group_by(Source, Index, Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
-    mutate(censored = case_when(unique(First_RF) == first_group_obs ~ 1,
-                                   unique(First_RF) > first_group_obs ~ 0,
-                                   is.na(unique(First_RF)) ~ 3)) %>%
-    filter(DoY == First_RF, Phenophase_Derived == 2)
+    summarise(censored = case_when(unique(First_RF) == min(first_group_obs) ~ 1,
+                                   unique(First_RF) > min(first_group_obs) ~ 0,
+                                   is.na(unique(First_RF)) ~ 3))
+
 
   nawal <- walshbegin[(is.na(walshbegin$censored)),] #test no nas
 
@@ -35,11 +35,6 @@ add_censor_indicator <- function() {
     mutate(Year = as.character(Year), Clone = as.character(Clone))
 
   naall <- censorbegin[(is.na(censorbegin$censored)),] #test no nas
-
-
-  censorbegin %>%
-    group_by(Site, Sex) %>%
-    summarise(percent_censored = sum(100*censored)/n())
 
   return(censorbegin)
 }
