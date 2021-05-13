@@ -8,7 +8,7 @@ add_censor_indicator <- function() {
   wagnerbegin <- phen %>%
     filter(Source == "Rita Wagner") %>%
     group_by(Source, Index, Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
-    summarise(censored = case_when(unique(First_RF) == min(DoY) ~ 1,
+    summarise(censored = case_when(unique(First_RF) == min(DoY) ~ -1,
                                    unique(First_RF) > min(DoY) ~ 0,
                                    is.na(unique(First_RF)) ~ 3))
 
