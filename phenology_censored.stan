@@ -76,7 +76,7 @@ data {
 parameters {
       real<lower=0> mu; //population location. accumulated forcing cannot be negative.
       real<lower=0> sigma; //population scale
-      //real<lower=0> sigma_cens;
+   //   real<lower=0> sigma_cens;
 
       vector[k_ncp_Site] delta_ncp_site; //non-centered site parameters
       vector[k_cp_Site] delta_cp_site; //centered site parameters
@@ -129,7 +129,7 @@ model {
       // prior model
       vector[k] forcing_mu;
       sigma ~ exponential(1);
-      // sigma_cens ~ exponential(1);
+      //sigma_cens ~ exponential();
       // these are half normals
       sigma_site ~ normal(0, 5);
       sigma_year ~ normal(0, 5);
