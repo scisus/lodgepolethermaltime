@@ -1,18 +1,21 @@
 # functions
 #
-# calculate censorship codes. 0 for uncensored, 1 for left censored, 2 for right censored, and 3 for no flowering record. Returns a dataframe with identifying information for each observation and a censorship code. only for start (left censoring) rn.
-add_censor_indicator <- function() {
-  phen <-  flowers::phenology
+# calculate censorship codes. for uncensored, 1 for left censored, 2 for right censored, and 3 for no flowering record. Returns a dataframe with identifying information for each observation and a censorship code. only for start (left censoring) rn.
+add_censor_indicator <- function(phen) {
 
   # Wagner censorship
   wagnerbegin <- phen %>%
     filter(Source == "Rita Wagner") %>%
     group_by(Source, Index, Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
-    summarise(censored = case_when(unique(First_RF) == min(DoY) ~ -1,
-                                   unique(First_RF) > min(DoY) ~ 0,
-                                   is.na(unique(First_RF)) ~ 3))
+    mutate(begin_censored = case_when(unique(First_RF) == min(DoY) ~ "left",
+                                   unique(First_RF) > min(DoY) ~ "interval",
+                                   is.na(unique(First_RF)) ~ "NA"),
+              end_censored = case_when(unique(Last_RF) == max(DoY) ~ "right",
+                                              unique(Last_RF) < max(DoY) ~ "interval",
+                                                     is.na(unique(Last_RF)) ~ "NA"))
 
-  nawag <- wagnerbegin[(is.na(wagnerbegin$censored)),] #test no nas
+
+  #nawag <- wagnerbegin[(is.na(wagnerbegin$censored)),] #test no nas
 
 
 
@@ -20,23 +23,38 @@ add_censor_indicator <- function() {
     filter(Source == "Chris Walsh") %>%
     distinct() %>%
     group_by(Source, Sex, Year, Site, Orchard) %>%
-    mutate(first_group_obs = min(DoY)) %>%
+    mutate(first_group_obs = min(DoY), last_group_obs = max(DoY)) %>%
     ungroup() %>%
     group_by(Source, Index, Sex, Year, Site, Orchard, Clone, Tree, X, Y) %>%
-    summarise(censored = case_when(unique(First_RF) == min(first_group_obs) ~ 1,
-                                   unique(First_RF) > min(first_group_obs) ~ 0,
-                                   is.na(unique(First_RF)) ~ 3))
+    mutate(begin_censored = case_when(unique(First_RF) == min(first_group_obs) ~ "left",
+                                   unique(First_RF) > min(first_group_obs) ~ "interval",
+                                   is.na(unique(First_RF)) ~ "NA"),
+              end_censored = case_when(unique(Last_RF) == max(last_group_obs) ~ "right",
+                                      unique(Last_RF) < max(last_group_obs) ~ "interval",
+                                             is.na(unique(Last_RF)) ~ "NA"))
 
 
-  nawal <- walshbegin[(is.na(walshbegin$censored)),] #test no nas
+ # nawal <- walshbegin[(is.na(walshbegin$censored)),] #test no nas
 
-  censorbegin <- full_join(wagnerbegin, walshbegin) %>%
+  censorind <- full_join(wagnerbegin, walshbegin) %>%
     ungroup() %>%
     mutate(Year = as.character(Year), Clone = as.character(Clone))
 
-  naall <- censorbegin[(is.na(censorbegin$censored)),] #test no nas
+  #naall <- censorbegin[(is.na(censorbegin$censored)),] #test no nas
+  assertthat::are_equal(nrow(censorind), nrow(phen))
 
-  return(censorbegin)
+  # begin <- select(censorind, -end_censored) %>%
+  #   mutate(event = "begin") %>%
+  #   rename(censored = begin_censored)
+  #
+  # end <- select(censorind, -begin_censored) %>%
+  #   mutate(event = "end") %>%
+  #   rename(censored = end_censored)
+  #
+  # censorind <- rbind(begin, end)
+  #
+  # assertthat::assert_that(nrow(censorind) > nrow(phen))
+  return(censorind)
 }
 
 # format data for model. Include only start and end dates and match them with forcing units
