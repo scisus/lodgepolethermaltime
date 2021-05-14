@@ -4,7 +4,7 @@ library(dplyr)
 library(purrr)
 library(rstan)
 
-fbfit <- readRDS('2021-05-09FEMALE_begin_censored.rds')
+fbfit <- readRDS('2021-05-11FEMALE_begin_nofactors.rds')
 fefit <- readRDS('2021-01-07FEMALE_end.rds')
 mbfit <- readRDS('2021-04-29MALE_begin_censored.rds')
 mefit <- readRDS('2021-01-07MALE_end.rds')
@@ -12,7 +12,7 @@ mefit <- readRDS('2021-01-07MALE_end.rds')
 #fbpars <- data.frame(rstan::extract(fbfit))
 
 
-pairs(fbfit, pars = c("mu", "sigma", "mu_site", "sigma_site", "mu_year", "sigma_year", "mu_clone", "sigma_clone", "mu_prov", "sigma_prov"))
+pairs(fbfit, pars = c("mu", "sigma", "sigma_cens", "mu_site", "sigma_site", "mu_year", "sigma_year", "mu_clone", "sigma_clone", "mu_prov", "sigma_prov"))
 pairs(fbfit, pars = c("mu", "sigma", "sigma_site", "sigma_year", "sigma_clone", "sigma_prov"))
 pairs(fbfit, pars = c("mu", "sigma", "mu_site", "mu_year", "mu_clone", "mu_prov"))
 nuts <- bayesplot::nuts_params(fbfit)
