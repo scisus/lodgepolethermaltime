@@ -1,0 +1,346 @@
+---
+title: "Compare model structures with brms"
+author: "C. Susannah Tysor"
+date: '2021-05-26'
+output: 
+  html_document: 
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+```{r fresh}
+# rerun all models fresh = TRUE; read in previously fit models, fresh = FALSE
+freshrun = FALSE
+```
+
+```{r packages_and_functions}
+library(flowers)
+library(dplyr)
+library(brms)
+library(ggplot2)
+library(bayesplot)
+library(tidyr)
+library(ggfortify)
+
+source('phenology_functions.R')
+```
+
+I am modeling the amount of forcing required for a phenological event to occur. My data is interval and end censored. Trees are from `Clone`s sourced from `Provenance`s grown at `Site`s and observed in `Year`s. Using the end of receptivity as my event of interest, I compare the performance of 4 model structures with efficient approximate leave-one-out cross validation using Pareto smoothed importance sampling (Vehtari, Gelman, & Gabry 2017, Vehtari, Simpson, Gelman, Yao, & Gabry 2019).
+
+While I have data for both the start and end of flowering for males and females, I am only doing a model structure comparison on the female end data. Leave-one-out optimization of interval censored data in `brms` is easier for end-of-flowering than start-of-flowering because of the way it codes upper and lower bounds.
+
+
+```{r phenprep, echo = FALSE}
+
+## 4 trees were observed by both Wagner and Walsh at PGTIS in 2006 - drop 1 copy of them (16 duplicate observations).
+rmidx <- phendat %>%
+  group_by(Index) %>%
+  summarize(count = n()) %>%
+  filter(count > 4)
+
+#add information about censoring
+phen <- phendat %>%
+  filter(! (Index %in% rmidx$Index & Source == "Rita Wagner")) %>% # Drop duplicates
+  add_censor_indicator() %>% # add censoring type
+  mutate(censored_lronly = case_when(censored == "interval" ~ "none",
+                                     censored %in% c("left", "right") ~ censored)) %>% # exclude interval censoring
+  # add bound labels for interval censoring models
+  mutate(bound = case_when(Event_Obs == 1 | Event_Obs == 2 & censored == "left" ~ "lower",
+                           Event_Obs == 2 & censored == "interval" ~ "upper",
+                           Event_Obs == 3 ~ "lower",
+                           Event_Obs == 4 ~ "upper"))
+
+# add forcing information
+clim <- "data/all_clim_PCIC.csv"
+forcingtype <- "ristos"
+
+spus <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv") %>%
+  select(SPU_Name, Orchard) # provenance information for each orchard in phen
+forcing <- read.csv(clim, header=TRUE, stringsAsFactors = FALSE) %>%
+  filter(forcing_type==forcingtype)  # ristos consider forcing units calculated based on work of Sarvas 1972
+
+phenf <- phen %>%
+  dplyr::left_join(forcing) %>%
+  dplyr::left_join(spus) %>%
+  dplyr::mutate(Year = as.character(Year), Clone = as.character(Clone)) %>%
+  dplyr::rename(Provenance = SPU_Name) %>%
+  distinct() %>%
+  dplyr:: mutate(sum_forcing_centered = sum_forcing - median(sum_forcing)) # standardize by center of flowering period
+
+ggplot(phenf, aes(x = sum_forcing_centered, color = Sex)) +
+  stat_ecdf() +
+  facet_grid(Event_Label ~ .) +
+  ggtitle("Cumulative distribution of accummulated forcing for flowering events")
+```
+
+Female end-of-flowering data
+```{r female_data}
+
+fedat <- phenf %>% filter(Sex == "FEMALE" & Event_Obs == 3)
+
+ggplot(fedat, aes(x = sum_forcing_centered, colour = censored)) +
+  stat_ecdf()
+
+# further munge data for interval censoring modeling - event 4 becomes the upper bound for interval censored data
+fedat_cens <- phenf %>%
+  filter(Sex == "FEMALE" & Event_Obs %in% c(3,4)) %>%
+  select(-DoY, -Date, -State, -contains("Event"), -mean_temp, -forcing, -sum_forcing) %>%
+  tidyr::pivot_wider(names_from = bound, values_from = sum_forcing_centered, values_fill = 0)
+
+```
+## Censoring
+
+All of the data is either end censored or interval censored. End censoring occurs when the tree was receptive on the first day of observation. Interval censoring occurs because we do not observe the exact moment receptivity begins. It is particularly important to record this as interval censoring since the time (and resulting amount of forcing) between when the tree was observed not yet receptive and receptive may be large. 
+
+```{r censoring graphs}
+ggplot(fedat, aes(x = censored)) +
+       geom_bar()+ 
+       ggtitle("Approximately half the data is interval censored vs right censored") 
+
+ggplot(fedat_cens, aes(x = lower, fill = censored)) +
+  geom_histogram(alpha = 0.5) +
+  ggtitle("distribution of observations for end vs interval censored data") 
+
+ggplot(filter(fedat_cens, censored == "interval"), aes(x = lower, colour = "lower" )) +
+    stat_ecdf()  +
+  stat_ecdf(data = filter(fedat_cens, censored == "interval"), aes(x=upper, colour = "upper")) +
+  theme_bw() +
+  ggtitle("cumulative distribution of accumulated forcing", subtitle = "for upper and lower bounds of interval censored observations")
+
+ggplot(filter(fedat_cens, censored == "interval"), aes(x = upper - lower)) +
+  geom_histogram(bins = 50) +
+  ggtitle("Distribution of interval sizes for interval censored observations") +
+  xlab("forcing units (ristos)") +
+  theme_bw()
+
+```
+## Fit Models and calculate leave-one-out cross validation elpds
+
+Models are fit with `brms::brm` and compared with `brms::loo`
+```{r fit_models, cache = TRUE, include=FALSE}
+
+init_ll <- init_ll <- lapply(1:4, function(id) list(sigma = 30 )) # interval censored models require big sigma inits to start sampling
+
+if (freshrun == TRUE) {
+  # mean only
+  mo <- brm(sum_forcing_centered ~ 0 + Intercept, data = fedat,
+            prior = c(prior("normal(0,50)", class = "b"),
+                      prior("normal(0,20)", class = "sigma")),
+            cores = 5, inits = init_ll)
+
+  saveRDS(mo, "mo.rds")
+
+  # mean only with end censoring
+  moc <- brm(sum_forcing_centered | cens(censored_lronly) ~ 0 + Intercept, data = fedat,
+             prior = c(prior("normal(0,50)", class = "b"),
+                       prior("normal(0,20)", class = "sigma")),
+             cores = 5, inits = init_ll)
+  saveRDS(moc, "moc.rds")
+
+  # mean only model with end and interval censoring
+
+
+  mocf <- brm(lower | cens(censored, upper) ~ 0 + Intercept, data = fedat_cens,
+              prior = c(prior("normal(0,50)", class = "b"),
+                        prior("normal(0,20)", class = "sigma")),
+              cores=5,  inits = init_ll)
+  saveRDS(mocf, "mocf.rds")
+
+  # mean + effects + end + interval censoring
+
+  ec <- brm(lower | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = fedat_cens,
+            prior = c(prior("normal(0,50)", class = "b"),
+                      prior("normal(0,20)", class = "sigma"),
+                      prior("normal(0,5)", class = "sd")),
+            cores = 5, inits = init_ll, iter = 3000, control = list(adapt_delta = 0.9),
+            save_pars = save_pars(all = TRUE))
+  saveRDS(ec, "ec.rds") } else {
+    mo <- readRDS("mo.rds")
+    moc <- readRDS("moc.rds")
+    modf <- readRDS("mocf.rds")
+    ec <- readRDS("ec.rds")
+  }
+
+if (freshrun == TRUE) {
+  loo_mo <- loo(mo)
+  loo_moc <- loo(moc)
+  loo_mocf <- loo(mocf)
+  loo_ec <- loo(ec, reloo = TRUE, reloo_args = list(inits = init_ll, iter = 3000, control = list(adapt_delta = 0.9), cores = 20))
+  
+  saveRDS(loo_mo, "loo_mo.rds")
+  saveRDS(loo_moc, "loo_moc.rds")
+  saveRDS(loo_mocf, "loo_mocf.rds")
+  saveRDS(loo_ec, "loo_ec.rds")
+} else {
+  loo_mo <- readRDS("loo_mo.rds")
+  loo_moc <- readRDS("loo_moc.rds")
+  loo_mocf <- readRDS("loo_mocf.rds")
+  loo_ec <- readRDS("loo_ec.rds")
+}
+
+```
+## Model results
+### Model 1: Mean only model
+
+In the simplest possible model, we fit only the population mean and standard deviation with weakly informative priors.
+$\mathrm{F_i} \sim \mathrm{Normal}(\mu,\sigma)$
+$\mu \sim \mathrm{Normal}(0,50)$
+$\sigma \sim |\mathrm{Normal}(0,20)|$
+```{r mo_model_details, echo=FALSE}
+
+mo$model
+mo$prior
+
+# fit the simplest model possible (mean only)
+color_scheme_set("blue")
+summary(mo)
+plot(mo)
+mo_yrep <- posterior_predict(mo, draws = 500)
+ppc_dens_overlay_grouped(fedat$sum_forcing_centered, mo_yrep[1:50,], group = fedat$censored) +
+  ggtitle("Mean-only", subtitle = "ppc & yrep")
+
+#Empirical CCDF estimates of each dataset (row) in yrep are overlaid, with the Kaplan-Meier estimate (Kaplan and Meier, 1958) for y itself on top (and in a darker shade). This is a PPC suitable for right-censored y. Note that the replicated data from yrep is assumed to be uncensored. (from the docs for `ppc_km_overlay`)
+
+status <- mutate(fedat, status_y = case_when(censored == "interval" ~ 1,
+                                                  censored == "right" ~ 0) )
+ppc_km_overlay(fedat$sum_forcing_centered, mo_yrep[1:50, ], status_y = status$status_y) +
+  ggtitle("Mean-only", subtitle = "Compare empirical distribution of right censored data (Kaplan-Meier estimate) to simulated data from the posterior predictive")
+```
+
+
+### Model 2: Mean only with end censoring
+
+Here we account for end censoring but not interval censoring. If the last time a tree is observed, it is still flowering, that day is a lower bound on the true last day of flowering and it is end censored.
+
+The overall model is the same
+
+$\mathrm{F_i} \sim \mathrm{Normal}(\mu,\sigma)$
+$\mu \sim \mathrm{Normal}(0,50)$
+$\sigma \sim |\mathrm{Normal}(0,20)|$
+
+but for right-censored data, we sample instead from the complement of the cumulative normal distribution function
+$\mathrm{F_i} \sim \mathrm{Normal CCDF}(\mu, \sigma)$
+
+```{r mean_only_with_end_censoring, echo = FALSE}
+
+moc$model
+moc$prior
+
+color_scheme_set("green")
+
+summary(moc)
+plot(moc)
+moc_yrep <- posterior_predict(moc, draws = 500)
+
+ppc_dens_overlay_grouped(fedat$sum_forcing_centered, moc_yrep[1:50,], group=fedat$censored) +
+  ggtitle("Mean-only with end censoring", subtitle = "ppc & yrep")
+
+ppc_km_overlay(fedat$sum_forcing_centered, moc_yrep[1:50, ], status_y = status$status_y) +
+  ggtitle("Mean-only with end censoring", "Compare empirical distribution of right censored data (Kaplan-Meier estimate) to simulated data from the posterior predictive")
+
+```
+
+### Model 3: Mean only with end AND interval censoring
+
+In the third model, we still only fit the mean and standard deviation, but we account for both end and interval censoring.
+
+For right-censored data, we sample from the complement of the cumulative normal distribution function
+$\mathrm{F_i} \sim \mathrm{Normal CCDF}(\mu, \sigma)$
+
+and for interval-censored data
+
+$\mu \sim \mathrm{Normal}(0,50)$
+$\sigma \sim |\mathrm{Normal}(0,20)|$
+```{r mean_only_with_end_and_interval_censoring, echo=FALSE}
+
+mocf$model
+mocf$prior
+
+summary(mocf)
+
+color_scheme_set("pink")
+plot(mocf)
+mocf_yrep <- posterior_predict(mocf, draws = 500)
+
+ppc_dens_overlay_grouped(fbdat_cens$lower, mocf_yrep[1:50,], group = fbdat_cens$censored) 
+
+# compare
+loo_mocf <- loo(mocf)
+```
+
+# Is censoring important to include?
+
+Including both interval and end censoring dramatically improves the model.
+```{r compare_censoring_models}
+loo_compare(loo_mo, loo_moc, loo_mocf)
+```
+
+# Model with full effects and censorship
+```{r}
+
+# fit a model with censorship and effects
+# msypc_c <- brm(sum_forcing_centered | cens(censored) ~ 1 + (1|Site) + (1|Provenance) + (1|Year) + (1|Clone), data = fbdat, cores = 5)
+# 
+# 
+# summary(msypc_c)
+# msypc_c_yrep <- posterior_predict(msypc_c, draws = 500)
+# 
+# loo_msypc_c <- loo(msypc_c)
+# color_scheme_set("green")
+# ppc_dens_overlay(fbdat$sum_forcing_centered, msypc_c_yrep[1:50,])
+# 
+# # compare only models with no effects
+# brms::loo_compare(loo_mo, loo_moc, loo_mocf)
+# brms::loo_compare(loo_msypc_c, loo_msypc, loo_moc, loo_mo, loo_mocf)
+```
+
+```{r effects_and_full_censorship}
+init_ll <- init_ll <- lapply(1:4, function(id) list(sigma = abs(rnorm(1,25,10)) ))
+# fit a model with left and interval censoring
+ec <- brm(lower | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = fbdat_cens, 
+            prior = c(prior("normal(0,50)", class = "b"),
+                      prior("normal(0,5)", class = "sigma"),
+                      prior("normal(0,5)", class = "sd")), 
+            future = TRUE,  inits = init_ll, iter = 3000, control = list(adapt_delta = 0.9), 
+          save_pars = save_pars(all = TRUE))
+
+(summary(ec))
+plot(ec)
+ec_yrep <- posterior_predict(ec, draws = 500)
+
+color_scheme_set("green")
+ppc_dens_overlay_grouped(fbdat_cens$lower, ec_yrep[1:50,], group = fbdat_cens$censored) 
+```
+
+Adding factors has improved the model further.
+```{r loo}
+
+# compare
+options(mc.cores = 20)
+loo_ec <- loo(ec, reloo = TRUE, reloo_args = list(inits = init_ll, iter = 3000, control = list(adapt_delta = 0.9), cores = 20))
+
+saveRDS(loo_ec, "loo_ec.rds")
+saveRDS(ec, "ecfit.rds")
+
+loo_compare(loo_mocf, loo_ec)
+```
+
+What if I try to fit an interaction between Site & Year
+
+
+```{r interaction}
+itrxn <- brm(lower | cens(censored, upper) ~ 0 + Intercept + (1|Site:Year) + (1|Provenance) + (1|Clone), data = fbdat_cens, 
+            prior = c(prior("normal(0,50)", class = "b"),
+                      prior("normal(0,5)", class = "sigma"),
+                      prior("normal(0,5)", class = "sd")), 
+            cores = 10,  inits = init_ll, iter = 3000, control = list(adapt_delta = 0.95), 
+          save_pars = save_pars(all = TRUE))
+
+summary(itrxn)
+loo_itrxn <- loo(itrxn, reloo = TRUE, reloo_args = list(inits = init_ll, iter = 3000, control = list(adapt_delta = 0.9), cores = 20))
+
+loo_compare(loo_mocf, loo_ec, loo_itrxn)
+
+
+
+```

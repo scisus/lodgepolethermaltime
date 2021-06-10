@@ -2,124 +2,79 @@ library(flowers)
 library(dplyr)
 library(brms)
 library(bayesplot)
+library(tidyr)
 
 source('phenology_functions.R')
 
-# add start and end censorship to phenology data
+# pull phenology data from package
+phendat <- flowers::lodgepole_phenology_event
 
-phen <- flowers::phenology %>%
-  distinct()
-
-
-# infer phenophases 1 and 3 for walsh
-walsh <- filter(phen, Source == "Chris Walsh")
-
-## build a dataframe with all possible dates for Walsh data given Site/Year/Orchard observations
-doys <- walsh %>%
-  select(Site, Year, Orchard, DoY, Date) %>%
-  distinct()
-
-individualmeta <- walsh %>%
-  select(-DoY, -Date, -contains("Phenophase")) %>%
-  distinct()
-
-walsh_grid <- full_join(doys, individualmeta) %>%
-  arrange(Index, DoY, Date)
-
-inferred_walsh <- walsh_grid %>%
-  mutate(Phenophase_Inferred = case_when(DoY < First_RF ~ 1,
-                                         First_RF <= DoY & DoY <= Last_RF ~ 2,
-                                         Last_RF < DoY ~ 3)) %>%
-  select(-First_RF, -Last_RF)
-
-## merge in observations
-
-full_walsh <- left_join(inferred_walsh, walsh)
-
-### test proper merge
-
-#did i drop or add data?
-full_walsh <- left_join(inferred_walsh, walsh)
-samefl <- walsh %>% filter(First_RF==Last_RF) %>% # which trees have the same first and last recorded flowering date
-  group_by(Index) %>%
-  summarise(phases = n()) %>% # recorded under different phenophases
-  filter(phases > 1)
-nrow(full_walsh) == nrow(inferred_walsh) + nrow(samefl)
-
-# did I overwrite correct phenophase?
-full_walsh %>%
-  filter(Phenophase_Derived == 2) %>%
-  summarise(comp = Phenophase_Inferred == Phenophase_Derived) %>%
-  summarise(unique(comp))
-
-# rename columns
-full_walsh <- full_walsh %>%
-  select(-Phenophase_Derived) %>%
-  rename(Phenophase_Derived = Phenophase_Inferred)
-
-## merge back into full phenology dataset
-phen <- full_join(phen, full_walsh)
-
-## filter dataset so that only the following 4 kinds of observations are retained
-## 1) last recorded obs before flowering
-## 2) first recorded flowering obs
-## 3) last recorded flowering obs
-## 4) first recorded finished flowering obs
-phen_trim <- phen %>%
-  group_by(Index, Phenophase_Derived, Year) %>%
-  summarise(First = min(DoY), Last = max(DoY) ) %>%
-  select(Index, Phenophase_Derived, First, Last) %>%
-  tidyr::pivot_longer(cols = c(First, Last), names_to = "firstorlast", values_to = "DoY") %>%
-  ungroup() %>%
-  group_by(Index) %>%
-  filter(Phenophase_Derived == 1 & firstorlast == "Last" |
-           Phenophase_Derived == 2 |
-           Phenophase_Derived ==3 & firstorlast == "First") %>%
-  select(-firstorlast)
-
-## Test - should have 0 rows since max 4 obs (see phentrim)
-phen_trim %>%
+## 4 trees were observed by both Wagner and Walsh at PGTIS in 2006 - drop 1 copy of them (16 duplicate observations).
+rmidx <- phendat %>%
   group_by(Index) %>%
   summarize(count = n()) %>%
   filter(count > 4)
 
-### merge back in full dataset
+#add information about censoring
+phen <- phendat %>%
+  filter(! (Index %in% rmidx$Index & Source == "Rita Wagner")) %>%
+  add_censor_indicator() %>% # add censoring type
+  mutate(censored_lronly = case_when(censored == "interval" ~ "none",
+                                     censored %in% c("left", "right") ~ censored)) %>% # exclude interval censoring
+  # add bound labels for interval censoring models
+  mutate(bound = case_when(Event_Obs == 1 | Event_Obs == 2 & censored == "left" ~ "lower",
+                           Event_Obs == 2 & censored == "interval" ~ "upper",
+                           Event_Obs == 3 ~ "lower",
+                           Event_Obs == 4 ~ "upper"))
 
-phenbe <- phen %>%
-  select(-DoY, -Phenophase, -Date, -Phenophase_Derived, -contains("_RF"), -Source) %>%
-  distinct() %>%
-  right_join(phen_trim)
+# phen <- phendat %>%
+#   filter(! (Index %in% rmidx$Index & Source == "Rita Wagner")) %>%
+#   add_censor_indicator() %>% # add censoring type
+#   mutate(censored_lronly = case_when(censored == "interval" ~ "none",
+#                                      censored %in% c("left", "right") ~ censored)) %>% # exclude interval censoring
+#   # add bound labels for interval censoring models
+#   mutate(bound = case_when(Event_Obs == 1 ~ "lower",
+#                            Event_Obs == 2 ~ "upper",
+#                            Event_Obs == 3 ~ "lower",
+#                            Event_Obs == 4 ~ "upper"))
 
+# add forcing information
+clim <- "data/all_clim_PCIC.csv"
+forcingtype <- "ristos"
 
-#####
-censorind <- add_censor_indicator(phenbe) # add a label for censorship type. all data is either end or interval censored
+spus <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv") %>%
+  select(SPU_Name, Orchard) # provenance information for each orchard in phen
+forcing <- read.csv(clim, header=TRUE, stringsAsFactors = FALSE) %>%
+  filter(forcing_type==forcingtype)  # ristos consider forcing units calculated based on work of Sarvas 1972
 
-# add a y and y2 variable for interval data for brms
-# for start data, y is the last date the tree was observed not flowering (in phase 1) and y2 is the observation date
-# for end data, y is the last day the tree was observed flowering and y2 is the first day the tree was observed in phase 3
-
-
-
-
-
-foo <- censorind %>%
-  #filter(begin_censored == "interval" | end_censored == "interval")
-  group_by(Index, Phenophase_Derived) %>%
-  mutate(Last = max(DoY), First = min(DoY)) %>%
-  filter(Phenophase_Derived == 2)
-
-
-
-phenbe <- filter_start_end() # filter phenology data for only start and end dates
+phenf <- phen %>%
+    dplyr::left_join(forcing) %>%
+    dplyr::left_join(spus) %>%
+    dplyr::mutate(Year = as.character(Year), Clone = as.character(Clone)) %>%
+    dplyr::rename(Provenance = SPU_Name) %>%
+    distinct()
 
 factors <- c("Site", "Provenance", "Year", "Clone")
 
-fbdat <- select_data(phendat = phenbe, censordat = censorbegin, factors = factors, sex = "FEMALE", event = "begin") %>%
+fbdat <- phenf %>% filter(Sex == "FEMALE" & Event_Obs == 2) %>%
   mutate(sum_forcing_centered = sum_forcing - mean(sum_forcing))
+#
+# fedat <- phenf %>% filter(Sex == "FEMALE" & Event_Obs == 3) %>%
+#   mutate(sum_forcing_centered = sum_forcing - mean(sum_forcing))
 
 # fit the simplest model possible (mean only)
 
-mo <- brm(sum_forcing_centered ~ 1, data = fbdat)
+mo <- brm(sum_forcing_centered ~ 0 + Intercept, data = fbdat,
+          prior = c(prior("normal(0,50)", class = "b"),
+                    prior("normal(0,5)", class = "sigma")),
+          cores = 5)
+get_prior(sum_forcing_centered ~ 0 + Intercept, data = fbdat,
+    prior = c(prior(normal(0,50), class = "b"),
+              prior(normal(0,5), class = "sigma")))
+
+make_stancode(sum_forcing_centered ~ 0 + Intercept, data = fbdat,
+              prior = c(prior(normal(0,50), class = "b"),
+                        prior(normal(0,5), class = "sigma")))
 summary(mo)
 plot(mo)
 mo_yrep <- posterior_predict(mo, draws = 500)
@@ -129,9 +84,13 @@ ppc_dens_overlay(fbdat$sum_forcing_centered, mo_yrep[1:50,])
 
 loo_mo <- loo(mo)
 
-# fit a model with censorship
+# # female end
+# mo_fe <- brm(sum_forcing_centered ~ 1, data = fedat)
+# summary(mo_fe)
+# fit a model with left censoring
 
-moc <- brm(sum_forcing_centered | cens(censored) ~ 1, data = fbdat)
+moc <- brm(sum_forcing_centered | cens(censored_lronly) ~ 0 + Intercept, data = fbdat,
+           priorscores = 5)
 summary(moc)
 plot(moc)
 moc_yrep <- posterior_predict(moc, draws = 500)
@@ -142,15 +101,72 @@ ppc_dens_overlay(fbdat$sum_forcing_centered, moc_yrep[1:50,])
 # compare
 loo_moc <- loo(moc)
 
-# fit a model with effects
-msypc <- brm(sum_forcing_centered ~ 1 + (1|Site) + (1|Provenance) + (1|Year) + (1|Clone), data = fbdat, cores = 5)
+# fit a model with left and interval censoring
+fbdat_mean <- mean(fbdat$sum_forcing)
+fbdat_cens <- phenf %>%
+  filter(Sex == "FEMALE" & Event_Obs %in% c(1,2)) %>%
+  mutate(sum_forcing_centered = sum_forcing - fbdat_mean) %>%
+  select(-DoY, -Date, -State, -contains("Event"), -mean_temp, -forcing, -sum_forcing) %>%
+  tidyr::pivot_wider(names_from = bound, values_from = sum_forcing_centered, values_fill = 0)
+#fb_y2 <- fbdat_cens$upper[which(!is.na(fbdat_cens$upper))]
+#y | cens(censored, y2) ~ predictors
+n_chains = 4
+init_ll <- init_ll <- lapply(1:n_chains, function(id) list(sigma = abs(rnorm(1,50,10)) ))
+mocf <- brm(lower | cens(censored, upper) ~ 1, data = fbdat_cens, cores = 5, chains = n_chains, inits = init_ll)
+
+summary(mocf)
+plot(mocf)
+mocf_yrep <- posterior_predict(mocf, draws = 500)
+
+color_scheme_set("purple")
+ppc_dens_overlay(fbdat_cens$lower, mocf_yrep[1:50,])
+ppc_dens_overlay(fbdat$sum_forcing_centered, mocf_yrep[1:50,])
+
+# compare
+loo_mocf <- loo(mocf)
+
+# make_stancode(lower | cens(censored, upper) ~ 1, data = fbdat_cens)
+
+# fit a female end model with right and interval censoring
+# fedat_cens <- phenf %>%
+#   filter(Sex == "FEMALE" & Event_Obs %in% c(3,4)) %>%
+#   mutate(sum_forcing_centered = sum_forcing - mean(sum_forcing)) %>%
+#   select(-DoY, -Date, -State, -contains("Event"), -mean_temp, -forcing, -sum_forcing) %>%
+#   tidyr::pivot_wider(names_from = bound, values_from = sum_forcing_centered, values_fill = 0) %>%
+#   select(Index, lower, upper, censored)
+#
+# n_chains = 4
+# init_ll <- lapply(1:n_chains, function(id) list(sigma = 100) )
+#
+# moc_interval_female_end <- brm(lower | cens(censored, upper) ~ 1, data = fedat_cens, chains = n_chains,
+#                                prior = c(
+#                                          prior(exponential(1), class = sigma)),
+#                                inits = init_ll)
+# summary(moc_interval_female_end)
+
+
+# fit a censoring ignorant model with effects
+msypc <- brm(sum_forcing_centered ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Year) + (1|Clone),
+             data = fbdat, cores = 5,
+             prior = c(prior(normal(0,50), class = b), # prior on population level intercept
+                       prior(exponential(1), class = sigma), # prior on population level sd
+                       prior(normal(0,5), class = sd))) # prior on group level sds
 summary(msypc)
-plot(msypc, pars = )
+ranef(msypc)
+psum <- posterior_summary(msypc, include = FALSE) %>% round(digits = 2) %>% data.frame()
+psum$coef <- c(rownames(psum))
+
+
+pairs(fbfit, pars = c("b_Intercept", "sigma", "sd"))
+
+#plot(msypc, pars = c("sigma", "Intercept", "Site"))
 
 loo_msypc <- loo(msypc)
 
 # fit a model with censorship and effects
 msypc_c <- brm(sum_forcing_centered | cens(censored) ~ 1 + (1|Site) + (1|Provenance) + (1|Year) + (1|Clone), data = fbdat, cores = 5)
+
+
 summary(msypc_c)
 msypc_c_yrep <- posterior_predict(msypc_c, draws = 500)
 
@@ -158,6 +174,6 @@ loo_msypc_c <- loo(msypc_c)
 color_scheme_set("green")
 ppc_dens_overlay(fbdat$sum_forcing_centered, msypc_c_yrep[1:50,])
 
-# fit a model with left censorship AND interval censorship
-#
-brms::loo_compare(loo_msypc_c, loo_msypc, loo_moc, loo_mo)
+# compare only models with no effects
+brms::loo_compare(loo_mo, loo_moc, loo_mocf)
+brms::loo_compare(loo_msypc_c, loo_msypc, loo_moc, loo_mo, loo_mocf)
