@@ -1,0 +1,11 @@
+base
+flowers
+dplyr
+Rcpp
+brms
+ggplot2
+bayesplot
+tidyr
+ggfortify
+hrbrthemes
+future
