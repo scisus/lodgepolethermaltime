@@ -11,19 +11,18 @@ source('phenology_functions.R')
 
 phendat <- flowers::lodgepole_phenology_event
 
-#model_phenology(sex = "FEMALE", event = "begin", inits = lapply(1:4, function(id) list(sigma = 30 )), phendat = phendat)
 
 phenf <- prepare_data(phendat)
 
 dat <- filter_sex_event(sex = "FEMALE", event = "begin", phenf)
 
-#init_sigma <- lapply(1:4, function(id) list(sigma = 30 ))
+init_sigma <- lapply(1:4, function(id) list(sigma = 30 ))
 fit <- brm(sum_forcing_centered | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = dat,
-           prior = c(prior("normal(0,50)", class = "b"),
-                     prior("normal(0,50)", class = "sigma"),
-                      prior("student_t(3,0,10)", class = "sd")),
+           prior = c(prior("normal(0,20)", class = "b"),
+                     prior("normal(0,10)", class = "sigma"),
+                      prior("student_t(3,0,10)", class = "sd")), iter = 3000, control = list(adapt_delta=0.9),
            cores = 5, inits = init_sigma,
            save_pars = save_pars(all = TRUE))
 
-saveRDS(fit, "jobtest.rds")
+
 
