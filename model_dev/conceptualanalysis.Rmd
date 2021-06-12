@@ -14,7 +14,7 @@ library(zoo)
 library(flowers)
 library(dplyr)
 
-source('phenology_functions.R')
+source('../phenology_functions.R')
 ```
 
 # Conceptual Analysis
@@ -117,7 +117,7 @@ $y_i$'s value can be modeled as coming from a distribution with a mean forcing a
 
 ## sigma
 
-I think that most error is probably within about 1 day of forcing units in the observation period.
+Sigma is likely to be relatively large because of lackadaisical sampling and compounding errors through censoring, multiple observers, and errors in accumulated forcing measurements. I think an extreme upper limit is probably about 2 weeks of forcing. 
 
 ```{r}
 
@@ -126,24 +126,27 @@ I think that most error is probably within about 1 day of forcing units in the o
 janjun <- forcing %>%
   filter(DoY < late_limit) 
 
-ggplot(janjun, aes(x=forcing)) +
+library(zoo)
+maxforc <- janjun %>%
+  group_by(Site, Year) %>%
+  summarise(maxforc = rollsum(forcing, 14))
+
+ggplot(maxforc, aes(x=maxforc)) +
   geom_histogram() +
-  ggtitle("Forcing accumulation over 1 day periods in May and June") +
-  geom_vline(xintercept = mean(janjun$forcing))
+  ggtitle("Forcing accumulation over 14 day periods Jan-Jun") +
+  geom_vline(xintercept = mean(maxforc$maxforc))
 
 # 90th percentile of forcing diffs
-dextreme <- quantile(janjun$forcing, 1)
+dextreme <- quantile(maxforc$maxforc, 1)
 
-pnorm(dextreme, 0, sd=6) # sd to cap at extreme
-pexp(6, 1)
-pnorm(6, 0, 2)
+pnorm(dextreme, 0, sd=50) # sd to cap at extreme
+pexp(dextreme, 0.01)
 
-hist(rnorm(1000, 0, sd=6), breaks=30, xlim = c(-25, 25)) 
+
+hist(rnorm(1000, 0, sd=50), breaks=50) 
 abline(v = dextreme)
-hist(rexp(1000, 1), breaks=30)
-abline(v=6)
-hist(abs(rnorm(1e3, 0, 2)), breaks=30) 
-abline(v=6)
+hist(abs(rnorm(1e3, 0, 50)), breaks=50) 
+abline(v=dextreme)
 
 ```
 
@@ -151,9 +154,9 @@ So,
 
 $y_i ~ \mathcal{N}(f_i, \sigma)$
 
-$\sigma \sim \mathcal{Exp}(1)$
+$\sigma \sim |\mathcal{Normal}(0, 50)|$
 
-$f_i$ is a function of $\mu$ and the $\alpha$ effects. 
+$f_i$ is a function of $\mu$ and the $\delta$ offsets. 
 
 ## mu
 
@@ -163,6 +166,8 @@ For starting, values less than ~75 and greater than ~600 would be surprising.
 For finishing, values less than ~160 and greater than ~950 would be surprising.
 
 ### mu start
+
+
 For start events
 
 
