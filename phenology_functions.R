@@ -158,7 +158,7 @@ prepare_data <- function(phendat) {
     dplyr::mutate(Year = as.character(Year), Clone = as.character(Clone)) %>%
     dplyr::rename(Provenance = SPU_Name) %>%
     distinct() %>%
-    dplyr:: mutate(sum_forcing_centered = sum_forcing - median(sum_forcing)) # standardize by center of flowering period
+   # dplyr:: mutate(sum_forcing_centered = sum_forcing - median(sum_forcing)) # standardize by center of flowering period
   return(phenf)
 }
 
@@ -175,9 +175,11 @@ filter_sex_event <- function(sex, event, dat = phenf) {
 
   dat_prepped <- dat %>%
     dplyr::filter(Sex == sex & Event_Obs %in% event_obs) %>%
-    dplyr::select(-DoY, -Date, -State, -contains("Event"), -mean_temp, -forcing, -sum_forcing) %>%
-    tidyr::pivot_wider(names_from = bound, values_from = sum_forcing_centered, values_fill = 0) %>%
-    dplyr::rename(sum_forcing_centered = lower)
+    #dplyr::select(-DoY, -Date, -State, -contains("Event"), -mean_temp, -forcing, -sum_forcing) %>%
+    dplyr::select(-DoY, -Date, -State, -contains("Event"), -mean_temp, -forcing) %>%
+   # tidyr::pivot_wider(names_from = bound, values_from = sum_forcing_centered, values_fill = 0) %>%
+   tidyr::pivot_wider(names_from = bound, values_from = sum_forcing, values_fill = 0) %>%
+    dplyr::rename(sum_forcing = lower)
 
   return(dat_prepped)
 }
@@ -185,7 +187,7 @@ filter_sex_event <- function(sex, event, dat = phenf) {
 # fit an intercepts-only model to phenology data in brms. model accounts for both interval and end censoring and includes the effects of Site, Provenance, Clone, and Year.
 fit_model <- function(dat, init_sigma = lapply(1:4, function(id) list(sigma = 30 ))) {
 
-  fit <- brm(sum_forcing_centered | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = dat,
+  fit <- brm(sum_forcing | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = dat,
              prior = c(prior("normal(0,20)", class = "b"),
                        prior("normal(0,10)", class = "sigma"),
                        prior("normal(0,5)", class = "sd")),
