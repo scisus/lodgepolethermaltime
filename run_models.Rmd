@@ -1,0 +1,110 @@
+---
+title: "Run phenology models"
+author: "C. Susannah Tysor"
+date: '2021-06-11'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+
+library(flowers)
+library(dplyr)
+library(brms)
+source('phenology_functions.R')
+
+theme_set(theme_dark())
+```
+
+## Phenology models
+
+
+```{r all-data}
+phendat <- flowers::lodgepole_phenology_event
+
+phenf <- prepare_data(phendat)
+
+ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
+  stat_ecdf() +
+  ggtitle("Cumulative distribution of accumulated forcing for flowering events", subtitle = "raw data") +
+  scale_colour_viridis_d()
+
+```
+```{r subsets}
+fbdat <- filter_sex_event(sex = "FEMALE", event = "begin", dat = phenf)
+mbdat <- filter_sex_event(sex = "MALE", event = "begin", dat = phenf)
+fedat <- filter_sex_event(sex = "FEMALE", event = "end", dat = phenf)
+medat <- filter_sex_event(sex = "MALE", event = "end", dat=phenf)
+```
+
+Observations of the accumulated forcing for the begin of flowering are left or interval censored and data for the end of flowering are right or interval censored. 
+
+The likelihood for interval censored data depends on the lower and upper bound of the interval.
+
+$\mathrm{Pr}(l < y < u) = \int_l^u \mathrm{Normal}(y|\phi, \sigma)\mathrm{d}y$ which is
+
+$\mathrm{Normalcdf}(u | \phi, \sigma) - \mathrm{Normalcdf}(l|\phi, \sigma)$
+
+The likelihood for left censored begin data is 
+
+$\mathrm{y} \sim \mathrm{Normalcdf}(\phi,\sigma)$
+
+and for right censored data is
+
+$\mathrm{y} \sim \mathrm{Normal ccdf}(\phi, \sigma)$.
+
+The mean $\phi$ is the sum of the population mean $\mu$ and offsets $delta$ for each Site, Provenance, Year, and Clone.
+$\mathrm{\phi} = \mu + \delta_{Site} + \delta_{Provenance} + \delta_{Year} + \delta_{Clone}$
+
+Observations are centered on the mean accumulated forcing
+$\mu \sim \mathrm{Normal}(0,50)$
+
+$\sigma \sim |\mathrm{Normal}(0,20)|$
+
+and right censored data is handled as before, 
+
+$\mathrm{U} \sim \mathrm{Normal ccdf}(\mu, \sigma)$
+
+while the likelihood for interval censored data is
+
+Models were fit in `stan` through the `R` frontend `brms`.
+```{r models}
+init_sigma = lapply(1:4, function(id) list(sigma = 30))
+
+fbfit <- brm(sum_forcing_centered | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = fbdat,
+             prior = c(prior("normal(0,50)", class = "b"),
+                       prior("student_t(2,0,20)", class = "sigma"),
+                       prior("student_t(2,0,10)", class = "sd")),
+             cores = 5, inits = init_sigma, save_pars = save_pars(all = TRUE))
+saveRDS(fbfit, "fbfit.rds")
+
+mbfit <- brm(sum_forcing_centered | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = mbdat,
+             prior = c(prior("normal(0,50)", class = "b"),
+                       prior("normal(0,20)", class = "sigma"),
+                       prior("student_t(2,0,10)", class = "sd")),
+             cores = 5, inits = init_sigma, save_pars = save_pars(all = TRUE))
+saveRDS(mbfit, "mbfit.rds")
+
+fefit <- brm(sum_forcing_centered | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = fedat,
+             prior = c(prior("normal(0,50)", class = "b"),
+                       prior("normal(0,20)", class = "sigma"),
+                       prior("student_t(3,0,10)", class = "sd")),
+             cores = 5, inits = init_sigma, save_pars = save_pars(all = TRUE))
+saveRDS(fefit, "fefit.rds")
+
+mefit <- brm(sum_forcing_centered | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = medat,
+             prior = c(prior("normal(0,50)", class = "b"),
+                       prior("normal(0,20)", class = "sigma"),
+                       prior("student_t(3,0,10)", class = "sd")),
+             cores = 5, inits = init_sigma, save_pars = save_pars(all = TRUE))
+saveRDS(mefit, "mefit.rds")
+```
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
