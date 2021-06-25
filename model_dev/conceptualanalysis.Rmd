@@ -21,9 +21,9 @@ source('../phenology_functions.R')
 
 I have a record of days that lodgepole pine were recorded flowering or not flowering during the general flowering period. Trees were not observed every day and the start or end of the flowering period may have been missed.
 
-The flowering observations ($y$) were simplified to first recorded (began flowering) and last recorded (finished flowering) - discrete events. The amount of forcing accumulated at each event day was calculated using Risto Sarvas's 1972 curve.
+The flowering observations ($y$) were simplified to three states - before flowering, flowering, past flowering. States are used to infer two of four events (1-last day before flowering, 2-first day flowering, 3-last day flowering, 4-first day past flowering). . The amount of forcing accumulated at each event day was calculated using Risto Sarvas's 1972 curve.
 
-I want to know how much forcing after January 1 must accumulate for trees to achieve each event.
+I want to know how much forcing after January 1 must accumulate for events 2 and 3 - the flowering state - to occur.
 
 $y_i \sim \mathcal{N}(f_i, \sigma)$
 
@@ -36,9 +36,9 @@ I wish to account for several kinds of structure in the data:
 
 So
 
-$f_i = \mu + alpha_{site,i} + \alpha_{prov,i} + \alpha_{year,i} + \alpha_{clone,i}$
+$f_i = \mu + delta_{site,i} + \delta_{prov,i} + \delta_{year,i} + \delta_{clone,i}$
 
-where mu is the average amount of forcing it takes for a tree to reach an event and the $\alpha$s describe how each group in each cluster (site, prov, year, clone) effects the overall amount of forcing required to reach the event.
+where $\mu$ is the average amount of forcing it takes for a tree to reach an event and the $\delta$s describe how much each level in each factor (site, prov, year, clone) is offset from the population mean amount of forcing required to reach the event.
 
 I want priors on parameters to be regularizing and weakly informative.
 
@@ -46,9 +46,7 @@ I want priors on parameters to be regularizing and weakly informative.
 
 There are several thousand observations of each event. Each observation is the amount of forcing units accumulated when the event occurs for a given tree. 
 
-
-
-So, how much forcing is accumulated over the year?
+So, how much forcing is accumulated over the year? I use the sites in my study and all possible years in my climate dataset (1945-2012).
 
 ```{r}
 
@@ -65,35 +63,35 @@ ggplot(forcing, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
 
 ```
 
-What are reasonable amounts of forcing? Lodgepole in BC flower in late spring.
+What are reasonable amounts of forcing? Lodgepole in BC flower in late spring - pollination occurs, according to Owens in late May and June. I will generously set this as May 01 to June 30.
 
 ```{r}
 # likely Day of Year limits for flowering
-early_limit <- as.numeric(strftime("2020-04-15", format = "%j"))
+early_limit <- as.numeric(strftime("2020-05-01", format = "%j"))
 late_limit <- as.numeric(strftime("2020-06-30", format = "%j"))
 
 ff <- dplyr::filter(forcing, DoY > early_limit & DoY < late_limit)
 
 ggplot(ff, aes(x=sum_forcing)) +
          geom_histogram(bins=60) +
-  ggtitle("Range of forcing accummulations Apr 15 - June 30")
+  ggtitle("Range of forcing accummulations May 1 - June 30")
 
 ggplot(ff, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
   geom_line() +
   theme(legend.position = "none") +
-  ggtitle("forcing (ristos) accumulated at Day of Year", subtitle = "April 15 - June 30")
+  ggtitle("forcing (ristos) accumulated at Day of Year", subtitle = "May 1 - June 30")
 ```
 
 
 ```{r}
-# May and June alone
-apr15 <- as.numeric(strftime("2020-04-15", format = "%j"))
+# Early and Late
+may01 <- as.numeric(strftime("2020-05-01", format = "%j"))
 may31 <- as.numeric(strftime("2020-05-31", format = "%j"))
 
 may15 <- as.numeric(strftime("2020-05-15", format = "%j"))
 jun30 <- as.numeric(strftime("2020-06-30", format = "%j"))
 
-ffstart <- dplyr::filter(forcing, DoY > apr15 & DoY < may31)
+ffstart <- dplyr::filter(forcing, DoY > may01 & DoY < may31)
 range(ffstart$sum_forcing)
 
 ffend <- dplyr::filter(forcing, DoY > may15 & DoY < jun30)
@@ -107,7 +105,7 @@ Each event is associated with a year, provenance, site, and clone. There are 14 
 
 # Construct summary statistics
 
-Histograms of $y_i$ and each $\alpha_{cluster}$.
+Histograms of $y_i$ and each $\delta_{cluster}$.
 
 # Model development
 
@@ -117,39 +115,58 @@ $y_i$'s value can be modeled as coming from a distribution with a mean forcing a
 
 ## sigma
 
-Sigma is likely to be relatively large because of lackadaisical sampling and compounding errors through censoring, multiple observers, and errors in accumulated forcing measurements. I think an extreme upper limit is probably about 2 weeks of forcing. 
+Sigma could potentially be relatively large because of lackadaisical sampling and compounding errors through censoring, multiple observers, and errors in accumulated forcing measurements. I think an extreme upper limit is probably about 2 weeks of forcing. 
 
 ```{r}
 
-# get 1 day forcing accumulations
+# get 7 & 14 day forcing accumulations
 
 janjun <- forcing %>%
   filter(DoY < late_limit) 
 
-library(zoo)
-maxforc <- janjun %>%
+early <- forcing %>%
+  filter(DoY < may31)
+
+fortforc <- janjun %>%
   group_by(Site, Year) %>%
-  summarise(maxforc = rollsum(forcing, 14))
+  summarise(fortforc = rollsum(forcing, 14))
 
-ggplot(maxforc, aes(x=maxforc)) +
-  geom_histogram() +
-  ggtitle("Forcing accumulation over 14 day periods Jan-Jun") +
-  geom_vline(xintercept = mean(maxforc$maxforc))
+fortforce <- early %>%
+  group_by(Site, Year) %>%
+  summarise(fortforce = rollsum(forcing, 14))
 
-# 90th percentile of forcing diffs
-dextreme <- quantile(maxforc$maxforc, 1)
+fextreme <- quantile(fortforc$fortforc, 0.99)
 
-pnorm(dextreme, 0, sd=50) # sd to cap at extreme
-pexp(dextreme, 0.01)
-
-
-hist(rnorm(1000, 0, sd=50), breaks=50) 
-abline(v = dextreme)
-hist(abs(rnorm(1e3, 0, 50)), breaks=50) 
-abline(v=dextreme)
+feextreme <- quantile(fortforce$fortforce, 0.99)
 
 ```
 
+The amount of forcing that can accumulate over any two week period between January and June can be quite large - 99th percentile is `r fextreme`. For the start period, which is earlier, it's a bit smaller - `r feextreme`. The sd required to obtain these values is
+
+```{r}
+
+ggplot(fortforc, aes(x=fortforc)) +
+  geom_histogram() +
+  ggtitle("Forcing accumulation over 14 day periods Jan-Jun") +
+  geom_vline(xintercept = mean(fortforc$fortforc))
+
+pnorm(fextreme, 0, sd=80) # sd to cap at extreme
+pt(fextreme, 1)
+hist(rnorm(1000, 0, sd=80), breaks=50) 
+
+pnorm(feextreme, 0, sd = 55)
+pt(feextreme, 1)
+
+
+```
+And distributions that produce these standard deviations, for sampling sigma are
+```{r}
+pnorm(80, 0, 30)
+pt(80, 1)
+
+pnorm(55, 0, 20)
+pt(55, 1)
+```
 So,
 
 $y_i ~ \mathcal{N}(f_i, \sigma)$
@@ -160,10 +177,26 @@ $f_i$ is a function of $\mu$ and the $\delta$ offsets.
 
 ## mu
 
-$\mu$ represents the population average for forcing required to achieve the flowering event of interest. It must be positive and continuous. Values less than 75 and greater than ~1000 would be quite unusual for any phase.
+$\mu$ represents the population average for forcing required to achieve the flowering event of interest. 
 
-For starting, values less than ~75 and greater than ~600 would be surprising.
-For finishing, values less than ~160 and greater than ~950 would be surprising.
+```{r}
+
+ffstart <- dplyr::filter(forcing, DoY > apr15 & DoY < may31)
+range(ffstart$sum_forcing)
+
+ffend <- dplyr::filter(forcing, DoY > may15 & DoY < jun30)
+range(ffend$sum_forcing)
+
+ffs1 <- quantile(ffstart$sum_forcing, 0.01)
+ffe1 <- quantile(ffend$sum_forcing, 0.01)
+ffs99 <- quantile(ffstart$sum_forcing, 0.99)
+ffe99 <- quantile(ffend$sum_forcing, 0.99)
+
+```
+It must be positive and continuous. Values less ~50 and greater than ~1000 would be quite unbelievable for any phase.
+
+For starting, values less than `r ffs1` and greater than `r ffs99` would be very surprising.
+For finishing, values less than `r ffe1` and greater than `r ffe99` would be very surprising.
 
 ### mu start
 
@@ -173,36 +206,36 @@ For start events
 
 
 ```{r}
-pnorm(600, mean = (75+600)/2, sd = 50) #start
+pnorm(ffs99, mean = (ffs1+ffs99)/2, sd = 85) #start
+pt(ffs99, 25, ncp = 335)
+hist(rnorm(1000, 335, 85), breaks=60)
+hist(rt(1000, 25, ncp = 335), breaks=60)
 
-hist(rnorm(1000, 335, 50), breaks=60)
-abline(v=600)
 ```
-$\mu \sim \mathcal{N}(335,50)$
+$\mu \sim \mathcal{N}(335,85)$
 
 ### mu end
 
 For end events:
 
-$\mu \sim \mathcal{N}(555,50)$
+$\mu \sim \mathcal{N}(555,150)$
 
 ```{r}
-pnorm(950, mean = (160+950)/2, sd = 80) #end
-hist(rnorm(1000, 555, 80), breaks=60)
+pnorm(ffe99, mean = (ffe1 + ffe99)/2, sd = 140) #end
+pt(ffe99, 25, ncp = 555)
+hist(rnorm(1000, 555, 140), breaks=60)
 ```
-## alpha 
+These are very weakly informative - I could use more detailed prior information from work by Owens regarding dates and heatsums.
 
-The $\alpha$ effects can be modeled as changes from $\mu$. I believe (hope?) they're zero, but they *could* be as much as a week's worth of forcing.
+## delta 
 
-### alpha mean
+The $\delta$ effects are modeled as offsets from $\mu$, thus the superpopulation mean must be 0. Individual effects, however, may vary by $\sigma_{factor}$
 
-A flowering period of 2 weeks for a population would be very long and a flowering period of a week very long for an individual tree, so an effect ($\alpha$) that changed the timing of flowering by even a few days would be meaningful. An alpha that shifted flowering by 1 weeks would be quite extreme. How much forcing can accumulate in 1 week prior to an event?
+A flowering period of 2 weeks for a population would be very long and a flowering period of a week very long for an individual tree, so an effect ($\delta$) that changed the timing of flowering by even a few days would be meaningful. An delta that shifted flowering by 1 weeks would be quite extreme. How much forcing can accumulate in 1 week prior to an event?
 
 [Since there aren't extreme variations in the length of flowering period, using the first part of the flowering period might be a better guide for this. Currently using January - June]
 
 ```{r}
-
-
 week_forcing <- janjun %>%
   group_by(Site, Year) %>%
   summarise(sum_forcing_week = zoo::rollsum(forcing, 7))
@@ -213,47 +246,29 @@ ggplot(week_forcing, aes(x=sum_forcing_week)) +
   geom_vline(xintercept = mean(week_forcing$sum_forcing_week))
 
 # 90th percentile of forcing that can accumulate in a week
-asextreme <- quantile(week_forcing$sum_forcing_week, .90) # because forcing accumulates so much faster at the end of june when flowering is quite unlikely, capping at 90%
+wextreme <- quantile(week_forcing$sum_forcing_week, .99) # because forcing accumulates so much faster at the end of june when flowering is quite unlikely, capping at 90%
 
-pnorm(asextreme, mean=0, sd=14) # what sd caps at extreme forcing accumulation
+pnorm(wextreme, mean=0, sd=45) # what sd caps at extreme forcing accumulation
+
 
 ```
-`r asextreme` would be a very extreme alpha.
-
-
-$\alpha_{cluster} \sim \mathcal{N}(\mu_{cluster},\sigma_{cluster})$
-
-$\mu_{cluster} \sim \mathcal{N}(0, 14)$
+`r wextreme` would be a very extreme delta and it would be in the 99th percentile of a normal distribution with mean 0 and standard deviation 45. So to obtain a $\sigma$ of 45, 
 
 ```{r}
-hist(rnorm(1000, mean=0, sd=14), breaks=50) 
-abline(v=asextreme)
+pnorm(45, mean = 0, sd=18)
+pt(45, 1)
 ```
 
+$\delta_{cluster} \sim \mathcal{N}(0,\sigma_{cluster})$
 
-### alpha sigmas
-
-$\sigma_{cluster}$ describes variation between clusters. I think a very extreme value for this would be a difference of a week, maxing out at `r asextreme` forcing units. As calculated above, this requires a sigma of ~14.
-
-For clone, which has hundreds of clusters, we can use an exponential
-
-$\sigma_{cluster} \sim \mathcal{Exp}(0.7)$
+$\sigma_{cluster} \sim \mathcal{N}(0, 18)$
 
 ```{r}
-pexp(14, rate = 0.5)
-hist(rexp(1000, 0.5), breaks=40)
-abline(v=14)
+hist(rnorm(1000, mean=0, sd=18), breaks=50) 
+
 ```
 
-For site and clone (7 clusters), and maybe year (14 clusters), we should use something with thinner tails because we don't have many clusters to estimate sd with here.
- 
-$\sigma_{cluster} \sim \mathcal{HalfNormal}(0, 4)$
-
-```{r}
-pnorm(14, 0, 5)
-hist(abs(rnorm(1000, 0, 5)), breaks=40)
-abline(v=14)
-```
+I've stuck with half normals because while clone has hundreds of levels, Site and Provenance only have 7 and year only 14 (15?)
  
 ## Centering
 
@@ -308,7 +323,7 @@ ggplot(phenbe, aes(x=Clone)) +
 
 ```
 
-Looks like Clone, Orchard, and Site all need to have non-centering *within* factors. 
+Looks like Clone, Orchard, and Site might need to have non-centering *within* factors. 
 
 - Site threshold: 250
 - Provenance threshold: 150
