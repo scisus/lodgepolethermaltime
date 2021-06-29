@@ -124,7 +124,7 @@ add_censor_indicator <- function(phenevent) {
 # }
 
 # munge phenology data. Remove duplicate observations, add censoring information, combine with forcing data, and standardize sum_forcing. phendat should be flowers::lodgepole_phenology_event or structured similarly
-prepare_data <- function(phendat) {
+prepare_data <- function(phendat, forcing) {
   # 4 trees were observed by both Wagner and Walsh at PGTIS in 2006 - drop 1 copy of them (16 duplicate observations).
   rmidx <- phendat %>%
     group_by(Index) %>%
@@ -145,7 +145,7 @@ prepare_data <- function(phendat) {
 
   # add forcing information
   clim <- "data/all_clim_PCIC.csv"
-  forcingtype <- "ristos"
+  forcingtype <- forcing
 
   spus <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv") %>%
     select(SPU_Name, Orchard) # provenance information for each orchard in phen
@@ -158,7 +158,7 @@ prepare_data <- function(phendat) {
     dplyr::mutate(Year = as.character(Year), Clone = as.character(Clone)) %>%
     dplyr::rename(Provenance = SPU_Name) %>%
     distinct() %>%
-   # dplyr:: mutate(sum_forcing_centered = sum_forcing - median(sum_forcing)) # standardize by center of flowering period
+   # dplyr:: mutate(sum_forcing_centered = sum_forcing - median(sum_forcing)) # standardize by center of flowering period # brms does this automatically
   return(phenf)
 }
 

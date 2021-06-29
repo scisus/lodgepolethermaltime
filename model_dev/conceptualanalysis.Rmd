@@ -135,9 +135,9 @@ fortforce <- early %>%
   group_by(Site, Year) %>%
   summarise(fortforce = rollsum(forcing, 14))
 
-fextreme <- quantile(fortforc$fortforc, 0.99)
+fextreme <- quantile(fortforc$fortforc, 0.99) #end
 
-feextreme <- quantile(fortforce$fortforce, 0.99)
+feextreme <- quantile(fortforce$fortforce, 0.99) # start
 
 ```
 
