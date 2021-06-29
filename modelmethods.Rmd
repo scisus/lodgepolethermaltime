@@ -1,0 +1,179 @@
+---
+title: "Model methods"
+author: "C. Susannah Tysor"
+date: '2021-06-25'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+library(flowers)
+library(dplyr)
+library(brms)
+library(ggplot2)
+library(tidyr)
+
+knitr::opts_chunk$set(echo = TRUE)
+theme_set(theme_dark())
+
+source('phenology_functions.R')
+```
+
+## Data
+
+Data is available in the `flowers` R package published on Github
+
+```{r data}
+phendat <- flowers::lodgepole_phenology_event %>%
+  mutate(Tree = paste0(Orchard, Clone, X, Y)) # create a unique Tree identifier since original data doesn't always have one
+
+phenf <- prepare_data(phendat, forcing = "gdd")
+
+ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
+  stat_ecdf() +
+  ggtitle("Cumulative distribution of accumulated forcing for flowering events", subtitle = "raw data") +
+  scale_colour_viridis_d()
+
+# create 4 datasets for 4 models
+
+fbdat <- filter_sex_event(sex = "FEMALE", event = "begin", phenf)
+fedat <- filter_sex_event(sex = "FEMALE", event = "end", phenf)
+
+mbdat <- filter_sex_event(sex = "MALE", event = "begin", phenf)
+medat <- filter_sex_event(sex = "MALE", event = "end", phenf)
+
+
+
+```
+Make censorship tables (proportion?)
+```{r}
+
+begincensor <- phenf %>% filter(Event_Obs == 2)
+
+filter(begincensor, censored == "left") %>%
+select(Site, Sex) %>%
+group_by(Site, Sex) %>%
+  summarise(n=n()) %>%
+  pivot_wider(names_from = Sex, values_from = n)
+
+endcensor <- phenf %>% filter(Event_Obs == 3)
+
+filter(endcensor, censored == "right") %>%
+select(Site, Sex) %>%
+group_by(Site, Sex) %>%
+  summarise(n=n()) %>%
+  pivot_wider(names_from = Sex, values_from = n)
+
+#proportion
+phenf %>% filter(Event_Obs %in% c(2,3)) %>%
+  group_by(Sex, Event_Label) %>%
+  mutate(n = n()) %>%
+  group_by(Sex, Event_Label, censored) %>%
+  summarise(count = n(), proportion = round(count/n, 2)) %>%
+  select(-count) %>%
+  distinct() %>%
+  filter(censored %in% c("left", "right"))
+
+```
+
+## Model
+
+We built separate hierarchical Bayesian intercept-only factor models of the accumulated forcing at each of the four flowering events of interest: start of receptivity (female begin), end of receptivity (female end), start of pollen shed (male begin), and end of pollen shed (male end).
+
+Ideally, the likelihood of begin and end of flowering observations $y_i$ would
+
+$y_i \sim \mathrm{Normal}(\phi_i, \sigma)$
+
+However, interval and end censoring
+The likelihood is modified for the 37 to 65% of end censored observations. 
+
+Flowering start data is left censored when a tree is already flowering when it is first observed, so the likelihood is calculated with a cumulative normal distribution function.
+
+$\mathrm{y_i} \sim \mathrm{Cumulative Normal}(\phi_i,\sigma)$
+
+Flowering end data is right censored when a tree is never observed past flowering and a complementary cumulative normal distribution function is used for the likelihood. 
+
+$\mathrm{y_i} \sim \mathrm{Complementary Cumulative Normal}(\phi_i, \sigma)$.
+
+Mean $\phi_i$ is the sum of the overall population mean $\mu$ and offsets $\delta$ for each level of factors Site, Provenance, Year, and Clone.
+
+$\mathrm{\phi_i} = \mu + \delta_{Site, i} + \delta_{Provenance, i} + \delta_{Year, i} + \delta_{Clone, i}$
+
+Priors limit parameter estimates to forcing accumulations possible at our sites during late spring, when lodgepole pine are known to flower in British Columbia (@owensReproductiveBiologyLodgepole2006). Offset standard deviations $\sigma_{factor}$ were roughly constrained by both estimates of possible forcing accumulation and the approximately known length of the flowering period. Possible forcing accumulation ranges were calculated using daily PCIC weather data from 1945-2012 at all of our sites. As Site, Provenance, and Year have relatively few levels with which to estimate $\sigma_{factor}$, half normal priors with their relatively thin tails were used to help constrain the parameter. Additional details on prior choice can be found in the conceptual analysis (supplementary materials).
+
+Priors for the begin models differ for those of the end models as forcing accumulates faster in later spring than early spring and flowering must begin before it can end.
+
+Priors for the start of receptivity and pollen shed models were
+$$\begin{align}
+\mu & \sim \mathrm{Normal}(400,100) \\
+\sigma & \sim \left|\mathrm{Normal}(0,15)\right| \\
+\sigma_{factor, j} & \sim \left|\mathrm{Normal}(0,9)\right| \\
+\end{align}$$
+
+
+```{r model, cache = TRUE, echo = FALSE}
+# initialize parameter values on the right order of magnitude
+initpars <- lapply(1:6, function(id) list(sigma = 30, Intercept = 300))
+
+# model formula
+bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year) + (1|Tree))
+
+# model prior
+bprior <- c(prior("normal(400,100)", class = "Intercept"),
+                     prior("normal(0,15)", class = "sigma"),
+                     prior("normal(0,9)", class = "sd"))
+niter <- 4000
+ncores <- 6
+nchains <- 6
+
+fbfit <- brm(bform, data = fbdat,
+             save_model = "female_begin.stan",
+             file = "female_begin",
+             prior = bprior,
+             inits = initpars,
+             iter = niter,
+             cores = ncores,
+             chains = nchains,
+             sample_prior = TRUE,
+             save_pars = save_pars(all = TRUE),
+             file_refit = "on_change")
+
+fefit <- brm(bform, data = fedat,
+             save_model = "female_end.stan",
+             file = "female_end",
+             prior = bprior,
+             inits = initpars,
+             iter = niter,
+             cores = ncores,
+             chains = nchains,
+             sample_prior = TRUE,
+             save_pars = save_pars(all = TRUE),
+             file_refit = "on_change")
+
+mbfit <- brm(bform, data = mbdat,
+             save_model = "male_begin.stan",
+             file = "male_begin",
+             prior = bprior,
+             inits = initpars,
+             iter = niter,
+             cores = ncores,
+             chains = nchains,
+             sample_prior = TRUE,
+             save_pars = save_pars(all = TRUE),
+             file_refit = "on_change")
+
+mefit <- brm(bform, data = medat,
+             save_model = "male_end.stan",
+             file = "male_end",
+             prior = bprior,
+             inits = initpars,
+             iter = niter,
+             cores = ncores,
+             chains = nchains,
+             sample_prior = TRUE,
+             save_pars = save_pars(all = TRUE),
+             file_refit = "on_change")
+
+```
+Models were fit in Stan (`rstan` vers. 2.21.2 [@standevelopmentteam2020]) via the R (R version 4.0.3 (202-10-10)) package `brms` (vers. 2.15.0 [@Burkner2017a]). Stan uses the No-U-Turn Sampler, an efficient Markov Chain Monte Carlo method that extends the Hamiltonian Monte Carlo algorithm [@carpenter2017], to sample the joint posterior. We ran `r nchains` independent chains of `r iter` iterations each. `r iter/2` warmup iterations were dropped from each chain for `r nchains * (iter/2)` total samples. Model convergence and performance were considered good; $\hat R$ was $< 1.01$ and bulk and tail effective sample size was more than 100x the number of chains for all parameter values in all models [@vehtari2019]. There were no divergences. Visual inspection of energy plots and rank plots showed acceptable sampling behavior.
+
