@@ -6,7 +6,7 @@ output: html_document
 editor_options: 
   chunk_output_type: console
 ---
-  
+
 ```{r setup, include=FALSE}
 
 library(flowers)
@@ -504,7 +504,7 @@ newdata <- data.frame(Site = letters[1:n_newdat], Provenance = letters[1:n_newda
   tidyr::complete(Site, Provenance, Year, Clone, Tree)
 
 # simulate new data from the model for 5 new levels of each factor of the model. Draws for factor effects are from N(0, sigma_cluster). Using nsamples draws from the posterior
-simulate_from_model <- function(data, model, nlevels = 5, nsamples = 500, seed = 1013, cores = 6) {
+simulate_from_model <- function(data, model, nlevels = 5, nsamples = 10, seed = 1013, cores = 6) {
   # retrodict "true"
   yrep <- add_predicted_draws(newdata = data, model = model, n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
     mutate(prediction_type = "retrodiction - uncensored") 
@@ -512,14 +512,14 @@ simulate_from_model <- function(data, model, nlevels = 5, nsamples = 500, seed =
   # censor yrep based on censoring points in the raw data
   yrep_censored <- yrep %>%
     mutate(prediction_temp = case_when(censored == "interval" & prediction < sum_forcing ~ sum_forcing,
-                                     censored == "interval" & prediction > upper ~ upper,
-                                     censored == "interval" & (prediction >= sum_forcing) & (prediction <= upper) ~ prediction,
-                                     
-                                     censored == "right" & prediction >= sum_forcing ~ sum_forcing,
-                                     censored == "right" & prediction < sum_forcing ~ prediction,
-                                     
-                                     censored == "left" & prediction < sum_forcing ~ prediction,
-                                     censored == "left" & prediction >= sum_forcing ~ sum_forcing),
+                                       censored == "interval" & prediction > upper ~ upper,
+                                       censored == "interval" & (prediction >= sum_forcing) & (prediction <= upper) ~ prediction,
+                                       
+                                       censored == "right" & prediction >= sum_forcing ~ sum_forcing,
+                                       censored == "right" & prediction < sum_forcing ~ prediction,
+                                       
+                                       censored == "left" & prediction < sum_forcing ~ prediction,
+                                       censored == "left" & prediction >= sum_forcing ~ sum_forcing),
            prediction_type = "retrodiction - censored") %>%
     select(-prediction) %>%
     rename(prediction = prediction_temp)
@@ -531,7 +531,7 @@ simulate_from_model <- function(data, model, nlevels = 5, nsamples = 500, seed =
                         Year = lv, 
                         Clone = lv, 
                         Tree = lv) %>%
-  tidyr::complete(Site, Provenance, Year, Clone, Tree)
+    tidyr::complete(Site, Provenance, Year, Clone, Tree)
   
   yoos <- add_predicted_draws(newdata = newdata, model = model, allow_new_levels = TRUE, sample_new_levels = "gaussian", n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
     mutate(prediction_type = "out-of-sample prediction")
@@ -547,18 +547,54 @@ mesim <- simulate_from_model(data = medat, model = mefit)
 
 plot_retro <- function(data, preds, event, sex, n = niter)
 {
-
+  
   retroplot <- ggplot(data, aes(x = sum_forcing, y = "data" )) +
-    stat_halfeye( .width = c(0.5, 0.89), point_interval = median_hdci) +
+    stat_halfeye( .width = c(0.5, 0.89), point_interval = median_qi) +
     stat_slab(data = preds, aes(x = prediction, y = prediction_type, group=.draw), slab_color = "gray65", alpha = 1/10, fill = NA) +
     theme_bw() +
     stat_pointinterval(data = preds, aes(x = prediction, y = prediction_type), .width = c(0.5, 0.89), point_interval = median_hdci, inherit.aes = FALSE) +
     theme_bw() +
     labs(title = paste0(event, " of ", sex," flowering"), subtitle = "density of data and predictions with \n 50 and 89% HDCI with median")+
-    xlim(c(25,475))
+    xlim(35, 520)
   
   return(retroplot)
 }
+
+fbdat$event <- "begin"
+mbdat$event <- "begin"
+fedat$event <- "end"
+medat$event <- "end"
+alldat <- rbind(fbdat, mbdat, fedat, medat)
+
+fbsim$event <- "begin"
+mbsim$event <- "begin"
+fesim$event <- "end"
+mesim$event <- "end"
+
+fbsim$Sex <- "FEMALE"
+mbsim$Sex <- "MALE"
+fesim$Sex <- "FEMALE"
+mesim$Sex <- "MALE"
+
+allsim <- rbind(fbsim, mbsim, fesim, mesim)
+
+simsum <- allsim %>%
+    group_by(Sex, event, prediction_type) %>%
+    median_hdci(prediction, .width = c(0.5, 0.89))
+
+ggplot(alldat, aes(x = sum_forcing, y = "observations" )) +
+  stat_halfeye( .width = c(0.5, 0.89), point_interval = median_qi) +
+  stat_slab(data = allsim, 
+                    aes(x = prediction, y = prediction_type, group=.draw),
+                    .width = c(0.5, 0.89), point_interval = median_hdci, 
+                    slab_color = "gray65", alpha = 1/10, fill = NA) +
+  stat_pointinterval(data = allsim, aes(x = prediction, y = prediction_type), 
+                     .width = c(0.5, 0.89), point_interval = median_hdci ) + 
+  theme_bw() +
+  facet_grid(Sex ~ event) +
+  labs(title = "Modeled and observed flowering events", subtitle = "50 & 89% quantile intervals for observations \nand HCDI intervals for model predictions") +
+  xlab("Accumulated forcing") +
+  ylab("")
 
 fbppc <- plot_retro(fbdat, fbsim, event = "Beginning", sex = "female")
 mbppc <- plot_retro(mbdat, mbsim, event = "Beginning", sex = "male")
