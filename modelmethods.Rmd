@@ -181,6 +181,7 @@ fbfit <- brm(bform, data = fbdat,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
              file_refit = "on_change")
+fbfit <- readRDS("female_begin.rds")
 
 fefit <- brm(bform, data = fedat,
              save_model = "female_end.stan",
@@ -193,6 +194,7 @@ fefit <- brm(bform, data = fedat,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
              file_refit = "on_change")
+fefit <- readRDS("female_end.rds")
 
 mbfit <- brm(bform, data = mbdat,
              save_model = "male_begin.stan",
@@ -205,6 +207,7 @@ mbfit <- brm(bform, data = mbdat,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
              file_refit = "on_change")
+mbfit <- readRDS("male_begin.rds")
 
 mefit <- brm(bform, data = medat,
              save_model = "male_end.stan",
@@ -217,7 +220,350 @@ mefit <- brm(bform, data = medat,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
              file_refit = "on_change")
+mefit <- readRDS("male_end.rds")
+
+
 
 ```
-Models were fit in Stan (`rstan` vers. 2.21.2 [@standevelopmentteam2020]) via the R (R version 4.0.3 (202-10-10)) package `brms` (vers. 2.15.0 [@Burkner2017a]). Stan uses the No-U-Turn Sampler, an efficient Markov Chain Monte Carlo method that extends the Hamiltonian Monte Carlo algorithm [@carpenter2017], to sample the joint posterior. We ran `r nchains` independent chains of `r iter` iterations each. `r iter/2` warmup iterations were dropped from each chain for `r nchains * (iter/2)` total samples. Model convergence and performance were considered good; $\hat R$ was $< 1.01$ and bulk and tail effective sample size was more than 100x the number of chains for all parameter values in all models [@vehtari2019]. There were no divergences. Visual inspection of energy plots and rank plots showed acceptable sampling behavior.
+Models were fit in Stan (`rstan` vers. 2.21.2 [@standevelopmentteam2020]) via the R (R version 4.0.3 (202-10-10)) package `brms` (vers. 2.15.0 [@Burkner2017a]). Stan uses the No-U-Turn Sampler, an efficient Markov Chain Monte Carlo method that extends the Hamiltonian Monte Carlo algorithm [@carpenter2017], to sample the joint posterior. 
 
+### Diagnostics
+We ran `r nchains` independent chains of `r iter` iterations each. `r iter/2` warmup iterations were dropped from each chain for `r nchains * (iter/2)` total samples. Model convergence and performance were considered good; $\hat R$ was $< 1.01$ and bulk and tail effective sample size was more than 100x the number of chains for all parameter values in all models [@vehtari2019]. There were no divergences. Visual inspection of energy plots and rank plots showed acceptable sampling behavior.
+
+
+# Results
+## Means
+```{r means, cache=TRUE}
+vars <- tidybayes::get_variables(fbfit)
+
+fbm <- fbfit %>% gather_draws(b_Intercept) %>%
+  mutate(Event = "begin",  Sex = "FEMALE", model = "fb")
+
+mbm <- mbfit %>% gather_draws(b_Intercept) %>%
+  mutate(Event = "begin",  Sex = "MALE", model = "mb")
+
+fem <- fefit %>% gather_draws(b_Intercept) %>%
+  mutate(Event = "end",  Sex = "FEMALE", model = "fe")
+
+mem <- mefit %>% gather_draws(b_Intercept) %>%
+  mutate(Event = "end",  Sex = "MALE", model = "me")
+
+means <- rbind(fbm, mbm, fem, mem) %>%
+  mutate(.variable = "population_mean") %>%
+  mutate(model = forcats::fct_relevel(model, "fb", "mb", "fe", "me"))
+
+means_summary <- means %>%
+  group_by(model, .variable, Sex, Event) %>%
+  median_hdci(.value, .width = c(0.5, 0.89)) 
+
+ggplot(means, aes(y = fct_rev(model), x = .value, colour = Event, linetype = Sex)) +
+  stat_halfeye() +
+  scale_colour_viridis_d() +
+  ggtitle("Population mean") +
+  ylab("") +
+  xlab("Forcing")
+
+
+```
+Overall variation in flowering is ~15 forcing units for start and 17 for end. In general, variation is smaller for start events than end events, likely because forcing increases monotonically.
+
+Estimates for variation among Year, Site, and Provenance are relatively uncertain because the number of levels within each of these factors was small (7-15), while there were hundreds of clones and trees.
+
+Within-clone variance (sd Tree) is very low, but higher for males than females. Mean estimates of variation within provenance (among Clone variation) is higher than variation among provenances, but the posterior is quite wide for Provenance and the posterior has a great deal of weight beyond the upper limits of the Clone estimates.
+
+Year explains more of the variation than all other factors except for the female end model where Site is more important.
+
+Female begin: Year, Clone, Site, Provenance, Tree
+Male begin: Year, Clone, Provenance, Site, Tree
+Female end: Site, Year, Clone, Provenance, Tree
+Male end: Year, Site, Clone, Provenance, Tree
+
+Year: me, fe, mb, fb
+Site: fe, me, fb, mb
+Prov: me, fe, fe, mb
+Clone: fe, me, fb, mb
+Tree: me, mb, fb, fe
+
+## Variation
+
+```{r variation, cache = TRUE}
+
+fbvar <- fbfit %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE) %>%
+  ungroup() %>%
+  mutate(Event = "begin",  Sex = "FEMALE", model = "fb")
+
+mbvar <- mbfit %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE) %>%
+  ungroup() %>%
+  mutate(Event = "begin",  Sex = "MALE", model = "mb")
+
+fevar <- fefit %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE) %>%
+  ungroup() %>%
+  mutate(Event = "end", Sex = "FEMALE", model = "fe")
+
+mevar <- mefit %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE) %>%
+  ungroup() %>%
+  mutate(Event = "end", Sex = "MALE", model = "me")
+
+variation <- rbind(fbvar, mbvar, fevar, mevar) %>%
+  mutate(model = forcats::fct_relevel(model, "fb", "mb", "fe", "me")) %>%
+  mutate(.variable = case_when(.variable != "sigma" ~ stringr::str_sub(.variable, 4, -12),
+                               .variable == "sigma" ~ "sigma")) %>%
+  mutate(.variable = factor(.variable)) %>%
+  mutate(.variable = forcats::fct_relevel(.variable, "sigma", "Year", "Site", "Provenance", "Clone", "Tree"))
+
+variation_summary <- variation %>% 
+  group_by(model, .variable, Sex, Event) %>%
+  median_hdci(.value, .width = c(0.5, 0.89)) 
+
+# ggplot(variation, aes(y = fct_rev(model), x = .value, colour = Event, linetype = Sex)) +
+#   stat_pointinterval() +
+#   scale_colour_viridis_d() +
+#   ggtitle("Standard deviation of population mean and offsets") +
+#   ylab("") +
+#   xlab("Forcing") +
+#   facet_grid(.variable ~ .)
+
+ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .variable)) +
+  stat_pointinterval() +
+  scale_colour_viridis_d() +
+  ggtitle("Standard deviation of population mean and offsets") +
+  ylab("") +
+  xlab("Forcing") +
+  facet_grid(model ~ .)
+```
+Effects for Tree are generally quite small and are moderate for Provenance. Clone has a wide range of possible effects. PGTIS and PRT have relatively large effects for the end of flowering, tending to stop flowering at a larger forcing amount. (Maybe because of censoring?) Provenances have similar ranked effects across models and events, tending to skew events earlier or later by a small amount of forcing. 
+
+## Offsets
+```{r offsets,cache=TRUE}
+
+fbdelt <- fbfit %>% gather_draws(`r_.*`, regex = TRUE) %>%
+  ungroup() %>%
+  mutate(Event = "begin",  Sex = "FEMALE", model = "fb")
+
+mbdelt <- mbfit %>% gather_draws(`r_.*`, regex = TRUE) %>%
+  ungroup() %>%
+  mutate(Event = "begin",  Sex = "MALE", model = "mb")
+
+fedelt <- fefit %>% gather_draws(`r_.*`, regex = TRUE) %>%
+  ungroup() %>%
+  mutate(Event = "end",  Sex = "FEMALE", model = "fe")
+
+medelt <- mefit %>% gather_draws(`r_.*`, regex = TRUE) %>%
+  ungroup() %>%
+  mutate(Event = "end",  Sex = "MALE", model = "me")
+
+offsets_raw <- rbind(fbdelt, mbdelt, fedelt, medelt)
+
+# turn brms .variable names into useful names (slow)
+varlevel <- offsets_raw$.variable %>% stringr::str_split_fixed("[_\\[\\,]", n=4) %>% data.frame() %>%
+  select("X2", "X3")
+colnames(varlevel) <- c("factor", "level")
+
+# order factors and factor levels
+yearclonetree <- filter(varlevel, factor %in% c("Year", "Clone", "Tree")) %>% distinct()
+yctorder <- sort(yearclonetree$level)
+
+spyctorder <- c(sitefactororder, provfactororder, yctorder) 
+
+# ORDERING BROKEN DON'T KNOW WHY
+offsets <- offsets_raw %>% cbind(varlevel) #%>%
+  #mutate(.variable = forcats::fct_relevel(factor, "Year", "Site", "Provenance", "Clone", "Tree"))
+  #mutate(level = forcats::fct_relevel(level, spyctorder)) #broekn
+
+offsets_summary <- offsets %>%
+  group_by(model, Sex, Event, factor, level) %>%
+  median_hdci(.value, .width = c(0.5, 0.89)) %>%
+  ungroup()
+
+
+offsets_summary %>%
+  select(model, Sex, Event, factor, level, .value, .point) %>% distinct() %>%
+  ggplot(aes(y=.value, x = model)) +
+  geom_quasirandom(alpha = 0.5) +
+  facet_wrap("factor") +
+  ggtitle("Offset medians", subtitle = "Effect of clones, provenance, site, tree, and year") +
+  geom_hline(yintercept = 0, linetype =3, colour = "darkgray") +
+  theme_bw() +
+  ylab("Forcing") 
+
+
+siter <- filter(offsets, factor == "Site") %>%
+  mutate(level = forcats::fct_relevel(level, sitefactororder))
+
+provr <- filter(offsets, factor == "Provenance") %>%
+  mutate(level = forcats::fct_relevel(level, provfactororder))
+
+yearr <- filter(offsets, factor == "Year") %>%
+  mutate(level = forcats::fct_relevel(level, as.character(yearfactororder)))
+
+ggplot(siter, aes(y=level, x = .value)) +
+  stat_pointinterval() +
+  facet_grid(Event ~ Sex) +
+  ggtitle("Site offsets", subtitle = "Sites ordered warmest to coldest MAT") +
+  theme_bw() +
+  ylab("Forcing") +
+  geom_vline(xintercept = 0, linetype =3, colour = "darkgray") +
+  xlim(c(-90,90))
+
+ggplot(provr, aes(y=level, x = .value)) +
+  stat_pointinterval() +
+  facet_grid(Event ~ Sex) +
+  ggtitle("Provenance offsets", subtitle = "Provenances ordered warmest to coldest MAT") +
+  theme_bw() +
+  ylab("Forcing") +
+  geom_vline(xintercept = 0, linetype =3, colour = "darkgray")  +
+  xlim(c(-90,90))
+
+ggplot(yearr, aes(y=level, x = .value)) +
+  stat_pointinterval() +
+  facet_grid(Event ~ Sex) +
+  ggtitle("Year offsets", subtitle = "Years ordered warmest to coldest MAT") +
+  theme_bw() +
+  ylab("Forcing") +
+  geom_vline(xintercept = 0, linetype =3, colour = "darkgray")  +
+  xlim(c(-90,90))
+
+```
+
+# Retrodictions
+
+```{r censorpred, cache = TRUE}
+
+# simulate data from model
+fbyrep <- brms::posterior_predict(fbfit, cores = 6)
+mbyrep <- brms::posterior_predict(mbfit, cores = 6)
+feyrep <- brms::posterior_predict(fefit, cores = 6)
+meyrep <- brms::posterior_predict(mefit, cores = 6)
+
+# Censor one iteration worth of yrep based on censorship of actual data
+censor_estimates <- function(Estimate, dat) {
+  censordf <- select(dat, censored, sum_forcing, upper)
+  censordf$Estimate <- Estimate
+  
+  df <- censordf %>%
+    mutate(yrep_censored = case_when(censored == "interval" & Estimate < sum_forcing ~ sum_forcing,
+                                     censored == "interval" & Estimate > upper ~ upper,
+                                     censored == "interval" & (Estimate >= sum_forcing) & (Estimate <= upper) ~ Estimate,
+                                     
+                                     censored == "right" & Estimate >= sum_forcing ~ sum_forcing,
+                                     censored == "right" & Estimate < sum_forcing ~ Estimate,
+                                     
+                                     censored == "left" & Estimate < sum_forcing ~ Estimate,
+                                     censored == "left" & Estimate >= sum_forcing ~ sum_forcing))
+  
+  return(df$yrep_censored)
+}
+
+# censor all predicted data
+
+fbyrep_censored <- apply(fbyrep, MARGIN = 1, FUN = censor_estimates, dat = fbdat) %>% t()
+mbyrep_censored <- apply(mbyrep, MARGIN = 1, FUN = censor_estimates, dat = mbdat) %>% t()
+feyrep_censored <- apply(feyrep, MARGIN = 1, FUN = censor_estimates, dat = fedat) %>% t()
+meyrep_censored <- apply(meyrep, MARGIN = 1, FUN = censor_estimates, dat = medat) %>% t()
+
+# make a plot with uncensored model predictions, censored model predictions, and data
+plot_retro <- function(censored_model_predictions, uncensored_model_predictions, dat, event, sex, n = niter, d = 100)
+{
+  draws <- sample(1:n, size = d)
+  draws_censored <- bayesplot::ppc_data(dat$sum_forcing, censored_model_predictions[draws,]) %>% mutate(type = "model_censored")
+  all_draws <- bayesplot::ppc_data(dat$sum_forcing, uncensored_model_predictions[draws,]) %>% mutate(type = "model_uncensored") %>% 
+    rbind(draws_censored) %>%
+    rename(sum_forcing = value)
+  
+  
+  median_retrodictions <- all_draws %>%
+    group_by(y_id, type) %>%
+    median_qi(sum_forcing)
+  
+  retroplot <- ggplot(dat, aes(x = sum_forcing, y="data")) +
+    stat_halfeye( .width = c(0.5, 0.89)) +
+    stat_slab(data = all_draws, aes(x = sum_forcing, y = type, group=rep_id), slab_color = "gray65", alpha = 1/10, fill = NA) +
+    stat_pointinterval(data = median_retrodictions, aes(x = sum_forcing, y = type), .width = c(0.5, 0.89), inherit.aes = FALSE) +
+    theme_bw() +
+    labs(title = paste0(event, " of ", sex," flowering"), subtitle = "density of data and predictions with \n 50 and 89% quantile median point intervals")+
+    xlim(c(50,425))
+  
+  return(retroplot)
+}
+
+fbppc <- plot_retro(fbyrep_censored, fbyrep, fbdat, "Beginning", "female")
+mbppc <- plot_retro(mbyrep_censored, mbyrep, mbdat, "Beginning", "male")
+feppc <- plot_retro(feyrep_censored, feyrep, fedat, "End", "female")
+meppc <- plot_retro(meyrep_censored, meyrep, medat, "End", "male")
+
+cowplot::plot_grid(fbppc, feppc, mbppc, meppc, align="hv", ncol = 2, nrow = 2)
+#, caption = "Model densities are drawn with 100 censored and uncensored draws from the model for each observation. \n Model point intervals are based on the median prediction for each observed sum_forcing. \n 50% and 89% quantile interval widths for median.") +
+
+```
+
+## General predictions
+```{r general_predictions}
+n_newdat <- 5
+newdata <- data.frame(Site = letters[1:n_newdat], Provenance = letters[1:n_newdat], Year = letters[1:n_newdat], Clone = letters[1:n_newdat], Tree = letters[1:n_newdat]) %>%
+  tidyr::complete(Site, Provenance, Year, Clone, Tree)
+
+# simulate new data from the model for 5 new levels of each factor of the model. Draws for factor effects are from N(0, sigma_cluster). Using nsamples draws from the posterior
+simulate_from_model <- function(data, model, nlevels = 5, nsamples = 500, seed = 1013, cores = 6) {
+  # retrodict "true"
+  yrep <- add_predicted_draws(newdata = data, model = model, n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
+    mutate(prediction_type = "retrodiction - uncensored") 
+  
+  # censor yrep based on censoring points in the raw data
+  yrep_censored <- yrep %>%
+    mutate(prediction_temp = case_when(censored == "interval" & prediction < sum_forcing ~ sum_forcing,
+                                     censored == "interval" & prediction > upper ~ upper,
+                                     censored == "interval" & (prediction >= sum_forcing) & (prediction <= upper) ~ prediction,
+                                     
+                                     censored == "right" & prediction >= sum_forcing ~ sum_forcing,
+                                     censored == "right" & prediction < sum_forcing ~ prediction,
+                                     
+                                     censored == "left" & prediction < sum_forcing ~ prediction,
+                                     censored == "left" & prediction >= sum_forcing ~ sum_forcing),
+           prediction_type = "retrodiction - censored") %>%
+    select(-prediction) %>%
+    rename(prediction = prediction_temp)
+  
+  # simulate data from new levels (out-of-sample predictions)
+  lv <- as.character(1:nlevels)
+  newdata <- data.frame(Site = lv, 
+                        Provenance = lv, 
+                        Year = lv, 
+                        Clone = lv, 
+                        Tree = lv) %>%
+  tidyr::complete(Site, Provenance, Year, Clone, Tree)
+  
+  yoos <- add_predicted_draws(newdata = newdata, model = model, allow_new_levels = TRUE, sample_new_levels = "gaussian", n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
+    mutate(prediction_type = "out-of-sample prediction")
+  
+  return(rbind(yrep, yrep_censored, yoos))
+}
+
+fbsim <- simulate_from_model(data = fbdat, model = fbfit)
+mbsim <- simulate_from_model(data = mbdat, model = mbfit)
+fesim <- simulate_from_model(data = fedat, model = fefit)
+mesim <- simulate_from_model(data = medat, model = mefit)
+
+
+plot_retro <- function(data, preds, event, sex, n = niter)
+{
+
+  retroplot <- ggplot(data, aes(x = sum_forcing, y = "data" )) +
+    stat_halfeye( .width = c(0.5, 0.89), point_interval = median_hdci) +
+    stat_slab(data = preds, aes(x = prediction, y = prediction_type, group=.draw), slab_color = "gray65", alpha = 1/10, fill = NA) +
+    theme_bw() +
+    stat_pointinterval(data = preds, aes(x = prediction, y = prediction_type), .width = c(0.5, 0.89), point_interval = median_hdci, inherit.aes = FALSE) +
+    theme_bw() +
+    labs(title = paste0(event, " of ", sex," flowering"), subtitle = "density of data and predictions with \n 50 and 89% HDCI with median")+
+    xlim(c(25,475))
+  
+  return(retroplot)
+}
+
+fbppc <- plot_retro(fbdat, fbsim, event = "Beginning", sex = "female")
+mbppc <- plot_retro(mbdat, mbsim, event = "Beginning", sex = "male")
+feppc <- plot_retro(fedat, fesim, event = "End", sex = "female")
+meppc <- plot_retro(medat, mesim, event = "End", sex = "male")
+
+cowplot::plot_grid(fbppc, feppc, mbppc, meppc, align="hv", ncol = 2, nrow = 2)
+
+```
