@@ -126,23 +126,23 @@ We built separate hierarchical Bayesian intercept-only factor models of the accu
 Ideally, the likelihood of begin and end of flowering observations $y_i$ would
 
 $y_i \sim \mathrm{Normal}(\phi_i, \sigma)$
-  
-  However, interval and end censoring
+
+However, interval and end censoring
 The likelihood is modified for the 37 to 65% of end censored observations. 
 
 Flowering start data is left censored when a tree is already flowering when it is first observed, so the likelihood is calculated with a cumulative normal distribution function.
 
 $\mathrm{y_i} \sim \mathrm{Cumulative Normal}(\phi_i,\sigma)$
-  
-  Flowering end data is right censored when a tree is never observed past flowering and a complementary cumulative normal distribution function is used for the likelihood. 
+
+Flowering end data is right censored when a tree is never observed past flowering and a complementary cumulative normal distribution function is used for the likelihood. 
 
 $\mathrm{y_i} \sim \mathrm{Complementary Cumulative Normal}(\phi_i, \sigma)$.
 
 Mean $\phi_i$ is the sum of the overall population mean $\mu$ and offsets $\delta$ for each level of factors Site, Provenance, Year, and Clone.
 
 $\mathrm{\phi_i} = \mu + \delta_{Site, i} + \delta_{Provenance, i} + \delta_{Year, i} + \delta_{Clone, i}$
-  
-  Priors limit parameter estimates to forcing accumulations possible at our sites during late spring, when lodgepole pine are known to flower in British Columbia (@owensReproductiveBiologyLodgepole2006). Offset standard deviations $\sigma_{factor}$ were roughly constrained by both estimates of possible forcing accumulation and the approximately known length of the flowering period. Possible forcing accumulation ranges were calculated using daily PCIC weather data from 1945-2012 at all of our sites. As Site, Provenance, and Year have relatively few levels with which to estimate $\sigma_{factor}$, half normal priors with their relatively thin tails were used to help constrain the parameter. Additional details on prior choice can be found in the conceptual analysis (supplementary materials).
+
+Priors limit parameter estimates to forcing accumulations possible at our sites during late spring, when lodgepole pine are known to flower in British Columbia (@owensReproductiveBiologyLodgepole2006). Offset standard deviations $\sigma_{factor}$ were roughly constrained by both estimates of possible forcing accumulation and the approximately known length of the flowering period. Possible forcing accumulation ranges were calculated using daily PCIC weather data from 1945-2012 at all of our sites. As Site, Provenance, and Year have relatively few levels with which to estimate $\sigma_{factor}$, half normal priors with their relatively thin tails were used to help constrain the parameter. Additional details on prior choice can be found in the conceptual analysis (supplementary materials).
 
 Priors for the begin models differ for those of the end models as forcing accumulates faster in later spring than early spring and flowering must begin before it can end.
 
@@ -152,9 +152,10 @@ $$\begin{align}
 \sigma & \sim \left|\mathrm{Normal}(0,15)\right| \\
 \sigma_{factor, j} & \sim \left|\mathrm{Normal}(0,9)\right| \\
 \end{align}$$
-  
-  
-  ```{r model, cache = TRUE, echo = FALSE, include = FALSE}
+
+
+
+```{r model, cache = TRUE, echo = FALSE, include = FALSE}
 # This model block is faster if you run models in parallel
 # initialize parameter values on the right order of magnitude
 initpars <- lapply(1:6, function(id) list(sigma = 30, Intercept = 300))
