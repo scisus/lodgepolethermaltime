@@ -16,7 +16,6 @@ library(ggplot2)
 library(tidyr)
 library(tidybayes)
 library(forcats)
-library(cowplot)
 library(ggbeeswarm)
 
 knitr::opts_chunk$set(echo = TRUE)
@@ -238,26 +237,26 @@ We ran `r nchains` independent chains of `r iter` iterations each. `r iter/2` wa
 vars <- tidybayes::get_variables(fbfit)
 
 fbm <- fbfit %>% gather_draws(b_Intercept) %>%
-  mutate(Event = "begin",  Sex = "FEMALE", model = "fb")
+  mutate(event = "begin",  Sex = "FEMALE", model = "fb")
 
 mbm <- mbfit %>% gather_draws(b_Intercept) %>%
-  mutate(Event = "begin",  Sex = "MALE", model = "mb")
+  mutate(event = "begin",  Sex = "MALE", model = "mb")
 
 fem <- fefit %>% gather_draws(b_Intercept) %>%
-  mutate(Event = "end",  Sex = "FEMALE", model = "fe")
+  mutate(event = "end",  Sex = "FEMALE", model = "fe")
 
 mem <- mefit %>% gather_draws(b_Intercept) %>%
-  mutate(Event = "end",  Sex = "MALE", model = "me")
+  mutate(event = "end",  Sex = "MALE", model = "me")
 
 means <- rbind(fbm, mbm, fem, mem) %>%
   mutate(.variable = "population_mean") %>%
   mutate(model = forcats::fct_relevel(model, "fb", "mb", "fe", "me"))
 
 means_summary <- means %>%
-  group_by(model, .variable, Sex, Event) %>%
+  group_by(model, .variable, Sex, event) %>%
   median_hdci(.value, .width = c(0.5, 0.89)) 
 
-ggplot(means, aes(y = fct_rev(model), x = .value, colour = Event, linetype = Sex)) +
+ggplot(means, aes(y = fct_rev(model), x = .value, colour = event, linetype = Sex)) +
   stat_halfeye() +
   scale_colour_viridis_d() +
   ggtitle("Population mean") +
@@ -291,19 +290,19 @@ Tree: me, mb, fb, fe
 
 fbvar <- fbfit %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE) %>%
   ungroup() %>%
-  mutate(Event = "begin",  Sex = "FEMALE", model = "fb")
+  mutate(event = "begin",  Sex = "FEMALE", model = "fb")
 
 mbvar <- mbfit %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE) %>%
   ungroup() %>%
-  mutate(Event = "begin",  Sex = "MALE", model = "mb")
+  mutate(event = "begin",  Sex = "MALE", model = "mb")
 
 fevar <- fefit %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE) %>%
   ungroup() %>%
-  mutate(Event = "end", Sex = "FEMALE", model = "fe")
+  mutate(event = "end", Sex = "FEMALE", model = "fe")
 
 mevar <- mefit %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE) %>%
   ungroup() %>%
-  mutate(Event = "end", Sex = "MALE", model = "me")
+  mutate(event = "end", Sex = "MALE", model = "me")
 
 variation <- rbind(fbvar, mbvar, fevar, mevar) %>%
   mutate(model = forcats::fct_relevel(model, "fb", "mb", "fe", "me")) %>%
@@ -313,7 +312,7 @@ variation <- rbind(fbvar, mbvar, fevar, mevar) %>%
   mutate(.variable = forcats::fct_relevel(.variable, "sigma", "Year", "Site", "Provenance", "Clone", "Tree"))
 
 variation_summary <- variation %>% 
-  group_by(model, .variable, Sex, Event) %>%
+  group_by(model, .variable, Sex, event) %>%
   median_hdci(.value, .width = c(0.5, 0.89)) 
 
 # ggplot(variation, aes(y = fct_rev(model), x = .value, colour = Event, linetype = Sex)) +
@@ -339,19 +338,19 @@ Effects for Tree are generally quite small and are moderate for Provenance. Clon
 
 fbdelt <- fbfit %>% gather_draws(`r_.*`, regex = TRUE) %>%
   ungroup() %>%
-  mutate(Event = "begin",  Sex = "FEMALE", model = "fb")
+  mutate(event = "begin",  Sex = "FEMALE", model = "fb")
 
 mbdelt <- mbfit %>% gather_draws(`r_.*`, regex = TRUE) %>%
   ungroup() %>%
-  mutate(Event = "begin",  Sex = "MALE", model = "mb")
+  mutate(event = "begin",  Sex = "MALE", model = "mb")
 
 fedelt <- fefit %>% gather_draws(`r_.*`, regex = TRUE) %>%
   ungroup() %>%
-  mutate(Event = "end",  Sex = "FEMALE", model = "fe")
+  mutate(event = "end",  Sex = "FEMALE", model = "fe")
 
 medelt <- mefit %>% gather_draws(`r_.*`, regex = TRUE) %>%
   ungroup() %>%
-  mutate(Event = "end",  Sex = "MALE", model = "me")
+  mutate(event = "end",  Sex = "MALE", model = "me")
 
 offsets_raw <- rbind(fbdelt, mbdelt, fedelt, medelt)
 
@@ -372,13 +371,13 @@ offsets <- offsets_raw %>% cbind(varlevel) #%>%
 #mutate(level = forcats::fct_relevel(level, spyctorder)) #broekn
 
 offsets_summary <- offsets %>%
-  group_by(model, Sex, Event, factor, level) %>%
+  group_by(model, Sex, event, factor, level) %>%
   median_hdci(.value, .width = c(0.5, 0.89)) %>%
   ungroup()
 
 
 offsets_summary %>%
-  select(model, Sex, Event, factor, level, .value, .point) %>% distinct() %>%
+  select(model, Sex, event, factor, level, .value, .point) %>% distinct() %>%
   ggplot(aes(y=.value, x = model)) +
   geom_quasirandom(alpha = 0.5) +
   facet_wrap("factor") +
@@ -399,7 +398,7 @@ yearr <- filter(offsets, factor == "Year") %>%
 
 ggplot(siter, aes(y=level, x = .value)) +
   stat_pointinterval() +
-  facet_grid(Event ~ Sex) +
+  facet_grid(event ~ Sex) +
   ggtitle("Site offsets", subtitle = "Sites ordered warmest to coldest MAT") +
   theme_bw() +
   ylab("Forcing") +
@@ -408,7 +407,7 @@ ggplot(siter, aes(y=level, x = .value)) +
 
 ggplot(provr, aes(y=level, x = .value)) +
   stat_pointinterval() +
-  facet_grid(Event ~ Sex) +
+  facet_grid(event ~ Sex) +
   ggtitle("Provenance offsets", subtitle = "Provenances ordered warmest to coldest MAT") +
   theme_bw() +
   ylab("Forcing") +
@@ -417,7 +416,7 @@ ggplot(provr, aes(y=level, x = .value)) +
 
 ggplot(yearr, aes(y=level, x = .value)) +
   stat_pointinterval() +
-  facet_grid(Event ~ Sex) +
+  facet_grid(event ~ Sex) +
   ggtitle("Year offsets", subtitle = "Years ordered warmest to coldest MAT") +
   theme_bw() +
   ylab("Forcing") +
@@ -430,70 +429,70 @@ ggplot(yearr, aes(y=level, x = .value)) +
 
 ```{r censorpred, cache = TRUE}
 
-# simulate data from model
-fbyrep <- brms::posterior_predict(fbfit, cores = 6)
-mbyrep <- brms::posterior_predict(mbfit, cores = 6)
-feyrep <- brms::posterior_predict(fefit, cores = 6)
-meyrep <- brms::posterior_predict(mefit, cores = 6)
-
-# Censor one iteration worth of yrep based on censorship of actual data
-censor_estimates <- function(Estimate, dat) {
-  censordf <- select(dat, censored, sum_forcing, upper)
-  censordf$Estimate <- Estimate
-  
-  df <- censordf %>%
-    mutate(yrep_censored = case_when(censored == "interval" & Estimate < sum_forcing ~ sum_forcing,
-                                     censored == "interval" & Estimate > upper ~ upper,
-                                     censored == "interval" & (Estimate >= sum_forcing) & (Estimate <= upper) ~ Estimate,
-                                     
-                                     censored == "right" & Estimate >= sum_forcing ~ sum_forcing,
-                                     censored == "right" & Estimate < sum_forcing ~ Estimate,
-                                     
-                                     censored == "left" & Estimate < sum_forcing ~ Estimate,
-                                     censored == "left" & Estimate >= sum_forcing ~ sum_forcing))
-  
-  return(df$yrep_censored)
-}
-
-# censor all predicted data
-
-fbyrep_censored <- apply(fbyrep, MARGIN = 1, FUN = censor_estimates, dat = fbdat) %>% t()
-mbyrep_censored <- apply(mbyrep, MARGIN = 1, FUN = censor_estimates, dat = mbdat) %>% t()
-feyrep_censored <- apply(feyrep, MARGIN = 1, FUN = censor_estimates, dat = fedat) %>% t()
-meyrep_censored <- apply(meyrep, MARGIN = 1, FUN = censor_estimates, dat = medat) %>% t()
-
-# make a plot with uncensored model predictions, censored model predictions, and data
-plot_retro <- function(censored_model_predictions, uncensored_model_predictions, dat, event, sex, n = niter, d = 100)
-{
-  draws <- sample(1:n, size = d)
-  draws_censored <- bayesplot::ppc_data(dat$sum_forcing, censored_model_predictions[draws,]) %>% mutate(type = "model_censored")
-  all_draws <- bayesplot::ppc_data(dat$sum_forcing, uncensored_model_predictions[draws,]) %>% mutate(type = "model_uncensored") %>% 
-    rbind(draws_censored) %>%
-    rename(sum_forcing = value)
-  
-  
-  median_retrodictions <- all_draws %>%
-    group_by(y_id, type) %>%
-    median_qi(sum_forcing)
-  
-  retroplot <- ggplot(dat, aes(x = sum_forcing, y="data")) +
-    stat_halfeye( .width = c(0.5, 0.89)) +
-    stat_slab(data = all_draws, aes(x = sum_forcing, y = type, group=rep_id), slab_color = "gray65", alpha = 1/10, fill = NA) +
-    stat_pointinterval(data = median_retrodictions, aes(x = sum_forcing, y = type), .width = c(0.5, 0.89), inherit.aes = FALSE) +
-    theme_bw() +
-    labs(title = paste0(event, " of ", sex," flowering"), subtitle = "density of data and predictions with \n 50 and 89% quantile median point intervals")+
-    xlim(c(50,425))
-  
-  return(retroplot)
-}
-
-fbppc <- plot_retro(fbyrep_censored, fbyrep, fbdat, "Beginning", "female")
-mbppc <- plot_retro(mbyrep_censored, mbyrep, mbdat, "Beginning", "male")
-feppc <- plot_retro(feyrep_censored, feyrep, fedat, "End", "female")
-meppc <- plot_retro(meyrep_censored, meyrep, medat, "End", "male")
-
-cowplot::plot_grid(fbppc, feppc, mbppc, meppc, align="hv", ncol = 2, nrow = 2)
-#, caption = "Model densities are drawn with 100 censored and uncensored draws from the model for each observation. \n Model point intervals are based on the median prediction for each observed sum_forcing. \n 50% and 89% quantile interval widths for median.") +
+# # simulate data from model
+# fbyrep <- brms::posterior_predict(fbfit, cores = 6)
+# mbyrep <- brms::posterior_predict(mbfit, cores = 6)
+# feyrep <- brms::posterior_predict(fefit, cores = 6)
+# meyrep <- brms::posterior_predict(mefit, cores = 6)
+# 
+# # Censor one iteration worth of yrep based on censorship of actual data
+# censor_estimates <- function(Estimate, dat) {
+#   censordf <- select(dat, censored, sum_forcing, upper)
+#   censordf$Estimate <- Estimate
+#   
+#   df <- censordf %>%
+#     mutate(yrep_censored = case_when(censored == "interval" & Estimate < sum_forcing ~ sum_forcing,
+#                                      censored == "interval" & Estimate > upper ~ upper,
+#                                      censored == "interval" & (Estimate >= sum_forcing) & (Estimate <= upper) ~ Estimate,
+#                                      
+#                                      censored == "right" & Estimate >= sum_forcing ~ sum_forcing,
+#                                      censored == "right" & Estimate < sum_forcing ~ Estimate,
+#                                      
+#                                      censored == "left" & Estimate < sum_forcing ~ Estimate,
+#                                      censored == "left" & Estimate >= sum_forcing ~ sum_forcing))
+#   
+#   return(df$yrep_censored)
+# }
+# 
+# # censor all predicted data
+# 
+# fbyrep_censored <- apply(fbyrep, MARGIN = 1, FUN = censor_estimates, dat = fbdat) %>% t()
+# mbyrep_censored <- apply(mbyrep, MARGIN = 1, FUN = censor_estimates, dat = mbdat) %>% t()
+# feyrep_censored <- apply(feyrep, MARGIN = 1, FUN = censor_estimates, dat = fedat) %>% t()
+# meyrep_censored <- apply(meyrep, MARGIN = 1, FUN = censor_estimates, dat = medat) %>% t()
+# 
+# # make a plot with uncensored model predictions, censored model predictions, and data
+# plot_retro <- function(censored_model_predictions, uncensored_model_predictions, dat, event, sex, n = niter, d = 100)
+# {
+#   draws <- sample(1:n, size = d)
+#   draws_censored <- bayesplot::ppc_data(dat$sum_forcing, censored_model_predictions[draws,]) %>% mutate(type = "model_censored")
+#   all_draws <- bayesplot::ppc_data(dat$sum_forcing, uncensored_model_predictions[draws,]) %>% mutate(type = "model_uncensored") %>% 
+#     rbind(draws_censored) %>%
+#     rename(sum_forcing = value)
+#   
+#   
+#   median_retrodictions <- all_draws %>%
+#     group_by(y_id, type) %>%
+#     median_qi(sum_forcing)
+#   
+#   retroplot <- ggplot(dat, aes(x = sum_forcing, y="data")) +
+#     stat_halfeye( .width = c(0.5, 0.89)) +
+#     stat_slab(data = all_draws, aes(x = sum_forcing, y = type, group=rep_id), slab_color = "gray65", alpha = 1/10, fill = NA) +
+#     stat_pointinterval(data = median_retrodictions, aes(x = sum_forcing, y = type), .width = c(0.5, 0.89), inherit.aes = FALSE) +
+#     theme_bw() +
+#     labs(title = paste0(event, " of ", sex," flowering"), subtitle = "density of data and predictions with \n 50 and 89% quantile median point intervals")+
+#     xlim(c(50,425))
+#   
+#   return(retroplot)
+# }
+# 
+# fbppc <- plot_retro(fbyrep_censored, fbyrep, fbdat, "Beginning", "female")
+# mbppc <- plot_retro(mbyrep_censored, mbyrep, mbdat, "Beginning", "male")
+# feppc <- plot_retro(feyrep_censored, feyrep, fedat, "End", "female")
+# meppc <- plot_retro(meyrep_censored, meyrep, medat, "End", "male")
+# 
+# cowplot::plot_grid(fbppc, feppc, mbppc, meppc, align="hv", ncol = 2, nrow = 2)
+# #, caption = "Model densities are drawn with 100 censored and uncensored draws from the model for each observation. \n Model point intervals are based on the median prediction for each observed sum_forcing. \n 50% and 89% quantile interval widths for median.") +
 
 ```
 
@@ -504,7 +503,7 @@ newdata <- data.frame(Site = letters[1:n_newdat], Provenance = letters[1:n_newda
   tidyr::complete(Site, Provenance, Year, Clone, Tree)
 
 # simulate new data from the model for 5 new levels of each factor of the model. Draws for factor effects are from N(0, sigma_cluster). Using nsamples draws from the posterior
-simulate_from_model <- function(data, model, nlevels = 5, nsamples = 10, seed = 1013, cores = 6) {
+simulate_from_model <- function(data, model, nlevels = 5, nsamples = 300, seed = 1657, cores = 6) {
   # retrodict "true"
   yrep <- add_predicted_draws(newdata = data, model = model, n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
     mutate(prediction_type = "retrodiction - uncensored") 
@@ -536,7 +535,10 @@ simulate_from_model <- function(data, model, nlevels = 5, nsamples = 10, seed = 
   yoos <- add_predicted_draws(newdata = newdata, model = model, allow_new_levels = TRUE, sample_new_levels = "gaussian", n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
     mutate(prediction_type = "out-of-sample prediction")
   
-  return(rbind(yrep, yrep_censored, yoos))
+  preds <- rbind(yrep, yrep_censored, yoos) %>%
+    mutate(Sex = unique(data$Sex), event = unique(data$event))
+  
+  return(preds)
 }
 
 fbsim <- simulate_from_model(data = fbdat, model = fbfit)
@@ -545,42 +547,8 @@ fesim <- simulate_from_model(data = fedat, model = fefit)
 mesim <- simulate_from_model(data = medat, model = mefit)
 
 
-plot_retro <- function(data, preds, event, sex, n = niter)
-{
-  
-  retroplot <- ggplot(data, aes(x = sum_forcing, y = "data" )) +
-    stat_halfeye( .width = c(0.5, 0.89), point_interval = median_qi) +
-    stat_slab(data = preds, aes(x = prediction, y = prediction_type, group=.draw), slab_color = "gray65", alpha = 1/10, fill = NA) +
-    theme_bw() +
-    stat_pointinterval(data = preds, aes(x = prediction, y = prediction_type), .width = c(0.5, 0.89), point_interval = median_hdci, inherit.aes = FALSE) +
-    theme_bw() +
-    labs(title = paste0(event, " of ", sex," flowering"), subtitle = "density of data and predictions with \n 50 and 89% HDCI with median")+
-    xlim(35, 520)
-  
-  return(retroplot)
-}
-
-fbdat$event <- "begin"
-mbdat$event <- "begin"
-fedat$event <- "end"
-medat$event <- "end"
 alldat <- rbind(fbdat, mbdat, fedat, medat)
-
-fbsim$event <- "begin"
-mbsim$event <- "begin"
-fesim$event <- "end"
-mesim$event <- "end"
-
-fbsim$Sex <- "FEMALE"
-mbsim$Sex <- "MALE"
-fesim$Sex <- "FEMALE"
-mesim$Sex <- "MALE"
-
 allsim <- rbind(fbsim, mbsim, fesim, mesim)
-
-simsum <- allsim %>%
-    group_by(Sex, event, prediction_type) %>%
-    median_hdci(prediction, .width = c(0.5, 0.89))
 
 ggplot(alldat, aes(x = sum_forcing, y = "observations" )) +
   stat_halfeye( .width = c(0.5, 0.89), point_interval = median_qi) +
@@ -596,11 +564,5 @@ ggplot(alldat, aes(x = sum_forcing, y = "observations" )) +
   xlab("Accumulated forcing") +
   ylab("")
 
-fbppc <- plot_retro(fbdat, fbsim, event = "Beginning", sex = "female")
-mbppc <- plot_retro(mbdat, mbsim, event = "Beginning", sex = "male")
-feppc <- plot_retro(fedat, fesim, event = "End", sex = "female")
-meppc <- plot_retro(medat, mesim, event = "End", sex = "male")
-
-cowplot::plot_grid(fbppc, feppc, mbppc, meppc, align="hv", ncol = 2, nrow = 2)
 
 ```
