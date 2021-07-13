@@ -499,12 +499,85 @@ ggplot(yearr, aes(y=level, x = .value)) +
 
 ## General predictions
 ```{r general_predictions}
-n_newdat <- 5
-newdata <- data.frame(Site = letters[1:n_newdat], Provenance = letters[1:n_newdat], Year = letters[1:n_newdat], Clone = letters[1:n_newdat], Tree = letters[1:n_newdat]) %>%
-  tidyr::complete(Site, Provenance, Year, Clone, Tree)
+# n_newdat <- 5
+# newdata <- data.frame(Site = letters[1:n_newdat], Provenance = letters[1:n_newdat], Year = letters[1:n_newdat], Clone = letters[1:n_newdat], Tree = letters[1:n_newdat]) %>%
+#   tidyr::complete(Site, Provenance, Year, Clone, Tree)
+# 
+# # simulate new data from the model for 5 new levels of each factor of the model. Draws for factor effects are from N(0, sigma_cluster). Using nsamples draws from the posterior
+# simulate_from_model <- function(data, model, nlevels = 5, nsamples = 300, seed = 1657, cores = 6) {
+#   # retrodict "true"
+#   yrep <- add_predicted_draws(newdata = data, model = model, n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
+#     mutate(prediction_type = "retrodiction - uncensored") 
+#   
+#   # censor yrep based on censoring points in the raw data
+#   yrep_censored <- yrep %>%
+#     mutate(prediction_temp = case_when(censored == "interval" & prediction < sum_forcing ~ sum_forcing,
+#                                        censored == "interval" & prediction > upper ~ upper,
+#                                        censored == "interval" & (prediction >= sum_forcing) & (prediction <= upper) ~ prediction,
+#                                        
+#                                        censored == "right" & prediction >= sum_forcing ~ sum_forcing,
+#                                        censored == "right" & prediction < sum_forcing ~ prediction,
+#                                        
+#                                        censored == "left" & prediction < sum_forcing ~ prediction,
+#                                        censored == "left" & prediction >= sum_forcing ~ sum_forcing),
+#            prediction_type = "retrodiction - censored") %>%
+#     select(-prediction) %>%
+#     rename(prediction = prediction_temp)
+#   
+#   # simulate data from new levels (out-of-sample predictions)
+#   lv <- as.character(1:nlevels)
+#   newdata <- data.frame(Site = lv, 
+#                         Provenance = lv, 
+#                         Year = lv, 
+#                         Clone = lv, 
+#                         Tree = lv) %>%
+#     tidyr::complete(Site, Provenance, Year, Clone, Tree)
+#   
+#   yoos <- add_predicted_draws(newdata = newdata, model = model, allow_new_levels = TRUE, sample_new_levels = "gaussian", n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
+#     mutate(prediction_type = "out-of-sample prediction")
+#   
+#   preds <- rbind(yrep, yrep_censored, yoos) %>%
+#     mutate(Sex = unique(data$Sex), event = unique(data$event))
+#   
+#   return(preds)
+# }
+# 
+# fbsim <- simulate_from_model(data = fbdat, model = fbfit)
+# mbsim <- simulate_from_model(data = mbdat, model = mbfit)
+# fesim <- simulate_from_model(data = fedat, model = fefit)
+# mesim <- simulate_from_model(data = medat, model = mefit)
+# 
+# 
+# alldat <- rbind(fbdat, mbdat, fedat, medat)
+# allsim <- rbind(fbsim, mbsim, fesim, mesim)
+# 
+# may15doy <- lubridate::yday("2021-05-15")
+# 
+# may15 <- fclim %>% 
+#   filter(DoY == may15doy, forcing_type == "gdd") 
+# 
+# ggplot(alldat, aes(x = sum_forcing, y = "observations" )) +
+#   stat_halfeye( .width = c(0.5, 0.89), point_interval = median_qi) +
+#   stat_slab(data = allsim, 
+#                     aes(x = prediction, y = prediction_type, group=.draw),
+#                     .width = c(0.5, 0.89), point_interval = median_hdci, 
+#                     slab_color = "gray65", alpha = 1/10, fill = NA) +
+#   stat_pointinterval(data = allsim, aes(x = prediction, y = prediction_type), 
+#                      .width = c(0.5, 0.89), point_interval = median_hdci ) +
+#   stat_interval(data = may15, aes(x = sum_forcing, y = "May 15")) +
+#   theme_bw() +
+#   facet_grid(Sex ~ event) +
+#   labs(title = "Modeled and observed flowering events", subtitle = "50 & 89% quantile intervals for observations \nand HCDI intervals for model predictions") +
+#   xlab("Accumulated forcing") +
+#   ylab("")
+# 
 
-# simulate new data from the model for 5 new levels of each factor of the model. Draws for factor effects are from N(0, sigma_cluster). Using nsamples draws from the posterior
-simulate_from_model <- function(data, model, nlevels = 5, nsamples = 300, seed = 1657, cores = 6) {
+```
+```{r general_predictions}
+
+# simulate new data from the model for n_lct new levels of each factor of the model. n_lct is a numeric vector of length 3 c(number of new sites/provenances/years, number of clones per provenance, number of trees per clone) Draws for factor effects are from N(0, sigma_cluster). Using nsamples draws from the posterior.
+
+simulate_from_model <- function(data, model, n_lct = c(5,10,2), nsamples = 100, seed = 1657, cores = 6) {
   # retrodict "true"
   yrep <- add_predicted_draws(newdata = data, model = model, n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
     mutate(prediction_type = "retrodiction - uncensored") 
@@ -524,19 +597,33 @@ simulate_from_model <- function(data, model, nlevels = 5, nsamples = 300, seed =
     select(-prediction) %>%
     rename(prediction = prediction_temp)
   
-  # simulate data from new levels (out-of-sample predictions)
+  # simulate a dataset with all combinations of site, provenance, and year
+  # complete_data <- tidyr::complete(data, Year, Site, Provenance)
+  # ypred_complete <- add_predicted_draws(newdata = complete_data, model = model, n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
+  #   mutate(prediction_type = "prediction - fully crossed")
+  # 
+  # simulate data from new levels (out-of-sample predictions). The newdata simulation code took an embarrassingly long time to figure out
+  nlevels <- n_lct[1] # how many sites, provenances, and years
   lv <- as.character(1:nlevels)
-  newdata <- data.frame(Site = lv, 
-                        Provenance = lv, 
-                        Year = lv, 
-                        Clone = lv, 
-                        Tree = lv) %>%
-    tidyr::complete(Site, Provenance, Year, Clone, Tree)
+  nc <- n_lct[2] # clones per prov
+  nt <- n_lct[3] # trees per clone
   
-  yoos <- add_predicted_draws(newdata = newdata, model = model, allow_new_levels = TRUE, sample_new_levels = "gaussian", n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
-    mutate(prediction_type = "out-of-sample prediction")
+  Year <- data.frame(Year = lv)
+  newdata <- data.frame(Site = rep(lv, nc*nt),
+                        Provenance = rep(lv, nc*nt),
+                        Clone = as.character(rep(1:(nlevels*nc), nt))) %>%
+    tidyr::complete(Site, tidyr::nesting(Provenance, Clone)) %>%
+    arrange(Site, Provenance, Clone) %>%
+    mutate(Tree = as.character(1:n())) %>%
+    merge(Year) %>%
+    complete(Site, Provenance, Year)
   
-  preds <- rbind(yrep, yrep_censored, yoos) %>%
+  ypred_newlevels <- add_predicted_draws(newdata = newdata, model = model, allow_new_levels = TRUE, sample_new_levels = "gaussian", n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
+    mutate(prediction_type = "prediction - new levels")
+  
+  # preds <- rbind(yrep, yrep_censored, ypred_complete, ypred_newlevels) %>%
+  #   mutate(Sex = unique(data$Sex), event = unique(data$event))
+  preds <- rbind(yrep, yrep_censored, ypred_newlevels) %>%
     mutate(Sex = unique(data$Sex), event = unique(data$event))
   
   return(preds)
@@ -551,19 +638,152 @@ mesim <- simulate_from_model(data = medat, model = mefit)
 alldat <- rbind(fbdat, mbdat, fedat, medat)
 allsim <- rbind(fbsim, mbsim, fesim, mesim)
 
+may15doy <- lubridate::yday("2021-05-15")
+
+may15 <- fclim %>% 
+  filter(DoY == may15doy, forcing_type == "gdd") 
+
 ggplot(alldat, aes(x = sum_forcing, y = "observations" )) +
-  stat_halfeye( .width = c(0.5, 0.89), point_interval = median_qi) +
+  stat_dotsinterval( .width = c(0.5, 0.89), point_interval = median_qi) +
   stat_slab(data = allsim, 
                     aes(x = prediction, y = prediction_type, group=.draw),
                     .width = c(0.5, 0.89), point_interval = median_hdci, 
                     slab_color = "gray65", alpha = 1/10, fill = NA) +
   stat_pointinterval(data = allsim, aes(x = prediction, y = prediction_type), 
-                     .width = c(0.5, 0.89), point_interval = median_hdci ) + 
+                     .width = c(0.5, 0.89), point_interval = median_hdci ) +
+  stat_dots(data = may15, aes(x = sum_forcing, y = "Forcing at May 15")) +
   theme_bw() +
   facet_grid(Sex ~ event) +
   labs(title = "Modeled and observed flowering events", subtitle = "50 & 89% quantile intervals for observations \nand HCDI intervals for model predictions") +
   xlab("Accumulated forcing") +
   ylab("")
+
+```
+
+We used the model to simulate three data sets. First we retrodicted flowering forcing for the observed combinations of trees, clones, years, provenances, and sites (retrodiction - uncensored). Then we censored that data based on the censoring points recorded in our observations (retrodiction - censored). We expect the censored retrodictions to match our observations relatively well. 
+
+We also predicted 2500 flowering forcing events for all 4 flowering events. We sampled effects for 5 new sites, years and provenances from the superpopulation posterior distributions for each factor offset ($\mathrm{Normal}(0, \sigma_{factor})$). Each provenance was represented by 10 clones with 2 ramets each.
+
+All simulations used the same `nsamples` draws from the posterior.
+
+# Add days to preds
+
+See functions in retrodiction functions for this.
+
+```{r predictdays}
+
+# first get DoY predictions for specific predictions & retrodictions (uncensored, censored, fully crossed)
+# filter simulations for only real sites and years, not new levels and simplify to only columns needed for matching 
+specificsim <- filter(allsim, prediction_type %in% c("retrodiction - uncensored", "retrodiction - censored", "prediction - fully crossed")) %>%
+  ungroup() %>%
+  select(Year, Site, prediction) %>%
+  distinct() 
+
+specific_doy_preds_temp <- forcing_to_doy(filter(fclim, forcing_type == "gdd"), specificsim, aforce = "sum_forcing", bforce = "prediction", newdoycolname = "newdoycol") 
+  
+specific_doy_preds <- full_join(allsim, specific_doy_preds_temp) 
+
+# get DoY predictions for the general predictions - which means assigning all sites and years to each prediction
+
+# extract heat sum predictions at new sites and years and provs, clones, trees. downsample - 30 draws per "row"/new obs
+generalsim <- filter(allsim, prediction_type == "prediction - new levels") %>%
+  ungroup() %>%
+  select(Sex, event, .row, prediction, prediction_type) %>%
+  group_by(Sex, event, .row, prediction_type) %>%
+  sample_n(30)
+
+# assign each prediction to fully crossed site x climate dataset
+climsites <- unique(fclim$Site)
+climyears <- unique(fclim$Year)
+generalcross <- tidyr::crossing(climsites, climyears, prediction = unique( generalsim$prediction) ) %>%
+  dplyr::rename(Site = climsites, Year = climyears)
+
+general_doy_preds_temp <- forcing_to_doy(filter(fclim, forcing_type == "gdd"), generalcross, aforce = "sum_forcing", bforce = "prediction", newdoycolname = "newdoycol")
+
+general_doy_preds <- full_join(generalsim, general_doy_preds_temp)
+rm(general_doy_preds_temp)
+
+# general_doy_preds_med <- general_doy_preds %>% group_by(Sex, event, .row, Site, Year) %>%
+#   point_interval(prediction, newdoycol, .width = c(0.5, 0.95, .point = median, .interval = hdci))
+
+general_doy_preds_med <- general_doy_preds %>% group_by(Sex, event, .row, Site, Year) %>%
+  summarise(median = median(newdoycol))
+
+general_doy_preds_med_siteyearsex <- general_doy_preds %>% group_by(Sex, event, Site, Year) %>%
+  point_interval(newdoycol, .width = c(0.5, 0.95), .point = median, .interval = hdci)
+
+ggplot(general_doy_preds_med_siteyearsex, aes(x=Year, y = newdoycol, linetype = Sex, colour = event)) +
+  #geom_point() +
+  geom_line() +
+  scale_colour_viridis_d() +
+  facet_wrap("Site")
+
+ggplot(general_doy_preds_med_siteyearsex, aes(y = newdoycol, x = Year, colour = Site, group = Year)) +
+  geom_line() +
+  facet_grid(Site ~ Sex) +
+  scale_colour_viridis_d() +
+  theme_bw()
+
+widemedians <- general_doy_preds_med_siteyearsex %>% 
+  filter(.width == 0.5) %>%
+  select(Sex, event, Site, Year, newdoycol) %>% 
+  pivot_wider(names_from = event, values_from = newdoycol)
+
+
+  
+# foo doesn't quite look right - need to merge in info somehow - or figure out how it's getting stripped in forcing_to_doy function?
+
+# prepare dataframes a and b for interval finding by splitting into lists and ensuring that the climate list (a) and the phenology list (b) contain information for the same sites and years. a and b must both have Site and Year columns
+split_df_to_lists <- function(a, b) {
+  lista <- split(a, f = list(a$Site, a$Year), drop = TRUE)
+  listb <- split(b, f = list(b$Site, b$Year), drop = TRUE)
+  
+  # check that all sites and years in the phenology frame are in the climate frame
+  assertthat::assert_that(all(names(listb) %in% names(lista))) # all entries in B must be in A
+  
+  # subset lista so it only contains Site x Year that also occur in B
+  ainb <- lista[names(listb)] 
+  
+  assertthat::are_equal(names(ainb), names(listb)) 
+  
+  return(list(listainb = ainb, listb = listb))
+}
+
+forcing_to_doy <- function(a, b, aforce, bforce, newdoycolname) {
+  # prepare dataframes for interval finding by splitting into lists
+  splitdfs <- split_df_to_lists(a, b)
+  
+  df <- purrr::map2(splitdfs$listainb, splitdfs$listb, find_day_of_forcing, aforce = aforce, bforce = bforce) %>% # find DoY in A corresponding to each sum_forcing in B
+    purrr::map_dfr(bind_rows) # combine into a single dataframe
+  
+  names(df)[which(names(df) == "newdoycol")] <- newdoycolname 
+  
+  return(df)
+}
+
+# given dataframes adf (climate) and bdf (phenology) identify the day of year corresponding to reaching each sum_forcing bcol in df. adf must have a sum_forcing column identified by name acol and a DoY column and b must have a sum_forcing column identified with name bcol. name the new_day_col arg with a string
+find_day_of_forcing <- function(adf, bdf, aforce, bforce) {
+  
+  # what row in a contains the interval for entries in b. Add 1 to the index because phenological events require the threshold to be reached. this introduces error, but is unavoidable in some direction.
+  a_index <- findInterval(bdf[[bforce]], adf[[aforce]]) + 1
+  
+  
+  # add a column to b for Day of Year and extract the correct Day of year from a using the index
+  bdf$newdoycol <- adf$DoY[a_index] 
+  
+  # when sum_forcing in b is exactly identical to sum_forcing in b, a_index will be +1 day. Re-write those 
+  identical_forcing_index <- which(bdf[[bforce]] %in% adf[[aforce]])
+  bdf$newdoycol[identical_forcing_index] <- bdf$newdoycol[identical_forcing_index] - 1
+  
+  # (indirectly) test whether the correct day of year is being assigned to the correct forcing unit - for any site x year, sorting by sum_forcing_rep or newdoycol should produce the same ordering of newdoycol in bdf
+  
+  # order_by_sumforcing <- arrange(bdf, bforce, newdoycol)$newdoycol
+  # order_by_newdoycol <- arrange(bdf, newdoycol)$newdoycol
+  # 
+  # assertthat::are_equal(order_by_sumforcing, order_by_newdoycol)
+  
+  return(bdf)
+}
 
 
 ```
