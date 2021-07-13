@@ -54,6 +54,7 @@ medat <- filter_sex_event(sex = "MALE", event = "end", phenf)
 ```{r climdat}
 siteclim <- read.csv("../lodgepole_climate/processed/PCIC_all_seed_orchard_sites_adjusted.csv")
 provclim <- read.csv("../phd/data/Lodgepole_SPU_climsum.csv")
+fclim <- read.csv("data/all_clim_PCIC.csv")
 spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv")
 ```
 
