@@ -1,11 +1,18 @@
 //
-// This Stan program defines  model, with a
+// This Stan program defines a multilevel factor model of phenology, with a
 // vector of values 'sum_forcing' modeled as normally distributed
-// with mean 'mu' and standard deviation 'sigma'.
+// with mean 'mu' and standard deviation 'sigma' and heterogeneity from factors
+// Site, Provenance, Year, and Clone modeled as offsets `delta`.
 //
+// Some Site and Provenance levels are noncentered and Clone is fully non-centered.
+//
+
 
 // The input data is a vector 'y' of length 'k'.
 // Heterogeneity is a function of 4 factors - Site, Provenance, Year, and Clone
+
+// The input data is a vector 'sum_forcing' of length 'k'.
+
 
 
 data {
@@ -51,6 +58,7 @@ data {
   //
   // int<lower=0, upper=k_Year> k_cp_Year;           // Number of centered Years
   // int<lower=1, upper=k_Year> cp_idx_Year[k_cp_Year];   // Index of noncentered Years
+
 }
 
 
@@ -58,56 +66,44 @@ parameters {
   real<lower=0> mu; //population location. accumulated forcing cannot be negative.
   real<lower=0> sigma; //population scale
 
-  //vector[k_Site] alpha_site; // site effect
-  vector[k_ncp_Site] alpha_ncp_site; //non-centered site parameters
-  vector[k_cp_Site] alpha_cp_site; //centered site parameters
+  vector[k_ncp_Site] delta_ncp_site; //non-centered site parameters
+  vector[k_cp_Site] delta_cp_site; //centered site parameters
 
-  vector[k_Year] alpha_year; //year effect
-    // vector[k_ncp_Year] alpha_ncp_year; //non-centered year parameters
-    // vector[k_cp_Year] alpha_cp_year; //centered year parameters
-    //vector[k_Year] z_alpha_year; // noncentered year effect
+  vector[k_Year] delta_year; //year offset
 
-  //vector[k_Provenance] alpha_prov; //provenance effect
-  vector[k_ncp_Provenance] alpha_ncp_prov; //non-centered Provenance parameters
-  vector[k_cp_Provenance] alpha_cp_prov; //centered Provenance parameters
+  vector[k_ncp_Provenance] delta_ncp_prov; //non-centered Provenance parameters
+  vector[k_cp_Provenance] delta_cp_prov; //centered Provenance parameters
 
-  vector[k_Clone] z_alpha_clone; //clone effect
-  // vector[k_ncp_Clone] alpha_ncp_clone; //non-centered Clone parameters
-  // vector[k_cp_Clone] alpha_cp_clone; //centered Clone parameters
+  vector[k_Clone] z_delta_clone; //clone offset
 
-  real sigma_site; // site effect variance
-  real sigma_year; // year effect variance
-  real sigma_prov; // provenance effect variance
-  real sigma_clone; //clone effect variance
+  real sigma_site; // site offset variance
+  real sigma_year; // year offset variance
+  real sigma_prov; // provenance offset variance
+  real sigma_clone; //clone offset variance
 
-  real mu_site; // site effect mean
-  real mu_year; // year effect mean
-  real mu_prov; // provenance effect mean
-  real mu_clone; //clone effect mean
+  real mu_site; // site offset mean
+  real mu_year; // year offset mean
+  real mu_prov; // provenance offset mean
+  real mu_clone; //clone offset mean
 }
 
 transformed parameters {
-  // recenter individual parameters
-  vector[k_Site] alpha_site;
-  vector[k_Provenance] alpha_prov;
-  //vector[k_Year] alpha_year;
+
+  // recenter individual factor levels
+  vector[k_Site] delta_site;
+  vector[k_Provenance] delta_prov;
 
   //site
-  alpha_site[ncp_idx_Site] = mu_site + sigma_site * alpha_ncp_site;
-  alpha_site[cp_idx_Site] = alpha_cp_site;
+  delta_site[ncp_idx_Site] = mu_site + sigma_site * delta_ncp_site;
+  delta_site[cp_idx_Site] = delta_cp_site;
 
   //provenance
-  alpha_prov[ncp_idx_Provenance] = mu_prov + sigma_prov * alpha_ncp_prov;
-  alpha_prov[cp_idx_Provenance] = alpha_cp_prov;
+  delta_prov[ncp_idx_Provenance] = mu_prov + sigma_prov * delta_ncp_prov;
+  delta_prov[cp_idx_Provenance] = delta_cp_prov;
 
-  //year
-  // alpha_year[ncp_idx_Year] = mu_year + sigma_year * alpha_ncp_year;
-  // alpha_year[cp_idx_Year] = alpha_cp_year;
 }
 
-// The model to be estimated. We model the output
-// 'y' to be normally distributed with mean 'mu'
-// and standard deviation 'sigma'.
+
 model {
   // prior model
 
@@ -123,56 +119,41 @@ model {
   mu_prov ~ normal(0, 5);
   mu_clone ~ normal(0, 5);
 
-  alpha_ncp_site ~ normal(0,1); // non-centered hierarchical model
-  alpha_cp_site ~ normal(mu_site, sigma_site); //centered hierarchical model
+  delta_ncp_site ~ normal(0,1); // non-centered hierarchical model
+  delta_cp_site ~ normal(mu_site, sigma_site); //centered hierarchical model
 
-  alpha_year ~ normal(mu_year, sigma_year);
-  // alpha_ncp_year ~ normal(0,1);
-  // alpha_cp_year ~ normal(mu_year, sigma_year);
-  //z_alpha_year ~ normal(0,1); //non-centered year
+  delta_year ~ normal(mu_year, sigma_year);
 
-  // alpha_prov ~ normal(mu_prov, sigma_prov);
-  alpha_ncp_prov ~ normal(0,1); // non-centered hierarchical model
-  alpha_cp_prov ~ normal(mu_prov, sigma_prov); //centered hierarchical model
+  delta_ncp_prov ~ normal(0,1); // non-centered hierarchical model
+  delta_cp_prov ~ normal(mu_prov, sigma_prov); //centered hierarchical model
 
-  z_alpha_clone ~ normal(0, 1); // non-centered clone
-  // alpha_ncp_clone ~ normal(0,1); // non-centered hierarchical model
-  // alpha_cp_clone ~ normal(mu_clone, sigma_clone); //centered hierarchical model
+  z_delta_clone ~ normal(0, 1); // non-centered clone
 
   mu ~ normal(mu_mean, mu_sigma);
 
-  // sum_forcing ~ normal(mu + alpha_site[Site] + alpha_year[Year] + alpha_prov[Provenance] +
-  // (mu_clone + z_alpha_clone[Clone] * sigma_clone),
-  // sigma);
-  sum_forcing ~ normal(mu + alpha_site[Site] + alpha_year[Year] +  alpha_prov[Provenance] +
-  (mu_clone + z_alpha_clone[Clone] * sigma_clone),
+  sum_forcing ~ normal(mu + delta_site[Site] + delta_year[Year] +  delta_prov[Provenance] +
+  (mu_clone + z_delta_clone[Clone] * sigma_clone),
   sigma);
-
-  //sum_forcing ~ normal(mu + alpha_site[Site] + alpha_year[Year] + alpha_prov[Provenance] + alpha_clone[Clone], sigma);
 }
 
 
 // Simulate a full observation from the current value of the parameters
 generated quantities {
-  real sum_forcing_rep[k];
-  vector[k] log_lik;
+ real sum_forcing_rep[k];
+ real log_lik[k];
 
-  // reconstruct partially non-centered parameters
-  vector[k_Clone] alpha_clone;
- // vector[k_Year] alpha_year;
+  // reconstruct non-centered parameters
+  vector[k_Clone] delta_clone;
+  delta_clone = mu_clone + z_delta_clone * sigma_clone;
 
-  alpha_clone = mu_clone + z_alpha_clone * sigma_clone;
-  //alpha_year = mu_year + z_alpha_year * sigma_year;
 
-  { // Don't save tempvars
-
+  //simulate
+  {
   for (i in 1:k)
-  sum_forcing_rep[i] = normal_rng(mu + alpha_site[Site[i]] + alpha_year[Year[i]] + alpha_prov[Provenance[i]] + alpha_clone[Clone[i]]
+  sum_forcing_rep[i] = normal_rng(mu + delta_site[Site[i]] + delta_year[Year[i]] + delta_prov[Provenance[i]] + delta_clone[Clone[i]]
   , sigma);
   }
 
-  {
-  for (i in 1:k)
-  log_lik[i] = normal_lpdf(sum_forcing[i] | mu  + alpha_site[Site[i]] + alpha_year[Year[i]] + alpha_prov[Provenance[i]] + alpha_clone[Clone[i]], sigma);
 }
-}
+
+
