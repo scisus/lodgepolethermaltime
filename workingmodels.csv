@@ -1,0 +1,12 @@
+Sex,Event,Model #,censoring,mu,sigma,sd,iter,adapt delta,max treedepth,effects
+male,begin,18,end,"N(335,85)",20,10,3000,,,
+male,begin,7,End + interval,"N(335,50)",50,10,4000,,,
+male,begin,16,End + interval,"N(335,85)",20,10,3000,,,
+female,end,32,end,"N(550,140)",30,20,2000,,,
+female,end,31,End + interval,"N(550, 140)",30,20,2000,,,
+female,end,29,End + interval,"N(555,80)",50,10,2000,,,
+female,end,21,End + interval,"St(3,350,50","student_t(3,0,30)",20,3000,,,Tree
+male,end,7,end,"N(550,140)",30,20,3000,,,
+male,end,3,End + interval,"N(555,80)",50,10,3000,,,
+male,end,5,End + interval,"N(555,80)",30,20,2000,,,
+male,end,6,End + interval,"N(550, 140)",30,20,2000,,,
