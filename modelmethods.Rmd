@@ -186,7 +186,7 @@ fbfit <- brm(bform, data = fbdat,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
              file_refit = "on_change")
-fbfit <- readRDS("female_begin.rds")
+#fbfit <- readRDS("female_begin.rds")
 
 fefit <- brm(bform, data = fedat,
              save_model = "female_end.stan",
@@ -199,7 +199,7 @@ fefit <- brm(bform, data = fedat,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
              file_refit = "on_change")
-fefit <- readRDS("female_end.rds")
+#fefit <- readRDS("female_end.rds")
 
 mbfit <- brm(bform, data = mbdat,
              save_model = "male_begin.stan",
@@ -212,7 +212,7 @@ mbfit <- brm(bform, data = mbdat,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
              file_refit = "on_change")
-mbfit <- readRDS("male_begin.rds")
+#mbfit <- readRDS("male_begin.rds")
 
 mefit <- brm(bform, data = medat,
              save_model = "male_end.stan",
@@ -225,41 +225,43 @@ mefit <- brm(bform, data = medat,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
              file_refit = "on_change")
-mefit <- readRDS("male_end.rds")
+#mefit <- readRDS("male_end.rds")
 
-
+modells <- list(fb = readRDS("female_begin.rds"),
+                fe = readRDS("female_end.rds"),
+                mb = readRDS("male_begin.rds"),
+                me = readRDS("male_end.rds"))
 
 ```
 Models were fit in Stan (`rstan` vers. 2.21.2 [@standevelopmentteam2020]) via the R (R version 4.0.3 (202-10-10)) package `brms` (vers. 2.15.0 [@Burkner2017a]). Stan uses the No-U-Turn Sampler, an efficient Markov Chain Monte Carlo method that extends the Hamiltonian Monte Carlo algorithm [@carpenter2017], to sample the joint posterior. 
 
 ### Diagnostics
-We ran `r nchains` independent chains of `r iter` iterations each. `r iter/2` warmup iterations were dropped from each chain for `r nchains * (iter/2)` total samples. Model convergence and performance were considered good; $\hat R$ was $< 1.01$ and bulk and tail effective sample size was more than 100x the number of chains for all parameter values in all models [@vehtari2019]. There were no divergences. Visual inspection of energy plots and rank plots showed acceptable sampling behavior.
+We ran `r nchains` independent chains of `r niter` iterations each. `r niter/2` warmup iterations were dropped from each chain for `r nchains * (niter/2)` total samples. Model convergence and performance were considered good; $\hat R$ was $< 1.01$ and bulk and tail effective sample size was more than 100x the number of chains for all parameter values in all models [@vehtari2019]. There were no divergences. Visual inspection of energy plots and rank plots showed acceptable sampling behavior.
 
 
 # Results
+
+
+```{r samplepost}
+nsamp <- 2000
+seed <- 1657
+```
+
+For efficiency, `r nsamp` posterior samples were used for plotting results.
+
 ## Means
 ```{r means, cache=TRUE}
-vars <- tidybayes::get_variables(fbfit)
+#vars <- tidybayes::get_variables(fbfit)
 
-fbm <- fbfit %>% gather_draws(b_Intercept) %>%
-  mutate(event = "begin",  Sex = "FEMALE", model = "fb")
+labdf <- data.frame(Sex = c("FEMALE", "FEMALE", "MALE", "MALE"), event = c('begin', 'end', 'begin', 'end'), model = c('fb', 'fe', 'mb', 'me'))
 
-mbm <- mbfit %>% gather_draws(b_Intercept) %>%
-  mutate(event = "begin",  Sex = "MALE", model = "mb")
+gather_means_draws <- function(mod) {
+  mod %>% gather_draws(b_Intercept, n = nsamp, seed = seed) 
+}
 
-fem <- fefit %>% gather_draws(b_Intercept) %>%
-  mutate(event = "end",  Sex = "FEMALE", model = "fe")
-
-mem <- mefit %>% gather_draws(b_Intercept) %>%
-  mutate(event = "end",  Sex = "MALE", model = "me")
-
-means <- rbind(fbm, mbm, fem, mem) %>%
-  mutate(.variable = "population_mean") %>%
-  mutate(model = forcats::fct_relevel(model, "fb", "mb", "fe", "me"))
-
-means_summary <- means %>%
-  group_by(model, .variable, Sex, event) %>%
-  median_hdci(.value, .width = c(0.5, 0.89)) 
+means <- purrr::map(modells, gather_means_draws) %>%
+  bind_rows(.id = "model") %>%
+  left_join(labdf)
 
 ggplot(means, aes(y = fct_rev(model), x = .value, colour = event, linetype = Sex)) +
   stat_halfeye() +
