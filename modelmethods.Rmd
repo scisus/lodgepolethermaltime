@@ -367,7 +367,8 @@ offsets_summary %>%
   theme_dark(base_size = 18) +
   ylab("GDD") +
   scale_colour_viridis_d() +
-  theme(legend.position = "top")
+  theme(legend.position = "top") +
+  geom_hline(yintercept = 0, linetype = 3)
 
 
 siter <- filter(offsets, factor == "Site") %>%
@@ -389,7 +390,7 @@ ggplot(siter, aes(y=level, x = .value, colour = Sex)) +
   geom_vline(xintercept = 0, linetype =3) +
   xlim(c(-90,90)) +
     scale_colour_viridis_d() +
-  theme(legend.position = "top")
+  theme(legend.position = "top") 
 
 ggplot(provr, aes(y=level, x = .value, colour = Sex)) +
   stat_pointinterval() +
@@ -403,14 +404,17 @@ ggplot(provr, aes(y=level, x = .value, colour = Sex)) +
     scale_colour_viridis_d() +
   theme(legend.position = "top")
 
-ggplot(yearr, aes(y=level, x = .value)) +
+ggplot(yearr, aes(y=level, x = .value, colour = Sex)) +
   stat_pointinterval() +
   facet_grid(event ~ Sex) +
-  ggtitle("Year offsets", subtitle = "Years ordered warmest to coldest MAT") +
-  theme_bw() +
-  ylab("Forcing") +
+  ggtitle("Year offsets", subtitle = "Ordered warmest to coldest MAT") +
+  theme_dark(base_size = 18) +
+  xlab("GDD") +
+  ylab("Year") +
   geom_vline(xintercept = 0, linetype =3, colour = "darkgray")  +
-  xlim(c(-90,90))
+  xlim(c(-90,90)) +
+  scale_colour_viridis_d() +
+  theme(legend.position = "top")
 
 ```
 
@@ -491,7 +495,7 @@ allsim <- purrr::map2(alldatls, modells, function(x,y) {simulate_from_model(data
 #may15 <- histclim %>% 
  # filter(DoY == may15doy, forcing_type == "gdd") 
 
-ggplot(alldat, aes(x = sum_forcing, y = "observations" )) +
+ggplot(alldat, aes(x = sum_forcing, y = "observations" , colour = Sex)) +
   stat_dotsinterval( .width = c(0.5, 0.89), point_interval = median_qi) +
   stat_slab(data = allsim, 
                     aes(x = prediction, y = prediction_type, group=.draw),
@@ -501,10 +505,12 @@ ggplot(alldat, aes(x = sum_forcing, y = "observations" )) +
                      .width = c(0.5, 0.89), point_interval = median_hdci ) +
  # stat_dots(data = may15, aes(x = sum_forcing, y = "Forcing at May 15")) +
   theme_bw() +
-  facet_grid(Sex ~ event) +
-  labs(title = "Modeled and observed flowering events", subtitle = "50 & 89% quantile intervals for observations \nand HCDI intervals for model predictions", caption = "200 samples from the posterior, 5 for fully crossed predictions") +
-  xlab("Accumulated forcing") +
-  ylab("")
+  facet_grid(event ~ Sex) +
+  labs(title = "Modeled and observed flowering events",  caption = "200 samples from the posterior, 5 for fully crossed predictions") +
+  xlab("GDD") +
+  ylab("") + 
+  scale_colour_viridis_d()
+#subtitle = "50 & 89% quantile intervals for observations \nand HCDI intervals for model predictions",
 
 ```
 
@@ -621,13 +627,20 @@ ggplot(general_doy_preds_med_siteyearsex, aes(x=Year, y = newdoycol, linetype = 
   scale_colour_viridis_d() +
   facet_wrap("Site")
 
-ggplot(general_doy_preds_med_siteyearsex, aes(y = newdoycol, x = Year, colour = Site, group = Year)) +
+#mutate(Date = as.Date("2020-12-31") + newdoycol, .lowerdate = as.Date("2020-12-31") + .lower, .upperdate = as.Date("2020-12-31") + .upper)
+#
+general_doy_preds_med_siteyearsex <- general_doy_preds_med_siteyearsex %>%
+  mutate(Date = as.Date("2020-12-31") + newdoycol, .lowerdate = as.Date("2020-12-31") + .lower, .upperdate = as.Date("2020-12-31") + .upper)
+
+ggplot(general_doy_preds_med_siteyearsex, aes(y = Date, x = Year, colour = Sex, group = Year)) +
   geom_line() +
   facet_grid(Site ~ Sex) +
   #scale_colour_viridis_d(end = 0.9) +
-  theme_bw() +
+  theme_dark(base_size = 18) +
   labs(title = "Flowering period from 1945-2012 at 7 sites", subtitle = "median start day of year to median end day of year", caption = "1500 forcing observations simulated  from 200 draws of the posterior with new factor levels \n and matched to forcing data for plotted sites and years. Daily temperature data from PCIC \nand adjusted using monthly climateNA") +
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  scale_y_date(date_labels = "%b %e") +
+  scale_colour_viridis_d()
 
 # widemedians <- general_doy_preds_med_siteyearsex %>% 
 #   filter(.width == 0.5) %>%
