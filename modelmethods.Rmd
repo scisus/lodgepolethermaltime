@@ -40,7 +40,7 @@ ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
   scale_colour_viridis_d() +
   theme_dark(base_size = 18) +
   ylab("") +
-  xlab("Heatsum")
+  xlab("GDD")
 
 # create 4 datasets for 4 models
 
@@ -268,7 +268,7 @@ ggplot(means, aes(y = fct_rev(event), x = .value, colour = Sex)) +
   scale_colour_viridis_d() +
   labs(title = "Population mean", caption = "2000 draws from the posterior") +
   ylab("") +
-  xlab("Heatsum") +
+  xlab("GDD") +
   theme_dark(base_size = 18) +
   theme(legend.position = "top") +
   scale_x_continuous(breaks = scales::pretty_breaks(n=10))
@@ -316,7 +316,7 @@ ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .variable, li
   scale_colour_viridis_d() +
   labs(title = "Standard deviation of \npop mean & offsets", caption = "2000 draws from the posterior") +
   ylab("") +
-  xlab("Heatsum") +
+  xlab("GDD") +
   facet_grid(event ~ .) +
   guides(color = FALSE, size = FALSE) +
   theme_dark(base_size = 18) +
@@ -359,13 +359,15 @@ offsets_summary <- offsets %>%
 
 offsets_summary %>%
   select(model, Sex, event, factor, level, .value, .point) %>% distinct() %>%
-  ggplot(aes(y=.value, x = model)) +
+  ggplot(aes(y=.value, x = model, colour = Sex)) +
   geom_quasirandom(alpha = 0.5) +
   facet_wrap("factor") +
-  ggtitle("Offset medians", subtitle = "Effect of clones, provenance, site, tree, and year") +
+  labs(title = "Offset medians", caption = "2000 draws from posterior") +
   geom_hline(yintercept = 0, linetype =3, colour = "darkgray") +
   theme_bw() +
-  ylab("Forcing") 
+  ylab("GDD") +
+  scale_colour_viridis_d() +
+  theme(legend.position = "top")
 
 
 siter <- filter(offsets, factor == "Site") %>%
@@ -377,23 +379,28 @@ provr <- filter(offsets, factor == "Provenance") %>%
 yearr <- filter(offsets, factor == "Year") %>%
   mutate(level = forcats::fct_relevel(level, as.character(yearfactororder)))
 
-ggplot(siter, aes(y=level, x = .value)) +
+ggplot(siter, aes(y=level, x = .value, colour = Sex)) +
   stat_pointinterval() +
   facet_grid(event ~ Sex) +
   ggtitle("Site offsets", subtitle = "Sites ordered warmest to coldest MAT") +
   theme_bw() +
-  ylab("Forcing") +
-  geom_vline(xintercept = 0, linetype =3, colour = "darkgray") +
-  xlim(c(-90,90))
+  ylab("Site") +
+  xlab("GDD") +
+  geom_vline(xintercept = 0, linetype =3) +
+  xlim(c(-90,90)) +
+    scale_colour_viridis_d() +
+  theme(legend.position = "top")
 
-ggplot(provr, aes(y=level, x = .value)) +
+ggplot(provr, aes(y=level, x = .value, colour = Sex)) +
   stat_pointinterval() +
   facet_grid(event ~ Sex) +
   ggtitle("Provenance offsets", subtitle = "Provenances ordered warmest to coldest MAT") +
   theme_bw() +
-  ylab("Forcing") +
-  geom_vline(xintercept = 0, linetype =3, colour = "darkgray")  +
-  xlim(c(-90,90))
+  ylab("GDD") +
+  geom_vline(xintercept = 0, linetype =3)  +
+  xlim(c(-90,90)) +
+    scale_colour_viridis_d() +
+  theme(legend.position = "top")
 
 ggplot(yearr, aes(y=level, x = .value)) +
   stat_pointinterval() +
