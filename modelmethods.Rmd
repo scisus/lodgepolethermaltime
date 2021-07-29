@@ -705,7 +705,7 @@ ggplot(filter(doypredmatchfut_medians, climate_forcing %in% c(4.5, 8.5)), aes(y 
   facet_grid(climate_forcing ~ Site) +
   #scale_colour_viridis_d(end = 0.9) +
   theme_dark(base_size = 18) +
-  labs(title = "Future flowering periods at 7 sites for 2 Climate forcing scenarios", subtitle = "median start day to median end day", caption = "medians of 1500 forcing observations simulated from 30 draws of the posterior with new factor levels \n and matched to forcing data for plotted sites and years. Daily temperature timeseries for 7 sites from PCIC & adjusted using ClimateNA") +
+  labs(title = "Future flowering periods at 7 sites for 2 Climate forcing scenarios", subtitle = "median start day to median end day", caption = "medians of 1500 forcing observations simulated from 30 draws of the posterior with new factor levels and matched \nto day of year data for plotted sites and years. Daily temperature timeseries for 7 sites from PCIC & adjusted using ClimateNA") +
   #theme(legend.position = "none") +
   scale_colour_viridis_d() +
   scale_y_date(date_labels = "%b %e") +
