@@ -700,12 +700,12 @@ doypredmatchfut_medians <- doypredmatchfut %>% group_by(Sex, event, Site, SSP, n
   point_interval(newdoycol, .width = c(0.5, 0.95), .point = median, .interval = hdci) %>%
   mutate(Date = as.Date("2020-12-31") + newdoycol, .lowerdate = as.Date("2020-12-31") + .lower, .upperdate = as.Date("2020-12-31") + .upper)
 
-ggplot(filter(doypredmatchfut_medians, SSP %in% c("ssp2", "ssp4")), aes(y = Date, x = normal_period, ymin = .lowerdate, ymax = .upperdate, group = interaction(normal_period, Sex), colour = Sex)) +
+ggplot(filter(doypredmatchfut_medians, climate_forcing %in% c(4.5, 8.5)), aes(y = Date, x = normal_period, ymin = .lowerdate, ymax = .upperdate, group = interaction(normal_period, Sex), colour = Sex)) +
   geom_pointinterval(position = "dodge", alpha = 0.5)  +
   facet_grid(climate_forcing ~ Site) +
   #scale_colour_viridis_d(end = 0.9) +
   theme_dark(base_size = 18) +
-  labs(title = "Future flowering periods at 7 sites for 4 Climate forcing scenarios", subtitle = "median start day to median end day", caption = "medians of 1500 forcing observations simulated from 30 draws of the posterior with new factor levels \n and matched to forcing data for plotted sites and years. Daily temperature timeseries for 7 sites from PCIC & adjusted using ClimateNA") +
+  labs(title = "Future flowering periods at 7 sites for 2 Climate forcing scenarios", subtitle = "median start day to median end day", caption = "medians of 1500 forcing observations simulated from 30 draws of the posterior with new factor levels \n and matched to forcing data for plotted sites and years. Daily temperature timeseries for 7 sites from PCIC & adjusted using ClimateNA") +
   #theme(legend.position = "none") +
   scale_colour_viridis_d() +
   scale_y_date(date_labels = "%b %e") +
