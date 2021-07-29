@@ -36,7 +36,7 @@ phenf <- prepare_data(phendat, forcing = "gdd")
 
 ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
   stat_ecdf() +
-  labs("Cumulative distribution of accumulated forcing for flowering events", caption = "raw data") +
+  labs(title = "Cumulative distribution of accumulated forcing for flowering events", caption = "raw data") +
   scale_colour_viridis_d() +
   theme_dark(base_size = 18) +
   ylab("") +
@@ -262,13 +262,16 @@ gather_means_draws <- function(mod) {
 means <- purrr::map(modells, gather_means_draws) %>%
   bind_rows(.id = "model") %>%
   left_join(labdf)
-
-ggplot(means, aes(y = fct_rev(model), x = .value, colour = event, linetype = Sex)) +
-  stat_halfeye() +
+#fct_rev(model, linetype = Sex)
+ggplot(means, aes(y = fct_rev(event), x = .value, colour = Sex)) +
+  stat_halfeye(position = "dodge") +
   scale_colour_viridis_d() +
-  ggtitle("Population mean") +
+  labs(title = "Population mean", caption = "2000 draws from the posterior") +
   ylab("") +
-  xlab("Forcing")
+  xlab("Heatsum") +
+  theme_dark(base_size = 18) +
+  theme(legend.position = "top") +
+  scale_x_continuous(breaks = scales::pretty_breaks(n=10))
 
 
 ```
