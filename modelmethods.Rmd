@@ -1,5 +1,5 @@
 ---
-  title: "Model methods"
+title: "Model methods"
 author: "C. Susannah Tysor"
 date: '2021-06-25'
 output: html_document
@@ -545,7 +545,7 @@ forcing_to_doy <- function(a, b, aforce, bforce, newdoycolname) {
   return(df)
 }
 
-# given dataframes adf (climate) and bdf (phenology) identify the day of year corresponding to reaching each sum_forcing bcol in df. adf must have a sum_forcing column identified by name acol and a DoY column and b must have a sum_forcing column identified with name bcol. name the new_day_col arg with a string
+# given dataframes adf (climate) and bdf (phenology) identify the day of year corresponding to reaching each sum_forcing bcol in df. adf must have a sum_forcing column identified by name aforce and a DoY column and b must have a sum_forcing column identified with name bforce.
 find_day_of_forcing <- function(adf, bdf, aforce, bforce) {
   
   # what row in a contains the interval for entries in b. Add 1 to the index because phenological events require the threshold to be reached. this introduces error, but is unavoidable in some direction.
@@ -569,5 +569,207 @@ find_day_of_forcing <- function(adf, bdf, aforce, bforce) {
   return(bdf)
 }
 
+specific_doy_preds_temp <- forcing_to_doy(filter(histclim, forcing_type == "gdd"), specificsim, aforce = "sum_forcing", bforce = "prediction", newdoycolname = "newdoycol") 
+  
+specific_doy_preds <- full_join(filter(allsim, prediction_type %in% c("retrodiction - uncensored", "prediction - full cross")), specific_doy_preds_temp) 
+rm(specific_doy_preds_temp)
 
+# get DoY predictions for the general predictions - which means assigning all sites and years to each prediction
+
+# extract heat sum predictions at new sites and years and provs, clones, trees. downsample - 30 draws per "row"/new obs
+generalsim <- filter(allsim, prediction_type == "prediction - new levels") %>%
+  ungroup() %>%
+  select(Sex, event, .row, .draw, prediction, prediction_type, Site, Year, Provenance, Clone, Tree) %>%
+  group_by(Sex, event, .row, prediction_type, Site, Year, Provenance, Clone, Tree) %>%
+  slice_sample(n = 30) %>%
+  rename(new_Site = Site, new_Year = Year)
+
+# assign each prediction to fully crossed site x climate dataset
+climsites <- unique(histclim$Site)
+climyears <- unique(histclim$Year)
+generalcross <- tidyr::crossing(climsites, climyears, prediction = unique( generalsim$prediction) ) %>%
+  dplyr::rename(Site = climsites, Year = climyears)
+
+general_doy_preds_temp <- forcing_to_doy(filter(histclim, forcing_type == "gdd"), generalcross, aforce = "sum_forcing", bforce = "prediction", newdoycolname = "newdoycol")
+
+general_doy_preds <- full_join(generalsim, general_doy_preds_temp)
+rm(general_doy_preds_temp)
+
+# general_doy_preds_med <- general_doy_preds %>% group_by(Sex, event, .row, Site, Year) %>%
+#   point_interval(prediction, newdoycol, .width = c(0.5, 0.95, .point = median, .interval = hdci))
+
+general_doy_preds_med <- general_doy_preds %>% group_by(Sex, event, .row, Site, Year) %>%
+  summarise(median = median(newdoycol))
+
+general_doy_preds_med_siteyearsex <- general_doy_preds %>% group_by(Sex, event, Site, Year) %>%
+  point_interval(newdoycol, .width = c(0.5, 0.95), .point = median, .interval = hdci)
+
+ggplot(general_doy_preds_med_siteyearsex, aes(x=Year, y = newdoycol, linetype = Sex, colour = event)) +
+  #geom_point() +
+  geom_line() +
+  scale_colour_viridis_d() +
+  facet_wrap("Site")
+
+ggplot(general_doy_preds_med_siteyearsex, aes(y = newdoycol, x = Year, colour = Site, group = Year)) +
+  geom_line() +
+  facet_grid(Site ~ Sex) +
+  #scale_colour_viridis_d(end = 0.9) +
+  theme_bw() +
+  labs(title = "Flowering period from 1945-2012 at 7 sites", subtitle = "median start day of year to median end day of year", caption = "1500 forcing observations simulated  from 200 draws of the posterior with new factor levels \n and matched to forcing data for plotted sites and years. Daily temperature data from PCIC \nand adjusted using monthly climateNA") +
+  theme(legend.position = "none")
+
+# widemedians <- general_doy_preds_med_siteyearsex %>% 
+#   filter(.width == 0.5) %>%
+#   select(Sex, event, Site, Year, newdoycol) %>% 
+#   pivot_wider(names_from = event, values_from = newdoycol)
+
+
+```
+DoY predictions used only 30 samples from the posterior for efficiency.
+
+# Climate change
+
+Daily mean temperatures for 2011-2100 were calculated for all sites. Mean monthly temperatures from a 13 model ensemble developed by @Mahony2021 were used to adjust 6 years of daily temperatures from the historical record up or down. I used every 15 years between 1945 and 2012 to cover a range of time periods and yearly variability. Mean monthly temperatures for each past year were compared to mean monthly temperatures for each future year. The difference between MMT future year and historical year was used to adjust daily temperatures for each historical time series so the mmt is the same for each.
+
+```{r future, eval=FALSE, echo = FALSE}
+# calculate forcing for future clim
+futclimf <- futclim %>%
+  # calculate heatsum forcing with 5 degree threshold
+  mutate(forcing = case_when(mean_temp_gcm >= 5 ~ mean_temp_gcm - 5,
+                             mean_temp_gcm < 5 ~ 0) )%>%
+  arrange(SSP, Site, Year, normal_period, DoY) %>%
+  group_by(SSP, Site, Year, normal_period) %>%
+  mutate(sum_forcing = cumsum(forcing)) %>%
+  ungroup() %>% group_by(Site, Year, name) %>%
+  group_split()
+
+
+# split this dataframe (gorup_split) by Site, Year, and name and then use purrr map to run find day of forcing function
+# DoY predictions for future (general) ####
+ 
+# select only columns necessary for matching to DoY in climate dataset
+smallgs <- generalsim %>% 
+  ungroup() %>%
+  select(prediction)%>% 
+  arrange(prediction)
+
+
+# match forcing to doy for future climates and add identifying info about the future climates
+match_force_future <- function(adf, bdf, aforce, bforce) {
+  matched <- find_day_of_forcing(adf, bdf, aforce, bforce) 
+  
+  idf <- select(adf, Year, Site, name, SSP, climate_forcing, normal_period) %>%
+    distinct()
+  
+  df <- merge(matched, idf)
+  
+  return(df)
+}
+
+
+doypredmatchfut <- purrr::map(futclimf, match_force_future, bdf = smallgs, aforce = "sum_forcing", bforce = "prediction")  %>%
+  bind_rows() %>%
+  full_join(generalsim)
+
+doypredmatchfut_medians <- doypredmatchfut %>% group_by(Sex, event, Site, SSP, normal_period, climate_forcing) %>%
+  point_interval(newdoycol, .width = c(0.5, 0.95), .point = median, .interval = hdci) %>%
+  mutate(Date = as.Date("2020-12-31") + newdoycol, .lowerdate = as.Date("2020-12-31") + .lower, .upperdate = as.Date("2020-12-31") + .upper)
+
+ggplot(doypredmatchfut_medians, aes(y = Date, x = normal_period, ymin = .lowerdate, ymax = .upperdate, group = interaction(normal_period, Sex), colour = Sex)) +
+  geom_pointinterval(position = "dodge", alpha = 0.5)  +
+  facet_grid(climate_forcing ~ Site) +
+  #scale_colour_viridis_d(end = 0.9) +
+  theme_dark(base_size = 18) +
+  labs(title = "Future flowering periods at 7 sites for 4 Climate forcing scenarios", subtitle = "median start day to median end day", caption = "medians of 1500 forcing observations simulated from 30 draws of the posterior with new factor levels \n and matched to forcing data for plotted sites and years. Daily temperature timeseries for 7 sites from PCIC & adjusted using ClimateNA") +
+  #theme(legend.position = "none") +
+  scale_colour_viridis_d() +
+  scale_y_date(date_labels = "%b %e") +
+  theme(axis.text.x = element_text(angle = 30, hjust=1), legend.position = "top") +
+  xlab("Normal period")
+```
+Date of flowering is earlier as climate change progresses - by quite a lot under some climate change scenarios.
+
+# length
+```{r length}
+
+#individual lengths
+specific_doy_preds_length <- specific_doy_preds %>%
+  ungroup() %>%
+  select(-prediction, -sum_forcing, -upper, -contains("censored")) %>%
+  pivot_wider(names_from = event, values_from = newdoycol) %>%
+  mutate(length = end - begin) 
+
+ggplot(specific_doy_preds_length, aes(x = length, y = prediction_type, colour = Sex)) +
+  stat_histinterval(position = "dodge", .width = c(0.5, 0.89)) +
+  scale_colour_viridis_d() +
+  labs(title = "Length of phenological period for individuals")
+
+# population lengths
+specific_doy_preds_length_ts <- specific_doy_preds %>%
+  group_by(Sex, event, Site, Year, prediction_type) %>%
+  median_hdci(newdoycol, .width = c(0.5, 0.89)) %>%
+  # drop uncertainty for now
+  filter(.width == 0.5) %>%
+  select(-starts_with(".")) %>% distinct() %>%
+  pivot_wider(names_from = event, values_from = newdoycol) %>%
+  mutate(length = end - begin) %>%
+  ungroup() %>%
+  mutate(Site = forcats::fct_relevel(as.factor(Site), sitefactororder))
+
+
+ggplot(filter(specific_doy_preds_length_ts, prediction_type == "prediction - full cross"), aes(x = Site, y = length, colour = Sex)) +
+  geom_beeswarm(dodge.width =0.75) +
+  scale_colour_viridis_d() +
+  labs(title = "Median flowering period length at a site", subtitle = "Each point represents one year at one site 1997-2012", caption = "fully crossed predictions") +
+  theme(legend.position = "bottom") +
+  ylab("Length of flowering period (days)") 
+
+futlen <- doypredmatchfut_medians %>% 
+  select(-contains("Date"), -contains(".lower"), -contains(".upper"), -.width) %>%
+  distinct() %>%
+  tidyr::pivot_wider(names_from = event, values_from = newdoycol) %>%
+  mutate(period_length = end - begin) 
+
+histlen_uncertainty <- general_doy_preds_med_siteyearsex %>%
+  group_by(event) %>%
+  pivot_wider(values_from)
+
+histlen <- general_doy_preds_med_siteyearsex %>%
+  select(-starts_with(".")) %>%
+  distinct() %>%
+  tidyr::pivot_wider(names_from = event, values_from = newdoycol) %>%
+  mutate(period_length = end - begin)
+
+ggplot(histlen, aes(x = Year, y = period_length, linetype = Sex)) +
+  geom_line() +
+  facet_grid(Site ~ .)
+
+ggplot(histlen, aes(x = Site,  y = period_length, colour = Sex)) +
+  geom_quasirandom(dodge.width = 0.75) +
+  scale_colour_viridis_d() 
+
+
+ggplot(futlen, aes(x = as.numeric(as.factor(normals)), y = period_length, colour = climate_forcing, linetype = Sex, shape = as.factor(climate_forcing))) +
+  geom_point(alpha = 0.8) +
+  geom_line(alpha = 0.9) +
+  facet_grid(. ~ Site) +
+  scale_colour_viridis_c() +
+  theme(legend.position = "top")
+
+```
+Haven't figured out a good graph for future length yet. Not sure it's really doing anything?
+
+# variation
+```{r doyvariation}
+doyvar <- specific_doy_preds %>%
+  group_by(Sex, event, Site, Year, Provenance, Clone, Tree) %>%
+  summarise(sd = sd(newdoycol)) %>%
+  median_hdci(sd, .width = c( 0.5, 0.89)) 
+  
+```
+
+# overlap
+
+```{r overlap}
+specific_doy_preds %>% filter(prediction_type == "retrodiction - uncensored")
 ```
