@@ -1,13 +1,14 @@
-# Calculate forcing unit data for seed orchard sites using PCIC weather data data adjusted with ClimateNA data in lodgepole_climate project
-
-# Calculate forcing unit data. Writes weather and forcing unit data to `all_clim_PCIC.csv`
+# Calculate forcing unit data for seed orchard sites
+#
+# 1) using PCIC weather data data adjusted with ClimateNA data in lodgepole_climate project. Writes weather and forcing unit data to `all_clim_PCIC.csv`
+# 2) using adjusted PCIC weather transposed into [future climate scenarios from ClimateNA](`lodgepole_climate/output/climateNA/gcms`) lodgepole_climate/processed/future_daily_temps.csv
 
 # combine phenology and PCIC data
 library(tidyverse)
 library(lubridate)
 
 
-forcingtype = "ristos" # choose forcing type for use in phendf output for modeling with stan
+#forcingtype = "gdd" # choose forcing type for use in phendf output for modeling with stan
 
 
 # Data --------------------------------------------------------------------
@@ -16,6 +17,8 @@ forcingtype = "ristos" # choose forcing type for use in phendf output for modeli
 climdat <- read.csv("../lodgepole_climate/processed/PCIC_all_seed_orchard_sites_adjusted.csv", header = TRUE, stringsAsFactors=FALSE) %>%
     mutate(DoY = yday(Date)) %>%
     rename(mean_temp = mean_temp_corrected) # use mean temps that PCIC raw with a ClimateNA correction
+
+futdat <- read.csv("../lodgepole_climate/processed/future_daily_temps.csv")
 
 # Functions ----------------------------------
 
@@ -91,18 +94,18 @@ clim <- dplyr::full_join(risto, clim5)
 #     theme_bw(base_size=20) +
 #     ggtitle("Heatsum Accumulation 1997-2012") +
 #     theme(legend.position="none")
-# 
+#
 # ggplot(filter(clim, DoY<180), aes(x=DoY, y=sum_scaled_ristos, color=Year)) +
 #     geom_point() +
 #     facet_wrap("Site") +
 #     theme_bw(base_size=18) +
 #     ggtitle("Risto Accumulation Jan-June 1997-2012") +
 #     theme(legend.position="none")
-# 
+#
 # ggplot(clim, aes(x=ristos, y=Heat)) +
 #     geom_point() +
 #     geom_abline(slope=1, intercept=0)
-# 
+#
 # #present - how heat and gdd compare
 # ggplot(clim, aes(x=mean_temp, y=ristos, color="ristos")) +
 #     geom_line(size=2) +
