@@ -314,13 +314,13 @@ variation <- purrr::map(modells, gather_var_draws) %>%
 ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .variable, linetype = Sex)) +
   stat_pointinterval(position = "dodge") +
   scale_colour_viridis_d() +
-  ggtitle("Standard deviation of population mean and offsets") +
+  labs(title = "Standard deviation of population mean and offsets", caption = "2000 draws from the posterior") +
   ylab("") +
   xlab("Forcing") +
-  facet_wrap("event") +
-  theme(legend.position = "bottom") +
+  facet_grid(event ~ .) +
   guides(color = FALSE, size = FALSE) +
-  theme_dark(base_size = 18)
+  theme_dark(base_size = 18) +
+  theme(legend.position = "top") 
 ```
 Effects for Tree are generally quite small and are moderate for Provenance. Clone has a wide range of possible effects. PGTIS and PRT have relatively large effects for the end of flowering, tending to stop flowering at a larger forcing amount. (Maybe because of censoring?) Provenances have similar ranked effects across models and events, tending to skew events earlier or later by a small amount of forcing. 
 
