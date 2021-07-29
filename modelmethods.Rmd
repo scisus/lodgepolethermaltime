@@ -314,7 +314,7 @@ variation <- purrr::map(modells, gather_var_draws) %>%
 ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .variable, linetype = Sex)) +
   stat_pointinterval(position = "dodge") +
   scale_colour_viridis_d() +
-  labs(title = "Standard deviation of population mean and offsets", caption = "2000 draws from the posterior") +
+  labs(title = "Standard deviation of \npop mean & offsets", caption = "2000 draws from the posterior") +
   ylab("") +
   xlab("Forcing") +
   facet_grid(event ~ .) +
