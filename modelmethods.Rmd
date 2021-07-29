@@ -26,7 +26,7 @@ source('phenology_functions.R')
 
 ## Data
 
-Data is available in the `flowers` R package published on Github
+Phenology data is available in the `flowers` R package published on Github [ARCHIVE ON ZENODO]
 
 ```{r data}
 phendat <- flowers::lodgepole_phenology_event %>%
@@ -36,8 +36,11 @@ phenf <- prepare_data(phendat, forcing = "gdd")
 
 ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
   stat_ecdf() +
-  ggtitle("Cumulative distribution of accumulated forcing for flowering events", subtitle = "raw data") +
-  scale_colour_viridis_d()
+  labs("Cumulative distribution of accumulated forcing for flowering events", caption = "raw data") +
+  scale_colour_viridis_d() +
+  theme_dark(base_size = 18) +
+  ylab("") +
+  xlab("Heatsum")
 
 # create 4 datasets for 4 models
 
