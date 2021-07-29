@@ -700,7 +700,7 @@ doypredmatchfut_medians <- doypredmatchfut %>% group_by(Sex, event, Site, SSP, n
   point_interval(newdoycol, .width = c(0.5, 0.95), .point = median, .interval = hdci) %>%
   mutate(Date = as.Date("2020-12-31") + newdoycol, .lowerdate = as.Date("2020-12-31") + .lower, .upperdate = as.Date("2020-12-31") + .upper)
 
-ggplot(doypredmatchfut_medians, aes(y = Date, x = normal_period, ymin = .lowerdate, ymax = .upperdate, group = interaction(normal_period, Sex), colour = Sex)) +
+ggplot(filter(doypredmatchfut_medians, SSP %in% c("ssp2", "ssp4")), aes(y = Date, x = normal_period, ymin = .lowerdate, ymax = .upperdate, group = interaction(normal_period, Sex), colour = Sex)) +
   geom_pointinterval(position = "dodge", alpha = 0.5)  +
   facet_grid(climate_forcing ~ Site) +
   #scale_colour_viridis_d(end = 0.9) +
