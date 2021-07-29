@@ -504,12 +504,13 @@ ggplot(alldat, aes(x = sum_forcing, y = "observations" , colour = Sex)) +
   stat_pointinterval(data = allsim, aes(x = prediction, y = prediction_type), 
                      .width = c(0.5, 0.89), point_interval = median_hdci ) +
  # stat_dots(data = may15, aes(x = sum_forcing, y = "Forcing at May 15")) +
-  theme_bw() +
+  theme_bw(base_size = 18) +
   facet_grid(event ~ Sex) +
   labs(title = "Modeled and observed flowering events",  caption = "200 samples from the posterior, 5 for fully crossed predictions") +
   xlab("GDD") +
   ylab("") + 
-  scale_colour_viridis_d()
+  scale_colour_viridis_d() +
+  theme(legend.position = "none")
 #subtitle = "50 & 89% quantile intervals for observations \nand HCDI intervals for model predictions",
 
 ```
