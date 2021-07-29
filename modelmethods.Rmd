@@ -80,7 +80,7 @@ provMAT <- provclim %>% select(SPU_Number, MAT) %>%
   arrange(MAT)
 
 provfactororder <- provMAT$SPU_Name %>% 
-  stringr::str_replace(pattern = "\\s", replacement = "\\.")
+  stringr::str_replace_all(pattern = "\\s", replacement = "\\.")
 
 yearMAT <- siteclim %>% 
   mutate(Year = lubridate::year(Date)) %>%
