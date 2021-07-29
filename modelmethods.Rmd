@@ -316,7 +316,7 @@ ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .variable, li
   scale_colour_viridis_d() +
   labs(title = "Standard deviation of \npop mean & offsets", caption = "2000 draws from the posterior") +
   ylab("") +
-  xlab("Forcing") +
+  xlab("Heatsum") +
   facet_grid(event ~ .) +
   guides(color = FALSE, size = FALSE) +
   theme_dark(base_size = 18) +
