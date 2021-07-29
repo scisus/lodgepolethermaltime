@@ -405,156 +405,14 @@ ggplot(yearr, aes(y=level, x = .value)) +
 
 # Retrodictions
 
-```{r censorpred, cache = TRUE}
-
-# # simulate data from model
-# fbyrep <- brms::posterior_predict(fbfit, cores = 6)
-# mbyrep <- brms::posterior_predict(mbfit, cores = 6)
-# feyrep <- brms::posterior_predict(fefit, cores = 6)
-# meyrep <- brms::posterior_predict(mefit, cores = 6)
-# 
-# # Censor one iteration worth of yrep based on censorship of actual data
-# censor_estimates <- function(Estimate, dat) {
-#   censordf <- select(dat, censored, sum_forcing, upper)
-#   censordf$Estimate <- Estimate
-#   
-#   df <- censordf %>%
-#     mutate(yrep_censored = case_when(censored == "interval" & Estimate < sum_forcing ~ sum_forcing,
-#                                      censored == "interval" & Estimate > upper ~ upper,
-#                                      censored == "interval" & (Estimate >= sum_forcing) & (Estimate <= upper) ~ Estimate,
-#                                      
-#                                      censored == "right" & Estimate >= sum_forcing ~ sum_forcing,
-#                                      censored == "right" & Estimate < sum_forcing ~ Estimate,
-#                                      
-#                                      censored == "left" & Estimate < sum_forcing ~ Estimate,
-#                                      censored == "left" & Estimate >= sum_forcing ~ sum_forcing))
-#   
-#   return(df$yrep_censored)
-# }
-# 
-# # censor all predicted data
-# 
-# fbyrep_censored <- apply(fbyrep, MARGIN = 1, FUN = censor_estimates, dat = fbdat) %>% t()
-# mbyrep_censored <- apply(mbyrep, MARGIN = 1, FUN = censor_estimates, dat = mbdat) %>% t()
-# feyrep_censored <- apply(feyrep, MARGIN = 1, FUN = censor_estimates, dat = fedat) %>% t()
-# meyrep_censored <- apply(meyrep, MARGIN = 1, FUN = censor_estimates, dat = medat) %>% t()
-# 
-# # make a plot with uncensored model predictions, censored model predictions, and data
-# plot_retro <- function(censored_model_predictions, uncensored_model_predictions, dat, event, sex, n = niter, d = 100)
-# {
-#   draws <- sample(1:n, size = d)
-#   draws_censored <- bayesplot::ppc_data(dat$sum_forcing, censored_model_predictions[draws,]) %>% mutate(type = "model_censored")
-#   all_draws <- bayesplot::ppc_data(dat$sum_forcing, uncensored_model_predictions[draws,]) %>% mutate(type = "model_uncensored") %>% 
-#     rbind(draws_censored) %>%
-#     rename(sum_forcing = value)
-#   
-#   
-#   median_retrodictions <- all_draws %>%
-#     group_by(y_id, type) %>%
-#     median_qi(sum_forcing)
-#   
-#   retroplot <- ggplot(dat, aes(x = sum_forcing, y="data")) +
-#     stat_halfeye( .width = c(0.5, 0.89)) +
-#     stat_slab(data = all_draws, aes(x = sum_forcing, y = type, group=rep_id), slab_color = "gray65", alpha = 1/10, fill = NA) +
-#     stat_pointinterval(data = median_retrodictions, aes(x = sum_forcing, y = type), .width = c(0.5, 0.89), inherit.aes = FALSE) +
-#     theme_bw() +
-#     labs(title = paste0(event, " of ", sex," flowering"), subtitle = "density of data and predictions with \n 50 and 89% quantile median point intervals")+
-#     xlim(c(50,425))
-#   
-#   return(retroplot)
-# }
-# 
-# fbppc <- plot_retro(fbyrep_censored, fbyrep, fbdat, "Beginning", "female")
-# mbppc <- plot_retro(mbyrep_censored, mbyrep, mbdat, "Beginning", "male")
-# feppc <- plot_retro(feyrep_censored, feyrep, fedat, "End", "female")
-# meppc <- plot_retro(meyrep_censored, meyrep, medat, "End", "male")
-# 
-# cowplot::plot_grid(fbppc, feppc, mbppc, meppc, align="hv", ncol = 2, nrow = 2)
-# #, caption = "Model densities are drawn with 100 censored and uncensored draws from the model for each observation. \n Model point intervals are based on the median prediction for each observed sum_forcing. \n 50% and 89% quantile interval widths for median.") +
-
-```
 
 ## General predictions
-```{r general_predictions}
-# n_newdat <- 5
-# newdata <- data.frame(Site = letters[1:n_newdat], Provenance = letters[1:n_newdat], Year = letters[1:n_newdat], Clone = letters[1:n_newdat], Tree = letters[1:n_newdat]) %>%
-#   tidyr::complete(Site, Provenance, Year, Clone, Tree)
-# 
-# # simulate new data from the model for 5 new levels of each factor of the model. Draws for factor effects are from N(0, sigma_cluster). Using nsamples draws from the posterior
-# simulate_from_model <- function(data, model, nlevels = 5, nsamples = 300, seed = 1657, cores = 6) {
-#   # retrodict "true"
-#   yrep <- add_predicted_draws(newdata = data, model = model, n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
-#     mutate(prediction_type = "retrodiction - uncensored") 
-#   
-#   # censor yrep based on censoring points in the raw data
-#   yrep_censored <- yrep %>%
-#     mutate(prediction_temp = case_when(censored == "interval" & prediction < sum_forcing ~ sum_forcing,
-#                                        censored == "interval" & prediction > upper ~ upper,
-#                                        censored == "interval" & (prediction >= sum_forcing) & (prediction <= upper) ~ prediction,
-#                                        
-#                                        censored == "right" & prediction >= sum_forcing ~ sum_forcing,
-#                                        censored == "right" & prediction < sum_forcing ~ prediction,
-#                                        
-#                                        censored == "left" & prediction < sum_forcing ~ prediction,
-#                                        censored == "left" & prediction >= sum_forcing ~ sum_forcing),
-#            prediction_type = "retrodiction - censored") %>%
-#     select(-prediction) %>%
-#     rename(prediction = prediction_temp)
-#   
-#   # simulate data from new levels (out-of-sample predictions)
-#   lv <- as.character(1:nlevels)
-#   newdata <- data.frame(Site = lv, 
-#                         Provenance = lv, 
-#                         Year = lv, 
-#                         Clone = lv, 
-#                         Tree = lv) %>%
-#     tidyr::complete(Site, Provenance, Year, Clone, Tree)
-#   
-#   yoos <- add_predicted_draws(newdata = newdata, model = model, allow_new_levels = TRUE, sample_new_levels = "gaussian", n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
-#     mutate(prediction_type = "out-of-sample prediction")
-#   
-#   preds <- rbind(yrep, yrep_censored, yoos) %>%
-#     mutate(Sex = unique(data$Sex), event = unique(data$event))
-#   
-#   return(preds)
-# }
-# 
-# fbsim <- simulate_from_model(data = fbdat, model = fbfit)
-# mbsim <- simulate_from_model(data = mbdat, model = mbfit)
-# fesim <- simulate_from_model(data = fedat, model = fefit)
-# mesim <- simulate_from_model(data = medat, model = mefit)
-# 
-# 
-# alldat <- rbind(fbdat, mbdat, fedat, medat)
-# allsim <- rbind(fbsim, mbsim, fesim, mesim)
-# 
-# may15doy <- lubridate::yday("2021-05-15")
-# 
-# may15 <- fclim %>% 
-#   filter(DoY == may15doy, forcing_type == "gdd") 
-# 
-# ggplot(alldat, aes(x = sum_forcing, y = "observations" )) +
-#   stat_halfeye( .width = c(0.5, 0.89), point_interval = median_qi) +
-#   stat_slab(data = allsim, 
-#                     aes(x = prediction, y = prediction_type, group=.draw),
-#                     .width = c(0.5, 0.89), point_interval = median_hdci, 
-#                     slab_color = "gray65", alpha = 1/10, fill = NA) +
-#   stat_pointinterval(data = allsim, aes(x = prediction, y = prediction_type), 
-#                      .width = c(0.5, 0.89), point_interval = median_hdci ) +
-#   stat_interval(data = may15, aes(x = sum_forcing, y = "May 15")) +
-#   theme_bw() +
-#   facet_grid(Sex ~ event) +
-#   labs(title = "Modeled and observed flowering events", subtitle = "50 & 89% quantile intervals for observations \nand HCDI intervals for model predictions") +
-#   xlab("Accumulated forcing") +
-#   ylab("")
-# 
 
-```
 ```{r general_predictions}
 
 # simulate new data from the model for n_lct new levels of each factor of the model. n_lct is a numeric vector of length 3 c(number of new sites/provenances/years, number of clones per provenance, number of trees per clone) Draws for factor effects are from N(0, sigma_cluster). Using nsamples draws from the posterior.
 
-simulate_from_model <- function(data, model, n_lct = c(5,10,2), nsamples = 100, seed = 1657, cores = 6) {
+simulate_from_model <- function(data, model, n_lct = c(5,10,2), nsamples = nsamp, seed = seed, cores = 6) {
   # retrodict "true"
   yrep <- add_predicted_draws(newdata = data, model = model, n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
     mutate(prediction_type = "retrodiction - uncensored") 
@@ -574,11 +432,17 @@ simulate_from_model <- function(data, model, n_lct = c(5,10,2), nsamples = 100, 
     select(-prediction) %>%
     rename(prediction = prediction_temp)
   
-  # simulate a dataset with all combinations of site, provenance, and year
-  # complete_data <- tidyr::complete(data, Year, Site, Provenance)
-  # ypred_complete <- add_predicted_draws(newdata = complete_data, model = model, n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
-  #   mutate(prediction_type = "prediction - fully crossed")
-  # 
+
+  # simulate data for fully crossed version of real dataset. This is 82,000+ observations and my computer can't handle that unless I use *very* few posterior samples
+  
+  crossdat <- data %>% tidyr::complete(Sex, event, Year, Site, tidyr::nesting(Provenance, Clone, Tree)) %>%
+    tidyr::complete(Year, nesting(Site, Tree)) %>%
+    select(Year, Site, Tree, Provenance, Clone) %>%
+    distinct()
+
+  ypred_fullcross <- tidybayes::add_predicted_draws(newdata = crossdat, model = model, n = 30, seed = seed, cores = cores, prediction = "prediction") %>%
+    mutate(prediction_type = "prediction - full cross")
+  
   # simulate data from new levels (out-of-sample predictions). The newdata simulation code took an embarrassingly long time to figure out
   nlevels <- n_lct[1] # how many sites, provenances, and years
   lv <- as.character(1:nlevels)
@@ -597,28 +461,24 @@ simulate_from_model <- function(data, model, n_lct = c(5,10,2), nsamples = 100, 
   
   ypred_newlevels <- add_predicted_draws(newdata = newdata, model = model, allow_new_levels = TRUE, sample_new_levels = "gaussian", n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
     mutate(prediction_type = "prediction - new levels")
-  
-  # preds <- rbind(yrep, yrep_censored, ypred_complete, ypred_newlevels) %>%
-  #   mutate(Sex = unique(data$Sex), event = unique(data$event))
-  preds <- rbind(yrep, yrep_censored, ypred_newlevels) %>%
+
+  preds <- rbind(yrep, yrep_censored, ypred_fullcross, ypred_newlevels) %>%
     mutate(Sex = unique(data$Sex), event = unique(data$event))
   
   return(preds)
 }
 
-fbsim <- simulate_from_model(data = fbdat, model = fbfit)
-mbsim <- simulate_from_model(data = mbdat, model = mbfit)
-fesim <- simulate_from_model(data = fedat, model = fefit)
-mesim <- simulate_from_model(data = medat, model = mefit)
+alldatls <- list(fbdat, fedat, mbdat, medat)
+alldat <- rbind(fbdat, fedat, mbdat, medat)
+
+allsim <- purrr::map2(alldatls, modells, function(x,y) {simulate_from_model(data = x, model = y, nsamples = 200, seed = seed)}) %>%
+  bind_rows()
 
 
-alldat <- rbind(fbdat, mbdat, fedat, medat)
-allsim <- rbind(fbsim, mbsim, fesim, mesim)
+#may15doy <- lubridate::yday("2021-05-15")
 
-may15doy <- lubridate::yday("2021-05-15")
-
-may15 <- fclim %>% 
-  filter(DoY == may15doy, forcing_type == "gdd") 
+#may15 <- histclim %>% 
+ # filter(DoY == may15doy, forcing_type == "gdd") 
 
 ggplot(alldat, aes(x = sum_forcing, y = "observations" )) +
   stat_dotsinterval( .width = c(0.5, 0.89), point_interval = median_qi) +
@@ -628,87 +488,34 @@ ggplot(alldat, aes(x = sum_forcing, y = "observations" )) +
                     slab_color = "gray65", alpha = 1/10, fill = NA) +
   stat_pointinterval(data = allsim, aes(x = prediction, y = prediction_type), 
                      .width = c(0.5, 0.89), point_interval = median_hdci ) +
-  stat_dots(data = may15, aes(x = sum_forcing, y = "Forcing at May 15")) +
+ # stat_dots(data = may15, aes(x = sum_forcing, y = "Forcing at May 15")) +
   theme_bw() +
   facet_grid(Sex ~ event) +
-  labs(title = "Modeled and observed flowering events", subtitle = "50 & 89% quantile intervals for observations \nand HCDI intervals for model predictions") +
+  labs(title = "Modeled and observed flowering events", subtitle = "50 & 89% quantile intervals for observations \nand HCDI intervals for model predictions", caption = "200 samples from the posterior, 5 for fully crossed predictions") +
   xlab("Accumulated forcing") +
   ylab("")
 
 ```
 
-We used the model to simulate three data sets. First we retrodicted flowering forcing for the observed combinations of trees, clones, years, provenances, and sites (retrodiction - uncensored). Then we censored that data based on the censoring points recorded in our observations (retrodiction - censored). We expect the censored retrodictions to match our observations relatively well. 
+We used the model to simulate four data sets. First we retrodicted flowering forcing for the observed combinations of trees, clones, years, provenances, and sites (retrodiction - uncensored). Then we censored that data based on the censoring points recorded in our observations (retrodiction - censored). We expect the censored retrodictions to match our observations relatively well. 
 
-We also predicted 2500 flowering forcing events for all 4 flowering events. We sampled effects for 5 new sites, years and provenances from the superpopulation posterior distributions for each factor offset ($\mathrm{Normal}(0, \sigma_{factor})$). Each provenance was represented by 10 clones with 2 ramets each.
+We also predicted flowering forcing for a fully crossed version of our original dataset and for new sites, years, provenances, clones, and trees. Since the fully-crossed version of our originally observed data set is 82,768 rows for each sex + event, only 5 samples from the posterior were used to simulate each observation. For new levels, we predicted 1500 forcing observations for all 4 flowering events. We sampled offsets for 5 new sites, years and provenances from the superpopulation posterior distributions for each factor offset ($\mathrm{Normal}(0, \sigma_{factor})$). Each provenance was represented by 10 clones with 2 ramets each.
 
-All simulations used the same `nsamples` draws from the posterior.
+All simulations used the same 200 draws from the posterior, except for the fully crossed version which used the same 5 which were a subset of the previous 200.
 
 # Add days to preds
 
 See functions in retrodiction functions for this.
 
-```{r predictdays}
+```{r predictdaysspecific, fig.height=8}
 
-# first get DoY predictions for specific predictions & retrodictions (uncensored, censored, fully crossed)
+# first get DoY predictions for specific predictions & retrodictions (uncensored, fully crossed)
 # filter simulations for only real sites and years, not new levels and simplify to only columns needed for matching 
-specificsim <- filter(allsim, prediction_type %in% c("retrodiction - uncensored", "retrodiction - censored", "prediction - fully crossed")) %>%
+specificsim <- filter(allsim, prediction_type %in% c("retrodiction - uncensored", "prediction - full cross")) %>%
   ungroup() %>%
   select(Year, Site, prediction) %>%
   distinct() 
 
-specific_doy_preds_temp <- forcing_to_doy(filter(fclim, forcing_type == "gdd"), specificsim, aforce = "sum_forcing", bforce = "prediction", newdoycolname = "newdoycol") 
-  
-specific_doy_preds <- full_join(allsim, specific_doy_preds_temp) 
-
-# get DoY predictions for the general predictions - which means assigning all sites and years to each prediction
-
-# extract heat sum predictions at new sites and years and provs, clones, trees. downsample - 30 draws per "row"/new obs
-generalsim <- filter(allsim, prediction_type == "prediction - new levels") %>%
-  ungroup() %>%
-  select(Sex, event, .row, prediction, prediction_type) %>%
-  group_by(Sex, event, .row, prediction_type) %>%
-  sample_n(30)
-
-# assign each prediction to fully crossed site x climate dataset
-climsites <- unique(fclim$Site)
-climyears <- unique(fclim$Year)
-generalcross <- tidyr::crossing(climsites, climyears, prediction = unique( generalsim$prediction) ) %>%
-  dplyr::rename(Site = climsites, Year = climyears)
-
-general_doy_preds_temp <- forcing_to_doy(filter(fclim, forcing_type == "gdd"), generalcross, aforce = "sum_forcing", bforce = "prediction", newdoycolname = "newdoycol")
-
-general_doy_preds <- full_join(generalsim, general_doy_preds_temp)
-rm(general_doy_preds_temp)
-
-# general_doy_preds_med <- general_doy_preds %>% group_by(Sex, event, .row, Site, Year) %>%
-#   point_interval(prediction, newdoycol, .width = c(0.5, 0.95, .point = median, .interval = hdci))
-
-general_doy_preds_med <- general_doy_preds %>% group_by(Sex, event, .row, Site, Year) %>%
-  summarise(median = median(newdoycol))
-
-general_doy_preds_med_siteyearsex <- general_doy_preds %>% group_by(Sex, event, Site, Year) %>%
-  point_interval(newdoycol, .width = c(0.5, 0.95), .point = median, .interval = hdci)
-
-ggplot(general_doy_preds_med_siteyearsex, aes(x=Year, y = newdoycol, linetype = Sex, colour = event)) +
-  #geom_point() +
-  geom_line() +
-  scale_colour_viridis_d() +
-  facet_wrap("Site")
-
-ggplot(general_doy_preds_med_siteyearsex, aes(y = newdoycol, x = Year, colour = Site, group = Year)) +
-  geom_line() +
-  facet_grid(Site ~ Sex) +
-  scale_colour_viridis_d() +
-  theme_bw()
-
-widemedians <- general_doy_preds_med_siteyearsex %>% 
-  filter(.width == 0.5) %>%
-  select(Sex, event, Site, Year, newdoycol) %>% 
-  pivot_wider(names_from = event, values_from = newdoycol)
-
-
-  
-# foo doesn't quite look right - need to merge in info somehow - or figure out how it's getting stripped in forcing_to_doy function?
 
 # prepare dataframes a and b for interval finding by splitting into lists and ensuring that the climate list (a) and the phenology list (b) contain information for the same sites and years. a and b must both have Site and Year columns
 split_df_to_lists <- function(a, b) {
