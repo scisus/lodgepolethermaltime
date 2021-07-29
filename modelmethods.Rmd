@@ -295,71 +295,42 @@ Tree: me, mb, fb, fe
 
 ```{r variation, cache = TRUE}
 
-fbvar <- fbfit %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE) %>%
-  ungroup() %>%
-  mutate(event = "begin",  Sex = "FEMALE", model = "fb")
 
-mbvar <- mbfit %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE) %>%
-  ungroup() %>%
-  mutate(event = "begin",  Sex = "MALE", model = "mb")
+gather_var_draws <- function(mod) {
+  mod %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE, n = nsamp, seed = seed) 
+}
 
-fevar <- fefit %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE) %>%
-  ungroup() %>%
-  mutate(event = "end", Sex = "FEMALE", model = "fe")
-
-mevar <- mefit %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE) %>%
-  ungroup() %>%
-  mutate(event = "end", Sex = "MALE", model = "me")
-
-variation <- rbind(fbvar, mbvar, fevar, mevar) %>%
-  mutate(model = forcats::fct_relevel(model, "fb", "mb", "fe", "me")) %>%
+variation <- purrr::map(modells, gather_var_draws) %>%
+  bind_rows(.id = "model") %>%
+  left_join(labdf) %>%
   mutate(.variable = case_when(.variable != "sigma" ~ stringr::str_sub(.variable, 4, -12),
                                .variable == "sigma" ~ "sigma")) %>%
   mutate(.variable = factor(.variable)) %>%
   mutate(.variable = forcats::fct_relevel(.variable, "sigma", "Year", "Site", "Provenance", "Clone", "Tree"))
 
-variation_summary <- variation %>% 
-  group_by(model, .variable, Sex, event) %>%
-  median_hdci(.value, .width = c(0.5, 0.89)) 
-
-# ggplot(variation, aes(y = fct_rev(model), x = .value, colour = Event, linetype = Sex)) +
-#   stat_pointinterval() +
-#   scale_colour_viridis_d() +
-#   ggtitle("Standard deviation of population mean and offsets") +
-#   ylab("") +
-#   xlab("Forcing") +
-#   facet_grid(.variable ~ .)
-
-ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .variable)) +
-  stat_pointinterval() +
+ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .variable, linetype = Sex)) +
+  stat_pointinterval(position = "dodge") +
   scale_colour_viridis_d() +
   ggtitle("Standard deviation of population mean and offsets") +
   ylab("") +
   xlab("Forcing") +
-  facet_grid(model ~ .)
+  facet_wrap("event") +
+  theme(legend.position = "bottom") +
+  guides(color = FALSE, size = FALSE) +
+  theme_dark(base_size = 18)
 ```
 Effects for Tree are generally quite small and are moderate for Provenance. Clone has a wide range of possible effects. PGTIS and PRT have relatively large effects for the end of flowering, tending to stop flowering at a larger forcing amount. (Maybe because of censoring?) Provenances have similar ranked effects across models and events, tending to skew events earlier or later by a small amount of forcing. 
 
 ## Offsets
-```{r offsets,cache=TRUE}
+```{r offsets, cache=TRUE}
 
-fbdelt <- fbfit %>% gather_draws(`r_.*`, regex = TRUE) %>%
-  ungroup() %>%
-  mutate(event = "begin",  Sex = "FEMALE", model = "fb")
+gather_offset_draws <- function(mod) {
+  mod %>% gather_draws(`r_.*`, regex = TRUE, n = nsamp, seed = seed) 
+}
 
-mbdelt <- mbfit %>% gather_draws(`r_.*`, regex = TRUE) %>%
-  ungroup() %>%
-  mutate(event = "begin",  Sex = "MALE", model = "mb")
-
-fedelt <- fefit %>% gather_draws(`r_.*`, regex = TRUE) %>%
-  ungroup() %>%
-  mutate(event = "end",  Sex = "FEMALE", model = "fe")
-
-medelt <- mefit %>% gather_draws(`r_.*`, regex = TRUE) %>%
-  ungroup() %>%
-  mutate(event = "end",  Sex = "MALE", model = "me")
-
-offsets_raw <- rbind(fbdelt, mbdelt, fedelt, medelt)
+offsets_raw <- purrr::map(modells, gather_offset_draws) %>%
+  bind_rows(.id = "model") %>%
+  left_join(labdf) #%>%
 
 # turn brms .variable names into useful names (slow)
 varlevel <- offsets_raw$.variable %>% stringr::str_split_fixed("[_\\[\\,]", n=4) %>% data.frame() %>%
@@ -370,12 +341,12 @@ colnames(varlevel) <- c("factor", "level")
 yearclonetree <- filter(varlevel, factor %in% c("Year", "Clone", "Tree")) %>% distinct()
 yctorder <- sort(yearclonetree$level)
 
-spyctorder <- c(sitefactororder, provfactororder, yctorder) 
+spyctorder <- c(sitefactororder, provfactororder, yctorder)
 
-# ORDERING BROKEN DON'T KNOW WHY
-offsets <- offsets_raw %>% cbind(varlevel) #%>%
-#mutate(.variable = forcats::fct_relevel(factor, "Year", "Site", "Provenance", "Clone", "Tree"))
-#mutate(level = forcats::fct_relevel(level, spyctorder)) #broekn
+offsets <- offsets_raw %>% cbind(varlevel) %>%
+  ungroup() %>%
+  mutate(factor = forcats::fct_relevel(factor, "Year", "Site", "Provenance", "Clone", "Tree")) %>%
+ mutate(level = forcats::fct_relevel(level, spyctorder)) 
 
 offsets_summary <- offsets %>%
   group_by(model, Sex, event, factor, level) %>%
