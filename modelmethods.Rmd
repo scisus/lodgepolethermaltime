@@ -359,12 +359,12 @@ offsets_summary <- offsets %>%
 
 offsets_summary %>%
   select(model, Sex, event, factor, level, .value, .point) %>% distinct() %>%
-  ggplot(aes(y=.value, x = model, colour = Sex)) +
+  ggplot(aes(y=.value, x = model, colour = Sex, shape = event)) +
   geom_quasirandom(alpha = 0.5) +
   facet_wrap("factor") +
   labs(title = "Offset medians", caption = "2000 draws from posterior") +
   geom_hline(yintercept = 0, linetype =3, colour = "darkgray") +
-  theme_bw() +
+  theme_dark(base_size = 18) +
   ylab("GDD") +
   scale_colour_viridis_d() +
   theme(legend.position = "top")
@@ -382,8 +382,8 @@ yearr <- filter(offsets, factor == "Year") %>%
 ggplot(siter, aes(y=level, x = .value, colour = Sex)) +
   stat_pointinterval() +
   facet_grid(event ~ Sex) +
-  ggtitle("Site offsets", subtitle = "Sites ordered warmest to coldest MAT") +
-  theme_bw() +
+  ggtitle("Site offsets", subtitle = "Ordered warmest to coldest MAT") +
+  theme_dark(base_size = 18) +
   ylab("Site") +
   xlab("GDD") +
   geom_vline(xintercept = 0, linetype =3) +
@@ -394,9 +394,10 @@ ggplot(siter, aes(y=level, x = .value, colour = Sex)) +
 ggplot(provr, aes(y=level, x = .value, colour = Sex)) +
   stat_pointinterval() +
   facet_grid(event ~ Sex) +
-  ggtitle("Provenance offsets", subtitle = "Provenances ordered warmest to coldest MAT") +
-  theme_bw() +
-  ylab("GDD") +
+  ggtitle("Provenance offsets", subtitle = "Ordered warmest to coldest MAT") +
+  theme_dark(base_size = 18) +
+  ylab("Provenance") +
+  xlab("GDD") +
   geom_vline(xintercept = 0, linetype =3)  +
   xlim(c(-90,90)) +
     scale_colour_viridis_d() +
