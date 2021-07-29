@@ -755,6 +755,19 @@ futlen <- doypredmatchfut_medians %>%
   tidyr::pivot_wider(names_from = event, values_from = newdoycol) %>%
   mutate(period_length = end - begin) 
 
+ggplot(filter(futlen, climate_forcing %in% c(4.5, 8.5)), aes(y = period_length, x = normal_period, colour = Sex)) +
+  geom_point()  +
+  facet_grid(climate_forcing ~ Site) +
+  #scale_colour_viridis_d(end = 0.9) +
+  theme_dark(base_size = 18) +
+  #theme(legend.position = "none") +
+  scale_colour_viridis_d() +
+  theme(legend.position = "bottom") +
+  ylab("Length of flowering period (days)") +
+  labs(title = "Future flowering period median length", caption = "fully crossed - only 5 posterior samples!") +
+  theme(axis.text.x = element_text(angle = 30, hjust=1), legend.position = "top") +
+  xlab("Normal period") 
+
 histlen_uncertainty <- general_doy_preds_med_siteyearsex %>%
   group_by(event) %>%
   pivot_wider(values_from)
