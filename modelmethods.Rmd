@@ -423,7 +423,7 @@ ggplot(yearr, aes(y=level, x = .value, colour = Sex)) +
 
 ## General predictions
 
-```{r general_predictions}
+```{r general_predictions, cache = TRUE}
 
 # simulate new data from the model for n_lct new levels of each factor of the model. n_lct is a numeric vector of length 3 c(number of new sites/provenances/years, number of clones per provenance, number of trees per clone) Draws for factor effects are from N(0, sigma_cluster). Using nsamples draws from the posterior.
 
