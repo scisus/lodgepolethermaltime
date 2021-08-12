@@ -18,7 +18,7 @@ library(tidybayes)
 library(forcats)
 library(ggbeeswarm)
 
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 theme_set(theme_dark())
 
 source('phenology_functions.R')
@@ -159,8 +159,9 @@ $$\begin{align}
 
 
 
-```{r model, cache = TRUE, echo = FALSE, include = FALSE}
+```{r model}
 # This model block is faster if you run models in parallel
+
 # initialize parameter values on the right order of magnitude
 initpars <- lapply(1:6, function(id) list(sigma = 30, Intercept = 300))
 
@@ -423,7 +424,7 @@ ggplot(yearr, aes(y=level, x = .value, colour = Sex)) +
 
 ## General predictions
 
-```{r general_predictions, cache = TRUE}
+```{r general_predictions}
 
 # simulate new data from the model for n_lct new levels of each factor of the model. n_lct is a numeric vector of length 3 c(number of new sites/provenances/years, number of clones per provenance, number of trees per clone) Draws for factor effects are from N(0, sigma_cluster). Using nsamples draws from the posterior.
 
@@ -656,7 +657,7 @@ DoY predictions used only 30 samples from the posterior for efficiency.
 
 Daily mean temperatures for 2011-2100 were calculated for all sites. Mean monthly temperatures from a 13 model ensemble developed by @Mahony2021 were used to adjust 6 years of daily temperatures from the historical record up or down. I used every 15 years between 1945 and 2012 to cover a range of time periods and yearly variability. Mean monthly temperatures for each past year were compared to mean monthly temperatures for each future year. The difference between MMT future year and historical year was used to adjust daily temperatures for each historical time series so the mmt is the same for each.
 
-```{r future, eval=FALSE, echo = FALSE}
+```{r future, echo = FALSE}
 # calculate forcing for future clim
 futclimf <- futclim %>%
   # calculate heatsum forcing with 5 degree threshold
@@ -768,31 +769,31 @@ ggplot(filter(futlen, climate_forcing %in% c(4.5, 8.5)), aes(y = period_length, 
   theme(axis.text.x = element_text(angle = 30, hjust=1), legend.position = "top") +
   xlab("Normal period") 
 
-histlen_uncertainty <- general_doy_preds_med_siteyearsex %>%
-  group_by(event) %>%
-  pivot_wider(values_from)
-
-histlen <- general_doy_preds_med_siteyearsex %>%
-  select(-starts_with(".")) %>%
-  distinct() %>%
-  tidyr::pivot_wider(names_from = event, values_from = newdoycol) %>%
-  mutate(period_length = end - begin)
-
-ggplot(histlen, aes(x = Year, y = period_length, linetype = Sex)) +
-  geom_line() +
-  facet_grid(Site ~ .)
-
-ggplot(histlen, aes(x = Site,  y = period_length, colour = Sex)) +
-  geom_quasirandom(dodge.width = 0.75) +
-  scale_colour_viridis_d() 
-
-
-ggplot(futlen, aes(x = as.numeric(as.factor(normals)), y = period_length, colour = climate_forcing, linetype = Sex, shape = as.factor(climate_forcing))) +
-  geom_point(alpha = 0.8) +
-  geom_line(alpha = 0.9) +
-  facet_grid(. ~ Site) +
-  scale_colour_viridis_c() +
-  theme(legend.position = "top")
+# histlen_uncertainty <- general_doy_preds_med_siteyearsex %>%
+#   group_by(event) %>%
+#   pivot_wider(values_from)
+# 
+# histlen <- general_doy_preds_med_siteyearsex %>%
+#   select(-starts_with(".")) %>%
+#   distinct() %>%
+#   tidyr::pivot_wider(names_from = event, values_from = newdoycol) %>%
+#   mutate(period_length = end - begin)
+# 
+# ggplot(histlen, aes(x = Year, y = period_length, linetype = Sex)) +
+#   geom_line() +
+#   facet_grid(Site ~ .)
+# 
+# ggplot(histlen, aes(x = Site,  y = period_length, colour = Sex)) +
+#   geom_quasirandom(dodge.width = 0.75) +
+#   scale_colour_viridis_d() 
+# 
+# 
+# ggplot(futlen, aes(x = as.numeric(as.factor(normals)), y = period_length, colour = climate_forcing, linetype = Sex, shape = as.factor(climate_forcing))) +
+#   geom_point(alpha = 0.8) +
+#   geom_line(alpha = 0.9) +
+#   facet_grid(. ~ Site) +
+#   scale_colour_viridis_c() +
+#   theme(legend.position = "top")
 
 ```
 Haven't figured out a good graph for future length yet. Not sure it's really doing anything?
@@ -809,5 +810,5 @@ doyvar <- specific_doy_preds %>%
 # overlap
 
 ```{r overlap}
-specific_doy_preds %>% filter(prediction_type == "retrodiction - uncensored")
+#specific_doy_preds %>% filter(prediction_type == "retrodiction - uncensored")
 ```
