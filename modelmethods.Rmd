@@ -92,34 +92,20 @@ yearMAT <- siteclim %>%
 yearfactororder <- yearMAT$Year
 
 ```
+## censorship
 Make censorship tables (proportion?)
 ```{r}
 
-begincensor <- phenf %>% filter(Event_Obs == 2)
+censdf <- filter(phenf, Event_Obs %in% c(2,3)) %>%
+  group_by(Event_Label, Sex) %>%
+  mutate(ng = n()) %>%
+  group_by(Event_Label, Sex, censored) %>%
+  summarise(prop_cens = n()/unique(ng)) %>%
+  arrange(Event_Label, Sex)
 
-filter(begincensor, censored == "left") %>%
-  select(Site, Sex) %>%
-  group_by(Site, Sex) %>%
-  summarise(n=n()) %>%
-  pivot_wider(names_from = Sex, values_from = n)
-
-endcensor <- phenf %>% filter(Event_Obs == 3)
-
-filter(endcensor, censored == "right") %>%
-  select(Site, Sex) %>%
-  group_by(Site, Sex) %>%
-  summarise(n=n()) %>%
-  pivot_wider(names_from = Sex, values_from = n)
-
-#proportion
-phenf %>% filter(Event_Obs %in% c(2,3)) %>%
-  group_by(Sex, Event_Label) %>%
-  mutate(n = n()) %>%
-  group_by(Sex, Event_Label, censored) %>%
-  summarise(count = n(), proportion = round(count/n, 2)) %>%
-  select(-count) %>%
-  distinct() %>%
-  filter(censored %in% c("left", "right"))
+ggplot(censdf, aes(x = Sex, y = prop_cens, fill = censored)) +
+  geom_bar(stat = "identity") +
+  facet_wrap("Event_Label") +
 
 ```
 
