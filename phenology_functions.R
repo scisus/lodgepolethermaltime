@@ -124,7 +124,8 @@ add_censor_indicator <- function(phenevent) {
 # }
 
 # munge phenology data. Remove duplicate observations, add censoring information, combine with forcing data, and standardize sum_forcing. phendat should be flowers::lodgepole_phenology_event or structured similarly
-prepare_data <- function(phendat, forcing) {
+# forcing is a string that specifies the type of forcing data to extract from the climate data file clim
+prepare_data <- function(phendat, forcing, clim) {
   # 4 trees were observed by both Wagner and Walsh at PGTIS in 2006 - drop 1 copy of them (16 duplicate observations).
   rmidx <- phendat %>%
     group_by(Index) %>%

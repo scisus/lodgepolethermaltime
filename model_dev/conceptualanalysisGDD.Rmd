@@ -1,7 +1,7 @@
 ---
 title: "Phenology model workflow"
 author: "C. Susannah Tysor"
-date: '2020-08-25'
+date: '2021-08-24'
 output: html_document
 ---
 
@@ -52,7 +52,7 @@ So, how much forcing is accumulated over the year? I use the sites in my study a
 ```{r}
 
 # forcing units for 15 years and at sites included in this study
-forcing <- read.csv('data/all_clim_PCIC.csv', header=TRUE) %>%
+forcing <- read.csv('../data/all_clim_PCIC.csv', header=TRUE) %>%
   dplyr::filter(forcing_type=="gdd")
 
 ggplot(forcing, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
@@ -130,17 +130,17 @@ fortforc <- janjun %>%
   group_by(Site, Year) %>%
   summarise(fortforc = rollsum(forcing, 14))
 
-fortforce <- early %>%
-  group_by(Site, Year) %>%
-  summarise(fortforce = rollsum(forcing, 14))
+# fortforce <- early %>%
+#   group_by(Site, Year) %>%
+#   summarise(fortforce = rollsum(forcing, 14))
 
 fextreme <- quantile(fortforc$fortforc, 0.99) #end
 
-feextreme <- quantile(fortforce$fortforce, 0.99) # start
+#feextreme <- quantile(fortforce$fortforce, 0.99) # start
 
 ```
 
-The amount of forcing that can accumulate over any two week period between January and June can be quite large - 99th percentile is `r fextreme`. For the start period, which is earlier, it's a bit smaller - `r feextreme`. The sd required to obtain these values is
+The amount of forcing that can accumulate over any two week period between January and June can be quite large - 99th percentile is `r fextreme`. The sd required to obtain these values is
 
 ```{r}
 
@@ -152,8 +152,8 @@ ggplot(fortforc, aes(x=fortforc)) +
 pnorm(fextreme, 0, sd=50) # sd to cap at extreme
 hist(rnorm(1000, 0, sd=50), breaks=50) 
 
-pnorm(feextreme, 0, sd = 40)
-hist(rnorm(1000, 0, sd = 40))
+# pnorm(feextreme, 0, sd = 40)
+# hist(rnorm(1000, 0, sd = 40))
 
 
 ```
@@ -284,59 +284,5 @@ I've stuck with half normals because while clone has hundreds of levels, Site an
 
 Factors that have a lot of levels all with limited data, like clone, will probably sample best if non-centered.
 
-Some of my factors are very unbalanced with some levels very well represented and others not.
+Some of my factors are very unbalanced with some levels very well represented and others not and could benefit from partial decentering. However, brms automatically non-centers everything. If it works, then don't worry here.
 
-```{r}
-phenbe <- 
- 
-  filter_start_end()
-
-phen_by_sex_and_side <- function(df, sex, side) {
-  outdf <- select_data(df, sex, side)
-  outdf$Side <- side
-  outdf$Sex <- sex
-  return(outdf)
-}
-
-male_begin <- phen_by_sex_and_side(phenbe, "MALE", "begin")
-male_end <- phen_by_sex_and_side(phenbe, "MALE", "end")
-female_begin <- phen_by_sex_and_side(phenbe, "FEMALE", "begin")
-female_end <- phen_by_sex_and_side(phenbe, "FEMALE", "end")
-
-phenbe <- rbind(male_begin, male_end, female_begin, female_end)
-
-#   dplyr::select(Year, Site, Provenance, Clone, Side, Sex) %>%
-#   mutate_all(as.character) %>%
-#   tidyr::pivot_longer( cols=c("Year", "Site", "Provenance", "Clone"), names_to = "Factor", values_to = "Level")
-
-
-ggplot(phenbe, aes(x=Site)) +
-  geom_histogram(stat="count") +
-  facet_grid(Sex ~ Side) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
-
-ggplot(phenbe, aes(x=Provenance)) +
-  geom_histogram(stat="count") +
-  facet_grid(Sex ~ Side) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
-
-ggplot(phenbe, aes(x=Year)) +
-  geom_histogram(stat="count") +
-  facet_grid(Sex ~ Side) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
-
-ggplot(phenbe, aes(x=Clone)) +
-  geom_histogram(stat="count") +
-  facet_grid(Sex ~ Side) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
-
-
-```
-
-Looks like Clone, Orchard, and Site might need to have non-centering *within* factors. 
-
-- Site threshold: 250
-- Provenance threshold: 150
-- Clone threshold: 10
-
-Year *might* benefit from non-centering with a threshold around either 150 or 100
