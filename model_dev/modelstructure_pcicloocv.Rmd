@@ -40,7 +40,7 @@ While I have data for both the start and end of flowering for males and females,
 ```{r phenprep, echo = FALSE}
 phendat <- flowers::lodgepole_phenology_event
 
-phenf <- prepare_data(phendat)
+phenf <- prepare_data(phendat, forcing = "gdd")
 
 ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
   stat_ecdf() +
@@ -67,7 +67,7 @@ Female end-of-flowering data
 
 fedat <- filter_sex_event(sex = "FEMALE", event = "end", phenf)
 
-ggplot(fedat, aes(x = sum_forcing_centered, colour = censored)) +
+ggplot(fedat, aes(x = sum_forcing, colour = censored)) +
   stat_ecdf() +
   scale_colour_ipsum() +
   ggtitle("End of female receptivity", subtitle = "Cumulative distribution of accummulated forcing (centered on overall median) for interval & right censored observations") +
@@ -95,7 +95,7 @@ ggplot(cens, aes(x = Short, y = count, fill = censored)) +
   xlab("flowering event")
 
 
-ggplot(fedat, aes(x = sum_forcing_centered, fill = censored)) +
+ggplot(fedat, aes(x = sum_forcing, fill = censored)) +
   geom_histogram(bins = 50) +
   ggtitle("distribution of observations for (right) end vs interval censored data", 
           subtitle = "end of receptivity") +
@@ -104,7 +104,7 @@ ggplot(fedat, aes(x = sum_forcing_centered, fill = censored)) +
 
 intonly <- filter(fedat, censored == "interval")
 
-ggplot(intonly, aes(x = upper - sum_forcing_centered)) +
+ggplot(intonly, aes(x = upper - sum_forcing)) +
   geom_histogram() +
   geom_vline(xintercept = median(intonly$upper - intonly$sum_forcing_centered), size = 1.5) +
   ggtitle("Distribution of interval sizes for interval censored observations", subtitle = "end of receptivity; vertical line at median size") +
@@ -120,35 +120,35 @@ init_ll <- lapply(1:4, function(id) list(sigma = 30 )) # interval censored model
 
 if (freshrun == TRUE) {
   # mean only
-  mo <- brm(sum_forcing_centered ~ 0 + Intercept, data = fedat,
-            prior = c(prior("normal(0,50)", class = "b"),
-                      prior("normal(0,20)", class = "sigma")),
+  mo <- brm(sum_forcing ~ 0 + Intercept, data = fedat,
+            prior = c(prior("normal(400,100)", class = "b"),
+                      prior("normal(0,14)", class = "sigma")),
             cores = 5, inits = init_ll)
 
   saveRDS(mo, "model_dev/mo.rds")
 
   # mean only with end censoring
-  moc <- brm(sum_forcing_centered | cens(censored_lronly) ~ 0 + Intercept, data = fedat,
-             prior = c(prior("normal(0,50)", class = "b"),
-                       prior("normal(0,20)", class = "sigma")),
+  moc <- brm(sum_forcing | cens(censored_lronly) ~ 0 + Intercept, data = fedat,
+             prior = c(prior("normal(400, 100)", class = "b"),
+                       prior("normal(0, 14)", class = "sigma")),
              cores = 5, inits = init_ll)
   saveRDS(moc, "model_dev/moc.rds")
 
   # mean only model with end and interval censoring
 
 
-  mocf <- brm(sum_forcing_centered | cens(censored, upper) ~ 0 + Intercept, data = fedat,
-              prior = c(prior("normal(0,50)", class = "b"),
-                        prior("normal(0,20)", class = "sigma")),
+  mocf <- brm(sum_forcing | cens(censored, upper) ~ 0 + Intercept, data = fedat,
+              prior = c(prior("normal(400,100)", class = "b"),
+                        prior("normal(0,14)", class = "sigma")),
               cores=5,  inits = init_ll)
   saveRDS(mocf, "model_dev/mocf.rds")
 
   # mean + effects + end + interval censoring
 
-  ec <- brm(sum_forcing_centered | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = fedat,
-            prior = c(prior("normal(0,50)", class = "b"),
-                      prior("normal(0,20)", class = "sigma"),
-                      prior("student_t(3,0,10)", class = "sd")),
+  ec <- brm(sum_forcing | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = fedat,
+            prior = c(prior("normal(400,100)", class = "b"),
+                      prior("normal(0, 14)", class = "sigma"),
+                      prior("normal(0, 9))", class = "sd")),
             cores = 5, inits = init_ll,
             save_pars = save_pars(all = TRUE))
   saveRDS(ec, "model_dev/ec.rds") } else {
@@ -163,9 +163,9 @@ if (freshrun == TRUE) {
   loo_moc <- loo(moc)
   loo_mocf <- loo(mocf)
   plan(multiprocess)
-  loo_ec <- loo(ec, reloo = TRUE, reloo_args = list(prior = c(prior("normal(0,50)", class = "b"),
-                                                              prior("normal(0,20)", class = "sigma"),
-                                                              prior("student_t(3,0,10)", class = "sd")),
+  loo_ec <- loo(ec, reloo = TRUE, reloo_args = list(prior = c(prior("normal(400,100)", class = "b"),
+                                                              prior("normal(0,14)", class = "sigma"),
+                                                              prior("normal(0,9)", class = "sd")),
                                                     future = TRUE,
                                                     inits = init_ll, iter = 3000))
   #loo_ec <- loo(ec)
