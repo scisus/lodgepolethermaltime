@@ -1,7 +1,7 @@
 ---
 title: "Compare model structures with brms"
 author: "C. Susannah Tysor"
-date: '2021-05-26'
+date: '2021-08-26'
 output: 
   html_document: 
     toc: yes
@@ -39,8 +39,10 @@ While I have data for both the start and end of flowering for males and females,
 
 ```{r phenprep, echo = FALSE}
 phendat <- flowers::lodgepole_phenology_event
+climdat <- "data/all_clim_PCIC.csv"
+spudat <- "data/LodgepoleSPUs.csv"
 
-phenf <- prepare_data(phendat)
+phenf <- prepare_data(phendat, forcingtype = "gdd", clim = climdat, spu = spudat)
 
 ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
   stat_ecdf() +
