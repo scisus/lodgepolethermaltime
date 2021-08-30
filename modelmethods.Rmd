@@ -26,13 +26,24 @@ source('phenology_functions.R')
 
 ## Data
 
+```{r climdat}
+siteclim <- read.csv("../lodgepole_climate/processed/PCIC_all_seed_orchard_sites_adjusted.csv")
+histclim <- read.csv("data/all_clim_PCIC.csv") # site clim with forcing
+provclim <- read.csv("../phd/data/Lodgepole_SPU_climsum.csv")
+futclim <- read.csv("../lodgepole_climate/processed/future_daily_temps.csv")
+spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv")
+```
+
 Phenology data is available in the `flowers` R package published on Github [ARCHIVE ON ZENODO]
 
 ```{r data}
+phendat <- flowers::lodgepole_phenology_event
+spudat <- "data/LodgepoleSPUs.csv"
+
 phendat <- flowers::lodgepole_phenology_event %>%
   mutate(Tree = paste0(Orchard, Clone, X, Y)) # create a unique Tree identifier since original data doesn't always have one
 
-phenf <- prepare_data(phendat, forcing = "gdd")
+phenf <- prepare_data(phendat, forcingtype = "gdd", clim = histclim, spu = spudat)
 
 ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
   stat_ecdf() +
@@ -54,13 +65,7 @@ medat <- filter_sex_event(sex = "MALE", event = "end", phenf)
 
 ```
 
-```{r climdat}
-siteclim <- read.csv("../lodgepole_climate/processed/PCIC_all_seed_orchard_sites_adjusted.csv")
-provclim <- read.csv("../phd/data/Lodgepole_SPU_climsum.csv")
-histclim <- read.csv("data/all_clim_PCIC.csv")
-futclim <- read.csv("../lodgepole_climate/processed/future_daily_temps.csv")
-spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv")
-```
+
 
 ```{r ordering}
 # order provenances and sites from warmest to coldest

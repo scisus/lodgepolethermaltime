@@ -125,7 +125,7 @@ add_censor_indicator <- function(phenevent) {
 
 # munge phenology data. Remove duplicate observations, add censoring information, combine with forcing data, and standardize sum_forcing. phendat should be flowers::lodgepole_phenology_event or structured similarly
 # forcing is a string that specifies the type of forcing data to extract from the climate data file clim
-prepare_data <- function(phendat, forcing, clim) {
+prepare_data <- function(phendat, forcingtype, clim, spu) {
   # 4 trees were observed by both Wagner and Walsh at PGTIS in 2006 - drop 1 copy of them (16 duplicate observations).
   rmidx <- phendat %>%
     group_by(Index) %>%
@@ -144,14 +144,12 @@ prepare_data <- function(phendat, forcing, clim) {
                              Event_Obs == 3 ~ "lower",
                              Event_Obs == 4 ~ "upper"))
 
-  # add forcing information
-  clim <- "data/all_clim_PCIC.csv"
-  forcingtype <- forcing
+  # add spu and forcing information
 
-  spus <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv") %>%
+  spus <- read.csv(spu, header = TRUE, stringsAsFactors = FALSE) %>%
     select(SPU_Name, Orchard) # provenance information for each orchard in phen
   forcing <- read.csv(clim, header=TRUE, stringsAsFactors = FALSE) %>%
-    filter(forcing_type==forcingtype)  # ristos consider forcing units calculated based on work of Sarvas 1972
+    filter(forcing_type == forcingtype)  # ristos consider forcing units calculated based on work of Sarvas 1972
 
   phenf <- phen %>%
     dplyr::left_join(forcing) %>%
