@@ -224,7 +224,7 @@ color_scheme_set("blue")
 summary(mo)
 plot(mo)
 mo_yrep <- posterior_predict(mo, draws = 500)
-ppc_ecdf_overlay_grouped(fedat$sum_forcing_centered, mo_yrep[1:50,], group = fedat$censored) +
+ppc_ecdf_overlay_grouped(fedat$sum_forcing, mo_yrep[1:50,], group = fedat$censored) +
   ggtitle("Mean-only", subtitle = "ppc & yrep")
 ```
 Retrodicting observations from the posterior shows approximate agreement with the data (`y`), but if we consider the Kaplan-Meier estimate for the right censored data, we see that the model performs very poorly. This is not unexpected since we haven't actually accounted for censorship at all in this model.
@@ -233,7 +233,7 @@ Retrodicting observations from the posterior shows approximate agreement with th
 
 status <- mutate(fedat, status_y = case_when(censored == "interval" ~ 1,
                                              censored == "right" ~ 0) )
-ppc_km_overlay(fedat$sum_forcing_centered, mo_yrep[1:50, ], status_y = status$status_y) +
+ppc_km_overlay(fedat$sum_forcing, mo_yrep[1:50, ], status_y = status$status_y) +
   ggtitle("Mean-only", subtitle = "Compare empirical distribution of right censored data (Kaplan-Meier estimate) \nto simulated data from the posterior predictive")
 ```
 
@@ -267,12 +267,12 @@ summary(moc)
 plot(moc)
 moc_yrep <- posterior_predict(moc, draws = 500)
 
-ppc_ecdf_overlay_grouped(fedat$sum_forcing_centered, moc_yrep[1:50,], group=fedat$censored) +
+ppc_ecdf_overlay_grouped(fedat$sum_forcing, moc_yrep[1:50,], group=fedat$censored) +
   ggtitle("Mean-only with end censoring", subtitle = "ppc & yrep")
 ```
 This time we see that the predictions for both interval and right censored data occur well after the data we observed. The Kaplan-Meier estimate suggests this model is a better fit at least for our right censored data.
 ```{r}
-ppc_km_overlay(fedat$sum_forcing_centered, moc_yrep[1:50, ], status_y = status$status_y) +
+ppc_km_overlay(fedat$sum_forcing, moc_yrep[1:50, ], status_y = status$status_y) +
   ggtitle("Mean-only with end censoring", "Compare empirical distribution of right censored data (Kaplan-Meier estimate) \nto simulated data from the posterior predictive")
 
 ```
@@ -310,10 +310,10 @@ color_scheme_set("pink")
 plot(mocf)
 mocf_yrep <- posterior_predict(mocf, draws = 500)
 
-ppc_ecdf_overlay_grouped(fedat$sum_forcing_centered, mocf_yrep[1:50,], group=fedat$censored) +
+ppc_ecdf_overlay_grouped(fedat$sum_forcing, mocf_yrep[1:50,], group=fedat$censored) +
   ggtitle("Mean-only with end & interval censoring", subtitle = "ppc & yrep")
 
-ppc_km_overlay(fedat$sum_forcing_centered, mocf_yrep[1:50, ], status_y = status$status_y) +
+ppc_km_overlay(fedat$sum_forcing, mocf_yrep[1:50, ], status_y = status$status_y) +
   ggtitle("Mean-only with end and interval censoring", "Compare empirical distribution of right censored data (Kaplan-Meier estimate) \nto simulated data from the posterior predictive")
 
 # compare
