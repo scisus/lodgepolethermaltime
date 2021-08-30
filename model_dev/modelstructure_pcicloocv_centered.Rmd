@@ -117,89 +117,90 @@ ggplot(intonly, aes(x = upper - sum_forcing)) +
 ## Fit Models and calculate leave-one-out cross validation elpds
 
 Models are fit with `brms::brm` and compared with `brms::loo`.
-```{r fit_models, cache = TRUE, include=FALSE}
+```{r fit_models, include=FALSE}
 
 init_ll <- lapply(1:4, function(id) list(sigma = 30, Intercept = 300 )) # interval censored models require big sigma inits to start sampling
 
 if (freshrun == TRUE) {
   # mean only
-  mo <- brm(sum_forcing ~ 0 + Intercept, data = fedat,
-            prior = c(prior("normal(350,50)", class = "b"),
-                      prior("normal(0,20)", class = "sigma")),
+  mo <- brm(sum_forcing ~ 1, data = fedat,
+            prior = c(prior("normal(400,100)", class = "Intercept"),
+                      prior("normal(0,15)", class = "sigma")),
             cores = 5, inits = init_ll)
 
-  saveRDS(mo, "model_dev/mo.rds")
+  saveRDS(mo, "mo.rds")
+  
 
   # mean only with end censoring
-  moc <- brm(sum_forcing | cens(censored_lronly) ~ 0 + Intercept, data = fedat,
-             prior = c(prior("normal(350,50)", class = "b"),
-                       prior("normal(0,20)", class = "sigma")),
+  moc <- brm(sum_forcing | cens(censored_lronly) ~ 1, data = fedat,
+              prior = c(prior("normal(400,100)", class = "Intercept"),
+                      prior("normal(0,15)", class = "sigma")),
              cores = 5, inits = init_ll)
-  saveRDS(moc, "model_dev/moc.rds")
+  saveRDS(moc, "moc.rds")
 
   # mean only model with end and interval censoring
 
 
-  mocf <- brm(sum_forcing | cens(censored, upper) ~ 0 + Intercept, data = fedat,
-              prior = c(prior("normal(350,50)", class = "b"),
-                        prior("normal(0,20)", class = "sigma")),
+  mocf <- brm(sum_forcing | cens(censored, upper) ~ 1, data = fedat,
+              prior = c(prior("normal(400,100)", class = "Intercept"),
+                        prior("normal(0,15)", class = "sigma")),
               cores=5,  inits = init_ll)
-  saveRDS(mocf, "model_dev/mocf.rds")
+  saveRDS(mocf, "mocf.rds")
 
   # mean + effects + end + interval censoring
 
-  ec <- brm(sum_forcing | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = fedat,
-            prior = c(prior("normal(350,50)", class = "b"),
-                      prior("normal(0,20)", class = "sigma"),
-                      prior("student_t(3,0,10)", class = "sd")),
+  ec <- brm(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = fedat,
+           prior =  c(prior("normal(400,100)", class = "Intercept"),
+            prior("normal(0,15)", class = "sigma"),
+            prior("normal(0,9)", class = "sd")),
             cores = 5, inits = init_ll,
             save_pars = save_pars(all = TRUE))
-  saveRDS(ec, "model_dev/ec.rds")
+  saveRDS(ec, "ec.rds")
   
   # mean + main effects + treeid + end + interval censoring
-  ect <- brm(sum_forcing | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year) + (1|TreeID), data = fedat,
-            prior = c(prior("normal(350,50)", class = "b"),
-                      prior("normal(0,30)", class = "sigma"),
-                      prior("normal(0,20)", class = "sd")),
+  ect <- brm(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year) + (1|TreeID), data = fedat,
+            prior = c(prior("normal(400,100)", class = "Intercept"),
+                      prior("normal(0,15)", class = "sigma"),
+                      prior("normal(0,9)", class = "sd")),
             cores = 5, inits = init_ll, iter = 3000,
             save_pars = save_pars(all = TRUE))
-  saveRDS(ect, "model_dev/ect.rds") } else {
-    mo <- readRDS("model_dev/mo.rds")
-    moc <- readRDS("model_dev/moc.rds")
-    mocf <- readRDS("model_dev/mocf.rds")
-    ec <- readRDS("model_dev/ec.rds")
-    ect <- readRDS("model_dev/ect.rds")
+  saveRDS(ect, "ect.rds") } else {
+    mo <- readRDS("mo.rds")
+    moc <- readRDS("moc.rds")
+    mocf <- readRDS("mocf.rds")
+    ec <- readRDS("ec.rds")
+    ect <- readRDS("ect.rds")
   }
 
 if (freshrun == TRUE) {
   loo_mo <- loo(mo)
   loo_moc <- loo(moc)
   loo_mocf <- loo(mocf)
-  plan(multiprocess)
-  loo_ec <- loo(ec, reloo = TRUE, reloo_args = list(prior = c(prior("normal(0,50)", class = "b"),
-                                                              prior("normal(0,20)", class = "sigma"),
-                                                              prior("student_t(3,0,10)", class = "sd")),
-                                                    future = TRUE,
+  plan(multisession)
+  loo_ec <- loo(ec, reloo = TRUE, reloo_args = list(prior = c(prior("normal(400,100)", class = "Intercept"),
+                                                              prior("normal(0,15)", class = "sigma"),
+                                                              prior("normal(0,9)", class = "sd")),
+                                                    future = TRUE, 
                                                     inits = init_ll, iter = 3000))
   
-  loo_ect <- loo(ect, reloo = TRUE, reloo_args = list(prior = c(prior("normal(350,50)", class = "b"),
-                                                                prior("normal(0,30)", class = "sigma"),
-                                                                prior("normal(0,20)", class = "sd")),
+  loo_ect <- loo(ect, reloo = TRUE, reloo_args = list(prior = c(prior("normal(400,100)", class = "Intercept"),
+                                                              prior("normal(0,15)", class = "sigma"),
+                                                              prior("normal(0,9)", class = "sd")),
                  future = TRUE,
                  inits = init_ll, iter = 3000))
   #loo_ec <- loo(ec)
 
-  saveRDS(loo_mo, "model_dev/loo_mo.rds")
-  saveRDS(loo_moc, "model_dev/loo_moc.rds")
-  saveRDS(loo_mocf, "model_dev/loo_mocf.rds")
-  saveRDS(loo_ec, "model_dev/loo_ec.rds")
-  saveRDS(loo_ect, "model_dev/loo_ect.rds")
+  saveRDS(loo_mo, "loo_mo.rds")
+  saveRDS(loo_moc, "loo_moc.rds")
+  saveRDS(loo_mocf, "loo_mocf.rds")
+  saveRDS(loo_ec, "loo_ec.rds")
+  saveRDS(loo_ect, "loo_ect.rds")
 } else {
-  loo_mo <- readRDS("model_dev/loo_mo.rds")
-  loo_moc <- readRDS("model_dev/loo_moc.rds")
-  loo_mocf <- readRDS("model_dev/loo_mocf.rds")
-  loo_ec <- readRDS("model_dev/loo_ec.rds")
-  loo_ect <- readRDS("model_dev/loo_ect.rds")
+  loo_mo <- readRDS("loo_mo.rds")
+  loo_moc <- readRDS("loo_moc.rds")
+  loo_mocf <- readRDS("loo_mocf.rds")
+  loo_ec <- readRDS("loo_ec.rds")
+  loo_ect <- readRDS("loo_ect.rds")
 }
 
 ```
