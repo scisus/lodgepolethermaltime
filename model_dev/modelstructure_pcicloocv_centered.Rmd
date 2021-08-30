@@ -68,7 +68,7 @@ Female end-of-flowering data
 ```{r female_data}
 
 fedat <- filter_sex_event(sex = "FEMALE", event = "end", phenf)
-fedat$TreeID <- paste0(fedat$Orchard, fedat$X, fedat$Y)
+fedat$TreeID <- paste0(fedat$Orchard, fedat$Clone, fedat$X, fedat$Y)
 
 ggplot(fedat, aes(x = sum_forcing, colour = censored)) +
   stat_ecdf() +
