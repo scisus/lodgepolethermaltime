@@ -1,7 +1,7 @@
 ---
 title: "Compare model structures with brms"
 author: "C. Susannah Tysor"
-date: '2021-05-26'
+date: '2021-08-26'
 output: 
   html_document: 
     toc: yes
@@ -12,8 +12,9 @@ editor_options:
 knitr::opts_chunk$set(message = FALSE, echo = FALSE) 
 ```
 ```{r fresh}
+# 
 # rerun all models freshrun = TRUE; read in previously fit models, freshrun = FALSE
-freshrun = TRUE # freshrun==TRUE takes a very long time because it requires reloo. If freshrun==TRUE, recommend running rmarkdown::render("modelstructure_pcicloocv.Rmd") as a background job
+freshrun = FALSE # freshrun==TRUE takes a very long time because it requires reloo. If freshrun==TRUE, recommend running rmarkdown::render("modelstructure_pcicloocv.Rmd") as a background job
 ```
 
 ```{r packages_and_functions}
@@ -30,6 +31,7 @@ library(future)
 source('phenology_functions.R')
 
 theme_set(hrbrthemes::theme_ipsum_ps())
+rstan::rstan_options(auto_write = TRUE)
 ```
 
 I am modeling the amount of forcing required for a phenological event to occur. My data is interval and end censored. Trees are from `Clone`s sourced from `Provenance`s grown at `Site`s and observed in `Year`s. Using the end of receptivity as the event of interest, I compare the performance of 4 model structures with efficient approximate leave-one-out cross validation using Pareto smoothed importance sampling (Vehtari, Gelman, & Gabry 2017, Vehtari, Simpson, Gelman, Yao, & Gabry 2019).
@@ -39,8 +41,10 @@ While I have data for both the start and end of flowering for males and females,
 
 ```{r phenprep, echo = FALSE}
 phendat <- flowers::lodgepole_phenology_event
+climdat <- "data/all_clim_PCIC.csv"
+spudat <- "data/LodgepoleSPUs.csv"
 
-phenf <- prepare_data(phendat, forcing = "gdd")
+phenf <- prepare_data(phendat, forcingtype = "gdd", clim = climdat, spu = spudat)
 
 ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
   stat_ecdf() +
@@ -66,6 +70,11 @@ Female end-of-flowering data
 ```{r female_data}
 
 fedat <- filter_sex_event(sex = "FEMALE", event = "end", phenf)
+fedat$TreeID <- paste0(fedat$Orchard, fedat$Clone, fedat$X, fedat$Y)
+
+# code censorship for plotting 
+status <- mutate(fedat, status_y = case_when(censored == "interval" ~ 1,
+                                             censored == "right" ~ 0) )
 
 ggplot(fedat, aes(x = sum_forcing, colour = censored)) +
   stat_ecdf() +
@@ -106,7 +115,7 @@ intonly <- filter(fedat, censored == "interval")
 
 ggplot(intonly, aes(x = upper - sum_forcing)) +
   geom_histogram() +
-  geom_vline(xintercept = median(intonly$upper - intonly$sum_forcing_centered), size = 1.5) +
+  geom_vline(xintercept = median(intonly$upper - intonly$sum_forcing), size = 1.5) +
   ggtitle("Distribution of interval sizes for interval censored observations", subtitle = "end of receptivity; vertical line at median size") +
   xlab("forcing units (ristos)") 
 
@@ -114,71 +123,90 @@ ggplot(intonly, aes(x = upper - sum_forcing)) +
 ## Fit Models and calculate leave-one-out cross validation elpds
 
 Models are fit with `brms::brm` and compared with `brms::loo`.
-```{r fit_models, cache = TRUE, include=FALSE}
+```{r fit_models, include=FALSE}
 
-init_ll <- lapply(1:4, function(id) list(sigma = 30 )) # interval censored models require big sigma inits to start sampling
+init_ll <- lapply(1:4, function(id) list(sigma = 30, Intercept = 300 )) # interval censored models require big sigma inits to start sampling
 
 if (freshrun == TRUE) {
   # mean only
-  mo <- brm(sum_forcing ~ 0 + Intercept, data = fedat,
-            prior = c(prior("normal(400,100)", class = "b"),
-                      prior("normal(0,14)", class = "sigma")),
+  mo <- brm(sum_forcing ~ 1, data = fedat,
+            prior = c(prior("normal(400,100)", class = "Intercept"),
+                      prior("normal(0,15)", class = "sigma")),
             cores = 5, inits = init_ll)
 
   saveRDS(mo, "model_dev/mo.rds")
+  
 
   # mean only with end censoring
-  moc <- brm(sum_forcing | cens(censored_lronly) ~ 0 + Intercept, data = fedat,
-             prior = c(prior("normal(400, 100)", class = "b"),
-                       prior("normal(0, 14)", class = "sigma")),
+  moc <- brm(sum_forcing | cens(censored_lronly) ~ 1, data = fedat,
+              prior = c(prior("normal(400,100)", class = "Intercept"),
+                      prior("normal(0,15)", class = "sigma")),
              cores = 5, inits = init_ll)
   saveRDS(moc, "model_dev/moc.rds")
 
   # mean only model with end and interval censoring
 
 
-  mocf <- brm(sum_forcing | cens(censored, upper) ~ 0 + Intercept, data = fedat,
-              prior = c(prior("normal(400,100)", class = "b"),
-                        prior("normal(0,14)", class = "sigma")),
+  mocf <- brm(sum_forcing | cens(censored, upper) ~ 1, data = fedat,
+              prior = c(prior("normal(400,100)", class = "Intercept"),
+                        prior("normal(0,15)", class = "sigma")),
               cores=5,  inits = init_ll)
   saveRDS(mocf, "model_dev/mocf.rds")
 
   # mean + effects + end + interval censoring
 
-  ec <- brm(sum_forcing | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = fedat,
-            prior = c(prior("normal(400,100)", class = "b"),
-                      prior("normal(0, 14)", class = "sigma"),
-                      prior("normal(0, 9))", class = "sd")),
+  ec <- brm(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = fedat,
+           prior =  c(prior("normal(400,100)", class = "Intercept"),
+            prior("normal(0,15)", class = "sigma"),
+            prior("normal(0,9)", class = "sd")),
             cores = 5, inits = init_ll,
             save_pars = save_pars(all = TRUE))
-  saveRDS(ec, "model_dev/ec.rds") } else {
+  saveRDS(ec, "model_dev/ec.rds")
+  
+  # mean + main effects + treeid + end + interval censoring
+  ect <- brm(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year) + (1|TreeID), data = fedat,
+            prior = c(prior("normal(400,100)", class = "Intercept"),
+                      prior("normal(0,15)", class = "sigma"),
+                      prior("normal(0,9)", class = "sd")),
+            cores = 5, inits = init_ll, iter = 3000,
+            save_pars = save_pars(all = TRUE))
+  saveRDS(ect, "model_dev/ect.rds") } else {
     mo <- readRDS("model_dev/mo.rds")
     moc <- readRDS("model_dev/moc.rds")
     mocf <- readRDS("model_dev/mocf.rds")
     ec <- readRDS("model_dev/ec.rds")
+    ect <- readRDS("model_dev/ect.rds")
   }
 
 if (freshrun == TRUE) {
   loo_mo <- loo(mo)
   loo_moc <- loo(moc)
   loo_mocf <- loo(mocf)
-  plan(multiprocess)
-  loo_ec <- loo(ec, reloo = TRUE, reloo_args = list(prior = c(prior("normal(400,100)", class = "b"),
-                                                              prior("normal(0,14)", class = "sigma"),
+  plan(multisession)
+  loo_ec <- loo(ec, reloo = TRUE, reloo_args = list(prior = c(prior("normal(400,100)", class = "Intercept"),
+                                                              prior("normal(0,15)", class = "sigma"),
                                                               prior("normal(0,9)", class = "sd")),
-                                                    future = TRUE,
+                                                    future = TRUE, 
                                                     inits = init_ll, iter = 3000))
-  #loo_ec <- loo(ec)
+  # For reasons unclear to me, running loo on ect with plan(multisession) causes the following error: Error in unserialize(node$con) : 
+  # MultisessionFuture (<none>) failed to receive results from cluster RichSOCKnode #17 (PID 2.43777e+06 on ‘localhost’). The reason reported was ‘error reading from connection’. Post-mortem diagnostic: Detected a non-exportable reference (‘externalptr’) in one of the globals (‘.reloo’ of class ‘function’) used in the future expression. The total size of the 11 globals exported is 191.75 MiB. The three largest globals are ‘x’ (191.45 MiB of class ‘list’), ‘mf’ (224.65 KiB of class ‘list’) and ‘.reloo’ (42.86 KiB of class ‘function’)
+  loo_ect <- loo(ect, reloo = TRUE, reloo_args = list(prior = c(prior("normal(400,100)", class = "Intercept"),
+                                                              prior("normal(0,15)", class = "sigma"),
+                                                              prior("normal(0,9)", class = "sd")),
+                 cores = 20,
+                 inits = init_ll, iter = 3000))
 
   saveRDS(loo_mo, "model_dev/loo_mo.rds")
   saveRDS(loo_moc, "model_dev/loo_moc.rds")
   saveRDS(loo_mocf, "model_dev/loo_mocf.rds")
   saveRDS(loo_ec, "model_dev/loo_ec.rds")
+  saveRDS(loo_ect, "model_dev/loo_ect.rds")
 } else {
   loo_mo <- readRDS("model_dev/loo_mo.rds")
   loo_moc <- readRDS("model_dev/loo_moc.rds")
   loo_mocf <- readRDS("model_dev/loo_mocf.rds")
   loo_ec <- readRDS("model_dev/loo_ec.rds")
+  loo_ect <- readRDS("model_dev/loo_ect.rds")
 }
 
 ```
@@ -202,16 +230,15 @@ color_scheme_set("blue")
 summary(mo)
 plot(mo)
 mo_yrep <- posterior_predict(mo, draws = 500)
-ppc_ecdf_overlay_grouped(fedat$sum_forcing_centered, mo_yrep[1:50,], group = fedat$censored) +
+ppc_ecdf_overlay_grouped(fedat$sum_forcing, mo_yrep[1:50,], group = fedat$censored) +
   ggtitle("Mean-only", subtitle = "ppc & yrep")
 ```
 Retrodicting observations from the posterior shows approximate agreement with the data (`y`), but if we consider the Kaplan-Meier estimate for the right censored data, we see that the model performs very poorly. This is not unexpected since we haven't actually accounted for censorship at all in this model.
 ```{r}
 #Empirical CCDF estimates of each dataset (row) in yrep are overlaid, with the Kaplan-Meier estimate (Kaplan and Meier, 1958) for y itself on top (and in a darker shade). This is a PPC suitable for right-censored y. Note that the replicated data from yrep is assumed to be uncensored. (from the docs for `ppc_km_overlay`)
 
-status <- mutate(fedat, status_y = case_when(censored == "interval" ~ 1,
-                                             censored == "right" ~ 0) )
-ppc_km_overlay(fedat$sum_forcing_centered, mo_yrep[1:50, ], status_y = status$status_y) +
+
+ppc_km_overlay(fedat$sum_forcing, mo_yrep[1:50, ], status_y = status$status_y) +
   ggtitle("Mean-only", subtitle = "Compare empirical distribution of right censored data (Kaplan-Meier estimate) \nto simulated data from the posterior predictive")
 ```
 
@@ -245,12 +272,12 @@ summary(moc)
 plot(moc)
 moc_yrep <- posterior_predict(moc, draws = 500)
 
-ppc_ecdf_overlay_grouped(fedat$sum_forcing_centered, moc_yrep[1:50,], group=fedat$censored) +
+ppc_ecdf_overlay_grouped(fedat$sum_forcing, moc_yrep[1:50,], group=fedat$censored) +
   ggtitle("Mean-only with end censoring", subtitle = "ppc & yrep")
 ```
 This time we see that the predictions for both interval and right censored data occur well after the data we observed. The Kaplan-Meier estimate suggests this model is a better fit at least for our right censored data.
 ```{r}
-ppc_km_overlay(fedat$sum_forcing_centered, moc_yrep[1:50, ], status_y = status$status_y) +
+ppc_km_overlay(fedat$sum_forcing, moc_yrep[1:50, ], status_y = status$status_y) +
   ggtitle("Mean-only with end censoring", "Compare empirical distribution of right censored data (Kaplan-Meier estimate) \nto simulated data from the posterior predictive")
 
 ```
@@ -288,10 +315,10 @@ color_scheme_set("pink")
 plot(mocf)
 mocf_yrep <- posterior_predict(mocf, draws = 500)
 
-ppc_ecdf_overlay_grouped(fedat$sum_forcing_centered, mocf_yrep[1:50,], group=fedat$censored) +
+ppc_ecdf_overlay_grouped(fedat$sum_forcing, mocf_yrep[1:50,], group=fedat$censored) +
   ggtitle("Mean-only with end & interval censoring", subtitle = "ppc & yrep")
 
-ppc_km_overlay(fedat$sum_forcing_centered, mocf_yrep[1:50, ], status_y = status$status_y) +
+ppc_km_overlay(fedat$sum_forcing, mocf_yrep[1:50, ], status_y = status$status_y) +
   ggtitle("Mean-only with end and interval censoring", "Compare empirical distribution of right censored data (Kaplan-Meier estimate) \nto simulated data from the posterior predictive")
 
 # compare
@@ -317,17 +344,34 @@ color_scheme_set("purple")
 plot(ec)
 ec_yrep <- posterior_predict(ec, draws = 500)
 
-ppc_ecdf_overlay_grouped(fedat$sum_forcing_centered, ec_yrep[1:50,], group=fedat$censored) +
-  ggtitle("Mean-only with end & interval censoring", subtitle = "ppc & yrep")
+ppc_ecdf_overlay_grouped(fedat$sum_forcing, ec_yrep[1:50,], group=fedat$censored) +
+  ggtitle("End + Interval censoring + Site, Year, Clone, Prov", subtitle = "ppc & yrep")
 
-ppc_km_overlay(fedat$sum_forcing_centered, ec_yrep[1:50, ], status_y = status$status_y) +
+ppc_km_overlay(fedat$sum_forcing, ec_yrep[1:50, ], status_y = status$status_y) +
+  ggtitle("Mean-only with end and interval censoring", "Compare empirical distribution of right censored data (Kaplan-Meier estimate) \nto simulated data from the posterior predictive")
+```
+
+```{r effects_and_full_censorship_with_tree}
+ect$model
+ect$prior
+
+summary(ect)
+
+color_scheme_set("purple")
+plot(ect)
+ect_yrep <- posterior_predict(ect, draws = 500)
+
+ppc_ecdf_overlay_grouped(fedat$sum_forcing, ect_yrep[1:50,], group=fedat$censored) +
+  ggtitle("End + Interval censoring + Site, Year, Clone, Prov, Tree", subtitle = "ppc & yrep")
+
+ppc_km_overlay(fedat$sum_forcing, ect_yrep[1:50, ], status_y = status$status_y) +
   ggtitle("Mean-only with end and interval censoring", "Compare empirical distribution of right censored data (Kaplan-Meier estimate) \nto simulated data from the posterior predictive")
 ```
 
 # Model comparison
-While we might hope the KM estimate looked better, model performance is better for a model that incorporates heterogeneity from Site, Provenance, Year, and Clone along with end and interval censoring.
+While we might hope the KM estimate looked better, model performance is better for a model that incorporates heterogeneity from Site, Provenance, Year, and Clone along with end and interval censoring. Including tree makes the model worse, but not meaningfully.
 
 ```{r compare}
-loo_compare(loo_mocf, loo_ec)
+loo_compare(loo_mocf, loo_ec, loo_ect)
 ```
 

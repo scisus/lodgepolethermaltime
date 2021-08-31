@@ -12,8 +12,9 @@ editor_options:
 knitr::opts_chunk$set(message = FALSE, echo = FALSE) 
 ```
 ```{r fresh}
+# 
 # rerun all models freshrun = TRUE; read in previously fit models, freshrun = FALSE
-freshrun = TRUE # freshrun==TRUE takes a very long time because it requires reloo. If freshrun==TRUE, recommend running rmarkdown::render("modelstructure_pcicloocv.Rmd") as a background job
+freshrun = FALSE # freshrun==TRUE takes a very long time because it requires reloo. If freshrun==TRUE, you need a beefy computer
 ```
 
 ```{r packages_and_functions}
@@ -30,6 +31,7 @@ library(future)
 source('phenology_functions.R')
 
 theme_set(hrbrthemes::theme_ipsum_ps())
+rstan::rstan_options(auto_write = TRUE)
 ```
 
 I am modeling the amount of forcing required for a phenological event to occur. My data is interval and end censored. Trees are from `Clone`s sourced from `Provenance`s grown at `Site`s and observed in `Year`s. Using the end of receptivity as the event of interest, I compare the performance of 4 model structures with efficient approximate leave-one-out cross validation using Pareto smoothed importance sampling (Vehtari, Gelman, & Gabry 2017, Vehtari, Simpson, Gelman, Yao, & Gabry 2019).
@@ -69,6 +71,10 @@ Female end-of-flowering data
 
 fedat <- filter_sex_event(sex = "FEMALE", event = "end", phenf)
 fedat$TreeID <- paste0(fedat$Orchard, fedat$Clone, fedat$X, fedat$Y)
+
+# code censorship for plotting 
+status <- mutate(fedat, status_y = case_when(censored == "interval" ~ 1,
+                                             censored == "right" ~ 0) )
 
 ggplot(fedat, aes(x = sum_forcing, colour = censored)) +
   stat_ecdf() +
@@ -182,13 +188,13 @@ if (freshrun == TRUE) {
                                                               prior("normal(0,9)", class = "sd")),
                                                     future = TRUE, 
                                                     inits = init_ll, iter = 3000))
-  
+  # For reasons unclear to me, running loo on ect with plan(multisession) causes the following error: Error in unserialize(node$con) : 
+  # MultisessionFuture (<none>) failed to receive results from cluster RichSOCKnode #17 (PID 2.43777e+06 on ‘localhost’). The reason reported was ‘error reading from connection’. Post-mortem diagnostic: Detected a non-exportable reference (‘externalptr’) in one of the globals (‘.reloo’ of class ‘function’) used in the future expression. The total size of the 11 globals exported is 191.75 MiB. The three largest globals are ‘x’ (191.45 MiB of class ‘list’), ‘mf’ (224.65 KiB of class ‘list’) and ‘.reloo’ (42.86 KiB of class ‘function’)
   loo_ect <- loo(ect, reloo = TRUE, reloo_args = list(prior = c(prior("normal(400,100)", class = "Intercept"),
                                                               prior("normal(0,15)", class = "sigma"),
                                                               prior("normal(0,9)", class = "sd")),
-                 future = TRUE,
+                 cores = 20,
                  inits = init_ll, iter = 3000))
-  #loo_ec <- loo(ec)
 
   saveRDS(loo_mo, "loo_mo.rds")
   saveRDS(loo_moc, "loo_moc.rds")
@@ -231,8 +237,7 @@ Retrodicting observations from the posterior shows approximate agreement with th
 ```{r}
 #Empirical CCDF estimates of each dataset (row) in yrep are overlaid, with the Kaplan-Meier estimate (Kaplan and Meier, 1958) for y itself on top (and in a darker shade). This is a PPC suitable for right-censored y. Note that the replicated data from yrep is assumed to be uncensored. (from the docs for `ppc_km_overlay`)
 
-status <- mutate(fedat, status_y = case_when(censored == "interval" ~ 1,
-                                             censored == "right" ~ 0) )
+
 ppc_km_overlay(fedat$sum_forcing, mo_yrep[1:50, ], status_y = status$status_y) +
   ggtitle("Mean-only", subtitle = "Compare empirical distribution of right censored data (Kaplan-Meier estimate) \nto simulated data from the posterior predictive")
 ```
@@ -339,17 +344,34 @@ color_scheme_set("purple")
 plot(ec)
 ec_yrep <- posterior_predict(ec, draws = 500)
 
-ppc_ecdf_overlay_grouped(fedat$sum_forcing_centered, ec_yrep[1:50,], group=fedat$censored) +
-  ggtitle("Mean-only with end & interval censoring", subtitle = "ppc & yrep")
+ppc_ecdf_overlay_grouped(fedat$sum_forcing, ec_yrep[1:50,], group=fedat$censored) +
+  ggtitle("End + Interval censoring + Site, Year, Clone, Prov", subtitle = "ppc & yrep")
 
-ppc_km_overlay(fedat$sum_forcing_centered, ec_yrep[1:50, ], status_y = status$status_y) +
+ppc_km_overlay(fedat$sum_forcing, ec_yrep[1:50, ], status_y = status$status_y) +
+  ggtitle("Mean-only with end and interval censoring", "Compare empirical distribution of right censored data (Kaplan-Meier estimate) \nto simulated data from the posterior predictive")
+```
+
+```{r effects_and_full_censorship_with_tree}
+ect$model
+ect$prior
+
+summary(ect)
+
+color_scheme_set("purple")
+plot(ect)
+ect_yrep <- posterior_predict(ect, draws = 500)
+
+ppc_ecdf_overlay_grouped(fedat$sum_forcing, ect_yrep[1:50,], group=fedat$censored) +
+  ggtitle("End + Interval censoring + Site, Year, Clone, Prov, Tree", subtitle = "ppc & yrep")
+
+ppc_km_overlay(fedat$sum_forcing, ect_yrep[1:50, ], status_y = status$status_y) +
   ggtitle("Mean-only with end and interval censoring", "Compare empirical distribution of right censored data (Kaplan-Meier estimate) \nto simulated data from the posterior predictive")
 ```
 
 # Model comparison
-While we might hope the KM estimate looked better, model performance is better for a model that incorporates heterogeneity from Site, Provenance, Year, and Clone along with end and interval censoring.
+While we might hope the KM estimate looked better, model performance is better for a model that incorporates heterogeneity from Site, Provenance, Year, and Clone along with end and interval censoring. Including tree makes the model worse, but not meaningfully.
 
 ```{r compare}
-loo_compare(loo_mocf, loo_ec)
+loo_compare(loo_mocf, loo_ec, loo_ect)
 ```
 
