@@ -551,18 +551,6 @@ smallgs <- generalsim %>%
   arrange(.prediction)
 
 
-# match forcing to doy for future climates and add identifying info about the future climates
-match_force_future <- function(adf, bdf, aforce, bforce) {
-  matched <- find_day_of_forcing(adf, bdf, aforce, bforce) 
-  
-  idf <- select(adf, Year, Site, name, SSP, climate_forcing, normal_period) %>%
-    distinct()
-  
-  df <- merge(matched, idf)
-  
-  return(df)
-}
-
 
 doypredmatchfut <- purrr::map(futclimf, match_force_future, bdf = smallgs, aforce = "sum_forcing", bforce = "prediction")  %>%
   bind_rows() %>%
