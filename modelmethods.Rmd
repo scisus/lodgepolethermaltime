@@ -1,10 +1,10 @@
 ---
 title: "Model methods"
 author: "C. Susannah Tysor"
-date: '2021-06-25'
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
