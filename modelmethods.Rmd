@@ -323,13 +323,14 @@ colnames(varlevel) <- c("factor", "level")
 yearclonetree <- filter(varlevel, factor %in% c("Year", "Clone", "Tree")) %>% distinct()
 yctorder <- sort(yearclonetree$level)
 
-spyctorder <- c(sitefactororder, provfactororder, yctorder)
+spyctorder <- unique(c(sitefactororder, provfactororder, yctorder))
 
 offsets <- offsets_raw %>% cbind(varlevel) %>%
   ungroup() %>%
   mutate(factor = forcats::fct_relevel(factor, "Year", "Site", "Provenance", "Clone", "Tree")) %>%
- mutate(level = forcats::fct_relevel(level, spyctorder)) 
+  mutate(level = forcats::fct_relevel(level, spyctorder))
 
+# slow
 offsets_summary <- offsets %>%
   group_by(model, Sex, event, factor, level) %>%
   median_hdci(.value, .width = c(0.5, 0.89)) %>%
