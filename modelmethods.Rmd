@@ -109,7 +109,7 @@ censdf <- filter(phenf, Event_Obs %in% c(2,3)) %>%
 
 ggplot(censdf, aes(x = Sex, y = prop_cens, fill = censored)) +
   geom_bar(stat = "identity") +
-  facet_wrap("Event_Label") +
+  facet_wrap("Event_Label") 
 
 ```
 
@@ -246,14 +246,10 @@ For efficiency, `r nsamp` posterior samples were used for plotting results.
 
 labdf <- data.frame(Sex = c("FEMALE", "FEMALE", "MALE", "MALE"), event = c('begin', 'end', 'begin', 'end'), model = c('fb', 'fe', 'mb', 'me'))
 
-gather_means_draws <- function(mod) {
-  mod %>% gather_draws(b_Intercept, n = nsamp, seed = seed) 
-}
-
 means <- purrr::map(modells, gather_means_draws) %>%
   bind_rows(.id = "model") %>%
   left_join(labdf)
-#fct_rev(model, linetype = Sex)
+
 ggplot(means, aes(y = fct_rev(event), x = .value, colour = Sex)) +
   stat_halfeye(position = "dodge") +
   scale_colour_viridis_d() +
@@ -290,10 +286,6 @@ Tree: me, mb, fb, fe
 ```{r variation, cache = TRUE}
 
 
-gather_var_draws <- function(mod) {
-  mod %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE, n = nsamp, seed = seed) 
-}
-
 variation <- purrr::map(modells, gather_var_draws) %>%
   bind_rows(.id = "model") %>%
   left_join(labdf) %>%
@@ -317,10 +309,6 @@ Effects for Tree are generally quite small and are moderate for Provenance. Clon
 
 ## Offsets
 ```{r offsets, cache=TRUE}
-
-gather_offset_draws <- function(mod) {
-  mod %>% gather_draws(`r_.*`, regex = TRUE, n = nsamp, seed = seed) 
-}
 
 offsets_raw <- purrr::map(modells, gather_offset_draws) %>%
   bind_rows(.id = "model") %>%
@@ -416,63 +404,6 @@ ggplot(yearr, aes(y=level, x = .value, colour = Sex)) +
 
 ```{r general_predictions}
 
-# simulate new data from the model for n_lct new levels of each factor of the model. n_lct is a numeric vector of length 3 c(number of new sites/provenances/years, number of clones per provenance, number of trees per clone) Draws for factor effects are from N(0, sigma_cluster). Using nsamples draws from the posterior.
-
-simulate_from_model <- function(data, model, n_lct = c(5,10,2), nsamples = nsamp, seed = seed, cores = 6) {
-  # retrodict "true"
-  yrep <- add_predicted_draws(newdata = data, model = model, n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
-    mutate(prediction_type = "retrodiction - uncensored") 
-  
-  # censor yrep based on censoring points in the raw data
-  yrep_censored <- yrep %>%
-    mutate(prediction_temp = case_when(censored == "interval" & prediction < sum_forcing ~ sum_forcing,
-                                       censored == "interval" & prediction > upper ~ upper,
-                                       censored == "interval" & (prediction >= sum_forcing) & (prediction <= upper) ~ prediction,
-                                       
-                                       censored == "right" & prediction >= sum_forcing ~ sum_forcing,
-                                       censored == "right" & prediction < sum_forcing ~ prediction,
-                                       
-                                       censored == "left" & prediction < sum_forcing ~ prediction,
-                                       censored == "left" & prediction >= sum_forcing ~ sum_forcing),
-           prediction_type = "retrodiction - censored") %>%
-    select(-prediction) %>%
-    rename(prediction = prediction_temp)
-  
-
-  # simulate data for fully crossed version of real dataset. This is 82,000+ observations and my computer can't handle that unless I use *very* few posterior samples
-  
-  crossdat <- data %>% tidyr::complete(Sex, event, Year, Site, tidyr::nesting(Provenance, Clone, Tree)) %>%
-    tidyr::complete(Year, nesting(Site, Tree)) %>%
-    select(Year, Site, Tree, Provenance, Clone) %>%
-    distinct()
-
-  ypred_fullcross <- tidybayes::add_predicted_draws(newdata = crossdat, model = model, n = 30, seed = seed, cores = cores, prediction = "prediction") %>%
-    mutate(prediction_type = "prediction - full cross")
-  
-  # simulate data from new levels (out-of-sample predictions). The newdata simulation code took an embarrassingly long time to figure out
-  nlevels <- n_lct[1] # how many sites, provenances, and years
-  lv <- as.character(1:nlevels)
-  nc <- n_lct[2] # clones per prov
-  nt <- n_lct[3] # trees per clone
-  
-  Year <- data.frame(Year = lv)
-  newdata <- data.frame(Site = rep(lv, nc*nt),
-                        Provenance = rep(lv, nc*nt),
-                        Clone = as.character(rep(1:(nlevels*nc), nt))) %>%
-    tidyr::complete(Site, tidyr::nesting(Provenance, Clone)) %>%
-    arrange(Site, Provenance, Clone) %>%
-    mutate(Tree = as.character(1:n())) %>%
-    merge(Year) %>%
-    complete(Site, Provenance, Year)
-  
-  ypred_newlevels <- add_predicted_draws(newdata = newdata, model = model, allow_new_levels = TRUE, sample_new_levels = "gaussian", n = nsamples, seed = seed, cores = cores, prediction = "prediction") %>%
-    mutate(prediction_type = "prediction - new levels")
-
-  preds <- rbind(yrep, yrep_censored, ypred_fullcross, ypred_newlevels) %>%
-    mutate(Sex = unique(data$Sex), event = unique(data$event))
-  
-  return(preds)
-}
 
 alldatls <- list(fbdat, fedat, mbdat, medat)
 alldat <- rbind(fbdat, fedat, mbdat, medat)
@@ -524,59 +455,6 @@ specificsim <- filter(allsim, prediction_type %in% c("retrodiction - uncensored"
   ungroup() %>%
   select(Year, Site, prediction) %>%
   distinct() 
-
-
-# prepare dataframes a and b for interval finding by splitting into lists and ensuring that the climate list (a) and the phenology list (b) contain information for the same sites and years. a and b must both have Site and Year columns
-split_df_to_lists <- function(a, b) {
-  lista <- split(a, f = list(a$Site, a$Year), drop = TRUE)
-  listb <- split(b, f = list(b$Site, b$Year), drop = TRUE)
-  
-  # check that all sites and years in the phenology frame are in the climate frame
-  assertthat::assert_that(all(names(listb) %in% names(lista))) # all entries in B must be in A
-  
-  # subset lista so it only contains Site x Year that also occur in B
-  ainb <- lista[names(listb)] 
-  
-  assertthat::are_equal(names(ainb), names(listb)) 
-  
-  return(list(listainb = ainb, listb = listb))
-}
-
-forcing_to_doy <- function(a, b, aforce, bforce, newdoycolname) {
-  # prepare dataframes for interval finding by splitting into lists
-  splitdfs <- split_df_to_lists(a, b)
-  
-  df <- purrr::map2(splitdfs$listainb, splitdfs$listb, find_day_of_forcing, aforce = aforce, bforce = bforce) %>% # find DoY in A corresponding to each sum_forcing in B
-    purrr::map_dfr(bind_rows) # combine into a single dataframe
-  
-  names(df)[which(names(df) == "newdoycol")] <- newdoycolname 
-  
-  return(df)
-}
-
-# given dataframes adf (climate) and bdf (phenology) identify the day of year corresponding to reaching each sum_forcing bcol in df. adf must have a sum_forcing column identified by name aforce and a DoY column and b must have a sum_forcing column identified with name bforce.
-find_day_of_forcing <- function(adf, bdf, aforce, bforce) {
-  
-  # what row in a contains the interval for entries in b. Add 1 to the index because phenological events require the threshold to be reached. this introduces error, but is unavoidable in some direction.
-  a_index <- findInterval(bdf[[bforce]], adf[[aforce]]) + 1
-  
-  
-  # add a column to b for Day of Year and extract the correct Day of year from a using the index
-  bdf$newdoycol <- adf$DoY[a_index] 
-  
-  # when sum_forcing in b is exactly identical to sum_forcing in b, a_index will be +1 day. Re-write those 
-  identical_forcing_index <- which(bdf[[bforce]] %in% adf[[aforce]])
-  bdf$newdoycol[identical_forcing_index] <- bdf$newdoycol[identical_forcing_index] - 1
-  
-  # (indirectly) test whether the correct day of year is being assigned to the correct forcing unit - for any site x year, sorting by sum_forcing_rep or newdoycol should produce the same ordering of newdoycol in bdf
-  
-  # order_by_sumforcing <- arrange(bdf, bforce, newdoycol)$newdoycol
-  # order_by_newdoycol <- arrange(bdf, newdoycol)$newdoycol
-  # 
-  # assertthat::are_equal(order_by_sumforcing, order_by_newdoycol)
-  
-  return(bdf)
-}
 
 specific_doy_preds_temp <- forcing_to_doy(filter(histclim, forcing_type == "gdd"), specificsim, aforce = "sum_forcing", bforce = "prediction", newdoycolname = "newdoycol") 
   

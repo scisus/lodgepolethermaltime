@@ -123,14 +123,15 @@ add_censor_indicator <- function(phenevent) {
 #   return(centering_indexes)
 # }
 
-# munge phenology data. Remove duplicate observations, add censoring information, combine with forcing data, and standardize sum_forcing. phendat should be flowers::lodgepole_phenology_event or structured similarly
-# forcing is a string that specifies the type of forcing data to extract from the climate data file clim
-prepare_data <- function(phendat, forcingtype, clim, spu) {
+# munge phenology data. Remove duplicate observations, add censoring information, combine with forcing data, and standardize sum_forcing. phendat should be flowers::lodgepole_phenology_event or structured similarly. clim is a dataframe of daily climate with Site + Year + DoY columns that can be matched against the ones in phendat. spu is a dataframe of information on spus with a provenance column SPU_Name and Orchard column that can be matched against the one in phendat
+prepare_data <- function(phendat, clim, spu) {
   # 4 trees were observed by both Wagner and Walsh at PGTIS in 2006 - drop 1 copy of them (16 duplicate observations).
   rmidx <- phendat %>%
     group_by(Index) %>%
     summarize(count = n()) %>%
     filter(count > 4)
+
+  spu <- select(spu, SPU_Name, Orchard) # drop unnecessary columns
 
   #add information about censoring
   phen <- phendat %>%
@@ -144,20 +145,13 @@ prepare_data <- function(phendat, forcingtype, clim, spu) {
                              Event_Obs == 3 ~ "lower",
                              Event_Obs == 4 ~ "upper"))
 
-  # add spu and forcing information
-
-  spus <- read.csv(spu, header = TRUE, stringsAsFactors = FALSE) %>%
-    select(SPU_Name, Orchard) # provenance information for each orchard in phen
-  forcing <- read.csv(clim, header=TRUE, stringsAsFactors = FALSE) %>%
-    filter(forcing_type == forcingtype)  # ristos consider forcing units calculated based on work of Sarvas 1972
-
   phenf <- phen %>%
-    dplyr::left_join(forcing) %>%
-    dplyr::left_join(spus) %>%
+    dplyr::left_join(clim) %>%
+    dplyr::left_join(spu) %>%
     dplyr::mutate(Year = as.character(Year), Clone = as.character(Clone)) %>%
     dplyr::rename(Provenance = SPU_Name) %>%
     distinct() %>%
-   # dplyr:: mutate(sum_forcing_centered = sum_forcing - median(sum_forcing)) # standardize by center of flowering period # brms does this automatically
+
   return(phenf)
 }
 
@@ -211,96 +205,144 @@ model_phenology <- function(event, sex, inits = lapply(1:4, function(id) list(si
   return(list(dat = dat, fit = fit))
 }
 
-# Fit a model in Stan to phenology data, return the model fit object and save the model fit object to a file. Choose whether the model is for "MALE" or "FEMALE" strobili and whether the event is the "begin" or "end" of flowering. data is a dataframe of flowering data. id is an optional identifier appended to the file name.
+# convenience function for gathering population mean draws from the model `mod`
+gather_means_draws <- function(mod) {
+  draws <- mod %>% tidybayes::gather_draws(b_Intercept, ndraws = nsamp, seed = seed)
+  return(draws)
+}
+
+# convenience function for gathering sd (population and offset) draws from the model `mod`
+gather_var_draws <- function(mod) {
+  draws <- mod %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE, ndraws = nsamp, seed = seed)
+  return(draws)
+}
+
+# convenience function for gathering offset delta draws from the model `mod`
+gather_offset_draws <- function(mod) {
+  draws <- mod %>% gather_draws(`r_.*`, regex = TRUE, ndraws = nsamp, seed = seed)
+  return(draws)
+}
+
+# simulate new data from the model for n_lct new levels of each factor of the model. n_lct is a numeric vector of length 3 c(number of new sites/provenances/years, number of clones per provenance, number of trees per clone) Draws for factor effects are from N(0, sigma_cluster). Using nsamples draws from the posterior.
+
+simulate_from_model <- function(data, model, n_lct = c(5,10,2), nsamples = nsamp, seed = seed, cores = 6) {
+
+  # retrodict "true"
+  yrep <- add_predicted_draws(newdata = data, object = model, ndraws = nsamples, seed = seed, cores = cores, value = ".prediction") %>%
+    mutate(prediction_type = "retrodiction - uncensored")
+
+  # censor yrep based on censoring points in the raw data
+  yrep_censored <- yrep %>%
+    mutate(prediction_temp = case_when(censored == "interval" & .prediction < sum_forcing ~ sum_forcing,
+                                       censored == "interval" & .prediction > upper ~ upper,
+                                       censored == "interval" & (.prediction >= sum_forcing) & (.prediction <= upper) ~ .prediction,
+
+                                       censored == "right" & .prediction >= sum_forcing ~ sum_forcing,
+                                       censored == "right" & .prediction < sum_forcing ~ .prediction,
+
+                                       censored == "left" & .prediction < sum_forcing ~ .prediction,
+                                       censored == "left" & .prediction >= sum_forcing ~ sum_forcing),
+           prediction_type = "retrodiction - censored") %>%
+    select(-.prediction) %>%
+    rename(.prediction = prediction_temp)
 
 
-# prepare_data_for_stan <- function(phensub, factor_threshold_list, event) {
-#
-#   base_data <- tidybayes::compose_data(phensub, .n_name=tidybayes::n_prefix(prefix="k")) # format data for stan
-#
-#   indexes_for_partially_centered_factors <- build_factor_centering_indexes(phensub, factor_threshold_list = factor_threshold_list) # create indexes for factors with some levels centered and others noncentered
-#
-#   input <- append(base_data, indexes_for_partially_centered_factors) # combine centering indices with the rest of the data for stan
-#
-#   # add event-specific prior. These are determined in the conceptual analysis
-#   if (event == "begin") {
-#     input <- c(input, mu_mean=335, mu_sigma = 50)
-#   }
-#
-#   if (event == "end") {
-#     input <- c(input, mu_mean=555, mu_sigma = 90)
-#   }
-#
-#   return(input)
-# }
+  # simulate data for fully crossed version of real dataset. This is 82,000+ observations and my computer can't handle that unless I use *very* few posterior samples
 
-## set iterations
-# sample_stan_model <- function(compiledmodel, input, sex, event, appendname = NULL,
-#                               expars = c("alpha_ncp_site", "alpha_cp_site",
-#                                          "alpha_ncp_prov", "alpha_cp_prov",
-#                                          "z_alpha_clone"),
-#                               init = rep(list(list(mu = abs(rnorm(1,100,50)),
-#                                                    sigma = rexp(1,1),
-#                                                    sigma_site = rexp(1,1),
-#                                                    sigma_year = rexp(1,1),
-#                                                    sigma_prov = rexp(1,1),
-#                                                    sigma_clone = rexp(1,1))), 6),
-#                               iter = 3500, warmup = floor(iter/2), control = NULL, kfold = FALSE, test = FALSE) {
-#
-#   # if the model is for kfold cross validation, then don't change the seed between runs.
-#   # if (kfold == FALSE) {
-#   #   seed = sample.int(.Machine$integer.max, 1) } else {
-#   #     seed = 1330 }
-#
-#   if (test == TRUE) { # if you're testing the model, run just a few iterations.
-#     iter = 100
-#   } else {
-#     iter = iter
-#   }
-#
-#   fit <- rstan::sampling(object = compiledmodel, chains=6, data=input, iter=iter, cores=7,
-#                          pars=expars, include=FALSE,
-#                          init = init, # stop stan from sampling impossible negative numbers
-#                          #seed = seed,
-#                          warmup = warmup,
-#                          control = control)
-#
-#
-#   gc() # don't eat all the RAM
+  crossdat <- data %>% tidyr::complete(Sex, event, Year, Site, tidyr::nesting(Provenance, Clone, Tree)) %>%
+    tidyr::complete(Year, nesting(Site, Tree)) %>%
+    select(Year, Site, Tree, Provenance, Clone) %>%
+    distinct()
 
-#   if (kfold == FALSE & test == FALSE) { # save the model fit unless you're doing kfold
-#     saveRDS(fit, file = paste(Sys.Date(), sex, "_", event, appendname, ".rds", sep=''))
-#   }
-#
-#   return(fit)
-# }
+  ypred_fullcross <- tidybayes::add_predicted_draws(newdata = crossdat, object = model, ndraws = 30, seed = seed, cores = cores, value = ".prediction") %>%
+    mutate(prediction_type = "prediction - full cross")
+
+  # simulate data from new levels (out-of-sample predictions). The newdata simulation code took an embarrassingly long time to figure out
+  nlevels <- n_lct[1] # how many sites, provenances, and years
+  lv <- as.character(1:nlevels)
+  nc <- n_lct[2] # clones per prov
+  nt <- n_lct[3] # trees per clone
+
+  Year <- data.frame(Year = lv)
+  newdata <- data.frame(Site = rep(lv, nc*nt),
+                        Provenance = rep(lv, nc*nt),
+                        Clone = as.character(rep(1:(nlevels*nc), nt))) %>%
+    tidyr::complete(Site, tidyr::nesting(Provenance, Clone)) %>%
+    arrange(Site, Provenance, Clone) %>%
+    mutate(Tree = as.character(1:n())) %>%
+    merge(Year) %>%
+    complete(Site, Provenance, Year)
+
+  ypred_newlevels <- tidybayes::add_predicted_draws(newdata = newdata, object = model, allow_new_levels = TRUE, sample_new_levels = "gaussian", ndraws = nsamples, seed = seed, cores = cores, value = ".prediction") %>%
+    mutate(prediction_type = "prediction - new levels")
+
+  preds <- rbind(yrep, yrep_censored, ypred_fullcross, ypred_newlevels) %>%
+    mutate(Sex = unique(data$Sex), event = unique(data$event))
+
+  return(preds)
+}
 
 
-#choose data, prepare it, and fit a model.
-#phendat is a dataframe with a columns Sex (containing MALE or FEMALE), FirstRF, and LastRF (Day of year recorded flowering) and factor level for the model. Sex is "MALE" or "FEMALE". compiled model is a stan model compiled with rstan::stan_model. appendname is a string to append to the end of the file name. factors is a vector of columns in phendat that serve as factors in your model. The factor_threshold_list is a list of key-value pairs matching a factor to a threshold used for centering or non-centering. Expars is a list of parameters calculated in the model that should not be returned. Init chooses initial values that aren't impossible so stan doesn't complain.
-# munge_and_fit <- function(phendat, censordat = NULL, sex, event,
-#                                   compiledmodel, appendname = NULL,
-#                           factors = c("Site", "Provenance", "Year", "Clone"),
-#                                   factor_threshold_list = list(Site = 250, Provenance = 150),
-#                                   expars = c("delta_ncp_site", "delta_cp_site",
-#                                              "delta_ncp_prov", "delta_cp_prov",
-#                                              "z_delta_clone"),
-#                                   init = rep(list(list(mu = abs(rnorm(1,100,50)),
-#                                                        sigma = rexp(1,1),
-#                                                        sigma_site = rexp(1,1),
-#                                                        sigma_year = rexp(1,1),
-#                                                        sigma_prov = rexp(1,1),
-#                                                        sigma_clone = rexp(1,1))), 6),
-#                                   control = NULL, test = FALSE) {
-#   # subset data by sex and event
-#   phensub <- select_data(phendat, censordat = censordat, factors = factors, sex = sex, event = event)
-#
-#   # add indexes and turn data into a list for stan
-#   input <- prepare_data_for_stan(phensub = phensub, factor_threshold_list = factor_threshold_list, event = event)
-#
-#
-#   # fit stan model
-#
-#   fit <- sample_stan_model(compiledmodel = compiledmodel, input = input, sex=sex, event = event, appendname = appendname, expars = expars, init = init, control = control, test = test, kfold = FALSE)
-#
-# }
+# prepare dataframes a and b for interval finding by splitting into lists and ensuring that the climate list (a) and the phenology list (b) contain information for the same sites and years. a and b must both have Site and Year columns
+split_df_to_lists <- function(a, b) {
+  lista <- split(a, f = list(a$Site, a$Year), drop = TRUE)
+  listb <- split(b, f = list(b$Site, b$Year), drop = TRUE)
+
+  # check that all sites and years in the phenology frame are in the climate frame
+  assertthat::assert_that(all(names(listb) %in% names(lista))) # all entries in B must be in A
+
+  # subset lista so it only contains Site x Year that also occur in B
+  ainb <- lista[names(listb)]
+
+  assertthat::are_equal(names(ainb), names(listb))
+
+  return(list(listainb = ainb, listb = listb))
+}
+
+forcing_to_doy <- function(a, b, aforce, bforce, newdoycolname) {
+  # prepare dataframes for interval finding by splitting into lists
+  splitdfs <- split_df_to_lists(a, b)
+
+  df <- purrr::map2(splitdfs$listainb, splitdfs$listb, find_day_of_forcing, aforce = aforce, bforce = bforce) %>% # find DoY in A corresponding to each sum_forcing in B
+    purrr::map_dfr(bind_rows) # combine into a single dataframe
+
+  names(df)[which(names(df) == "newdoycol")] <- newdoycolname
+
+  return(df)
+}
+
+# given dataframes adf (climate) and bdf (phenology) identify the day of year corresponding to reaching each sum_forcing bcol in df. adf must have a sum_forcing column identified by name aforce and a DoY column and b must have a sum_forcing column identified with name bforce.
+find_day_of_forcing <- function(adf, bdf, aforce, bforce) {
+
+  # what row in a contains the interval for entries in b. Add 1 to the index because phenological events require the threshold to be reached. this introduces error, but is unavoidable in some direction.
+  a_index <- findInterval(bdf[[bforce]], adf[[aforce]]) + 1
+
+
+  # add a column to b for Day of Year and extract the correct Day of year from a using the index
+  bdf$newdoycol <- adf$DoY[a_index]
+
+  # when sum_forcing in b is exactly identical to sum_forcing in b, a_index will be +1 day. Re-write those
+  identical_forcing_index <- which(bdf[[bforce]] %in% adf[[aforce]])
+  bdf$newdoycol[identical_forcing_index] <- bdf$newdoycol[identical_forcing_index] - 1
+
+  # (indirectly) test whether the correct day of year is being assigned to the correct forcing unit - for any site x year, sorting by sum_forcing_rep or newdoycol should produce the same ordering of newdoycol in bdf
+
+  # order_by_sumforcing <- arrange(bdf, bforce, newdoycol)$newdoycol
+  # order_by_newdoycol <- arrange(bdf, newdoycol)$newdoycol
+  #
+  # assertthat::are_equal(order_by_sumforcing, order_by_newdoycol)
+
+  return(bdf)
+}
+
+# match forcing to doy for future climates and add identifying info about the future climates
+match_force_future <- function(adf, bdf, aforce, bforce) {
+  matched <- find_day_of_forcing(adf, bdf, aforce, bforce)
+
+  idf <- select(adf, Year, Site, name, SSP, climate_forcing, normal_period) %>%
+    distinct()
+
+  df <- merge(matched, idf)
+
+  return(df)
+}
