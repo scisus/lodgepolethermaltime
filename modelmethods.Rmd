@@ -301,7 +301,7 @@ ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .variable, li
   ylab("") +
   xlab("GDD") +
   facet_grid(event ~ .) +
-  guides(color = FALSE, size = FALSE) +
+  guides(color = "none", size = "none") +
   theme_dark(base_size = 18) +
   theme(legend.position = "top") 
 ```
@@ -420,10 +420,10 @@ allsim <- purrr::map2(alldatls, modells, function(x,y) {simulate_from_model(data
 ggplot(alldat, aes(x = sum_forcing, y = "observations" , colour = Sex)) +
   stat_dotsinterval( .width = c(0.5, 0.89), point_interval = median_qi) +
   stat_slab(data = allsim, 
-                    aes(x = prediction, y = prediction_type, group=.draw),
+                    aes(x = .prediction, y = prediction_type, group=.draw),
                     .width = c(0.5, 0.89), point_interval = median_hdci, 
                     slab_color = "gray65", alpha = 1/10, fill = NA) +
-  stat_pointinterval(data = allsim, aes(x = prediction, y = prediction_type), 
+  stat_pointinterval(data = allsim, aes(x = .prediction, y = prediction_type), 
                      .width = c(0.5, 0.89), point_interval = median_hdci ) +
  # stat_dots(data = may15, aes(x = sum_forcing, y = "Forcing at May 15")) +
   theme_bw(base_size = 18) +
@@ -445,7 +445,7 @@ All simulations used the same 200 draws from the posterior, except for the fully
 
 # Add days to preds
 
-See functions in retrodiction functions for this.
+See functions in retrodiction functions for this. DoY predictions used only 30 samples from the posterior for efficiency.
 
 ```{r predictdaysspecific, fig.height=8}
 
@@ -453,10 +453,10 @@ See functions in retrodiction functions for this.
 # filter simulations for only real sites and years, not new levels and simplify to only columns needed for matching 
 specificsim <- filter(allsim, prediction_type %in% c("retrodiction - uncensored", "prediction - full cross")) %>%
   ungroup() %>%
-  select(Year, Site, prediction) %>%
+  select(Year, Site, .prediction) %>%
   distinct() 
 
-specific_doy_preds_temp <- forcing_to_doy(filter(histclim, forcing_type == "gdd"), specificsim, aforce = "sum_forcing", bforce = "prediction", newdoycolname = "newdoycol") 
+specific_doy_preds_temp <- forcing_to_doy(filter(histclim, forcing_type == "gdd"), specificsim, aforce = "sum_forcing", bforce = ".prediction", newdoycolname = "newdoycol") 
   
 specific_doy_preds <- full_join(filter(allsim, prediction_type %in% c("retrodiction - uncensored", "prediction - full cross")), specific_doy_preds_temp) 
 rm(specific_doy_preds_temp)
@@ -466,7 +466,7 @@ rm(specific_doy_preds_temp)
 # extract heat sum predictions at new sites and years and provs, clones, trees. downsample - 30 draws per "row"/new obs
 generalsim <- filter(allsim, prediction_type == "prediction - new levels") %>%
   ungroup() %>%
-  select(Sex, event, .row, .draw, prediction, prediction_type, Site, Year, Provenance, Clone, Tree) %>%
+  select(Sex, event, .row, .draw, .prediction, prediction_type, Site, Year, Provenance, Clone, Tree) %>%
   group_by(Sex, event, .row, prediction_type, Site, Year, Provenance, Clone, Tree) %>%
   slice_sample(n = 30) %>%
   rename(new_Site = Site, new_Year = Year)
@@ -474,10 +474,10 @@ generalsim <- filter(allsim, prediction_type == "prediction - new levels") %>%
 # assign each prediction to fully crossed site x climate dataset
 climsites <- unique(histclim$Site)
 climyears <- unique(histclim$Year)
-generalcross <- tidyr::crossing(climsites, climyears, prediction = unique( generalsim$prediction) ) %>%
+generalcross <- tidyr::crossing(climsites, climyears, .prediction = unique( generalsim$.prediction) ) %>%
   dplyr::rename(Site = climsites, Year = climyears)
 
-general_doy_preds_temp <- forcing_to_doy(filter(histclim, forcing_type == "gdd"), generalcross, aforce = "sum_forcing", bforce = "prediction", newdoycolname = "newdoycol")
+general_doy_preds_temp <- forcing_to_doy(filter(histclim, forcing_type == "gdd"), generalcross, aforce = "sum_forcing", bforce = ".prediction", newdoycolname = "newdoycol")
 
 general_doy_preds <- full_join(generalsim, general_doy_preds_temp)
 rm(general_doy_preds_temp)
@@ -485,23 +485,26 @@ rm(general_doy_preds_temp)
 # general_doy_preds_med <- general_doy_preds %>% group_by(Sex, event, .row, Site, Year) %>%
 #   point_interval(prediction, newdoycol, .width = c(0.5, 0.95, .point = median, .interval = hdci))
 
+# so slow
 general_doy_preds_med <- general_doy_preds %>% group_by(Sex, event, .row, Site, Year) %>%
   summarise(median = median(newdoycol))
 
 general_doy_preds_med_siteyearsex <- general_doy_preds %>% group_by(Sex, event, Site, Year) %>%
   point_interval(newdoycol, .width = c(0.5, 0.95), .point = median, .interval = hdci)
 
+# time series lines with begin and end for one site a piece on each plot
 ggplot(general_doy_preds_med_siteyearsex, aes(x=Year, y = newdoycol, linetype = Sex, colour = event)) +
   #geom_point() +
   geom_line() +
   scale_colour_viridis_d() +
   facet_wrap("Site")
 
-#mutate(Date = as.Date("2020-12-31") + newdoycol, .lowerdate = as.Date("2020-12-31") + .lower, .upperdate = as.Date("2020-12-31") + .upper)
-#
+
+# change doy to dates for plotting
 general_doy_preds_med_siteyearsex <- general_doy_preds_med_siteyearsex %>%
   mutate(Date = as.Date("2020-12-31") + newdoycol, .lowerdate = as.Date("2020-12-31") + .lower, .upperdate = as.Date("2020-12-31") + .upper)
 
+# Plot to compare time series
 ggplot(general_doy_preds_med_siteyearsex, aes(y = Date, x = Year, colour = Sex, group = Year)) +
   geom_line() +
   facet_grid(Site ~ Sex) +
@@ -544,8 +547,8 @@ futclimf <- futclim %>%
 # select only columns necessary for matching to DoY in climate dataset
 smallgs <- generalsim %>% 
   ungroup() %>%
-  select(prediction)%>% 
-  arrange(prediction)
+  select(.prediction)%>% 
+  arrange(.prediction)
 
 
 # match forcing to doy for future climates and add identifying info about the future climates
