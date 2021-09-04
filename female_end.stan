@@ -1,4 +1,4 @@
-// generated with brms 2.15.0
+// generated with brms 2.16.1
 functions {
 }
 data {
@@ -42,7 +42,7 @@ transformed data {
 }
 parameters {
   real Intercept;  // temporary intercept for centered predictors
-  real<lower=0> sigma;  // residual SD
+  real<lower=0> sigma;  // dispersion parameter
   vector<lower=0>[M_1] sd_1;  // group-level standard deviations
   vector[N_1] z_1[M_1];  // standardized group-level effects
   vector<lower=0>[M_2] sd_2;  // group-level standard deviations
@@ -114,7 +114,7 @@ model {
 generated quantities {
   // actual population-level intercept
   real b_Intercept = Intercept;
-  // additionally draw samples from priors
+  // additionally sample draws from priors
   real prior_Intercept = normal_rng(400,100);
   real prior_sigma = normal_rng(0,15);
   real prior_sd_1 = normal_rng(0,9);
