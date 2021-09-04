@@ -78,13 +78,13 @@ sitefactororder <- siteMAT$Site
 
 provMAT <- provclim %>% select(SPU_Number, MAT) %>%
   full_join(spudat) %>%
-  filter(!is.na(Repro_Data)) %>%
+  filter(SPU_Name %in% unique(phenf$Provenance)) %>%
   select(MAT, SPU_Name) %>%
   distinct() %>%
   arrange(MAT)
 
 provfactororder <- provMAT$SPU_Name %>% 
-  stringr::str_replace_all(pattern = "\\s", replacement = "\\.")
+  stringr::str_replace_all(pattern = "\\s", replacement = "\\.")  # format names to work with stan output
 
 yearMAT <- siteclim %>% 
   mutate(Year = lubridate::year(Date)) %>%
