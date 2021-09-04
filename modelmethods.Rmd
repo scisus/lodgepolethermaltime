@@ -17,6 +17,7 @@ library(tidyr)
 library(tidybayes)
 library(forcats)
 library(ggbeeswarm)
+library(lubridate)
 
 knitr::opts_chunk$set(echo = FALSE)
 theme_set(theme_dark())
@@ -28,22 +29,20 @@ source('phenology_functions.R')
 
 ```{r climdat}
 siteclim <- read.csv("../lodgepole_climate/processed/PCIC_all_seed_orchard_sites_adjusted.csv")
-histclim <- read.csv("data/all_clim_PCIC.csv") # site clim with forcing
-provclim <- read.csv("../phd/data/Lodgepole_SPU_climsum.csv")
+histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
+   filter(forcing_type == "gdd")  
+provclim <- read.csv("../phd/data/OrchardInfo/lodgepole_SPU_climsum.csv")
 futclim <- read.csv("../lodgepole_climate/processed/future_daily_temps.csv")
-spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv")
 ```
 
-Phenology data is available in the `flowers` R package published on Github [ARCHIVE ON ZENODO]
+Phenology data is available in the `flowers` R package published on Github [TO BE ARCHIVED ON ZENODO]
 
 ```{r data}
-phendat <- flowers::lodgepole_phenology_event
-spudat <- "data/LodgepoleSPUs.csv"
-
 phendat <- flowers::lodgepole_phenology_event %>%
   mutate(Tree = paste0(Orchard, Clone, X, Y)) # create a unique Tree identifier since original data doesn't always have one
+spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv", header = TRUE, stringsAsFactors = FALSE) 
 
-phenf <- prepare_data(phendat, forcingtype = "gdd", clim = histclim, spu = spudat)
+phenf <- prepare_data(phendat, clim = histclim, spu = spudat)
 
 ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
   stat_ecdf() +
