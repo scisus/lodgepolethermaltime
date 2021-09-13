@@ -15,6 +15,18 @@ This analysis models the mean forcing accummulation required for lodgepole pine 
 Order of analysis is
 
 - conceptual
-- simulations
 
 Data is prepared with `combine_phenology_and_heatsum.R`. Climate data is from `PCIC_all_seed_orchard_sites_adjusted.csv` in the `lodgepole_climate` project. Phenology data is from the `flowers` project.
+
+#####
+
+- `modelmethods.R` thermal time models of flowering events in stan
+  - stan code in `[sex]_[event].stan`
+  - model output in `[sex]_[event].rds`
+- `censoring.R` end vs interval censoring
+- `modelparameters.R` extract parameter values from models
+- `retrodictandpredict.R` predict thermal time for events from models and translate into day of year historical and future
+- `floweringlength.R` length of flowering period
+- `overlap.R` calculate historical and future overlap of phenological periods
+- `variation.R` variation in flowering period
+- `graphs.R` code for graphs
