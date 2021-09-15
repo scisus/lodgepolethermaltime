@@ -21,11 +21,8 @@ source('phenology_functions.R')
 # data ####
 
 # climate
-#siteclim <- read.csv("../lodgepole_climate/processed/PCIC_all_seed_orchard_sites_adjusted.csv")
 histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
    filter(forcing_type == "gdd")
-#provclim <- read.csv("../phd/data/OrchardInfo/lodgepole_SPU_climsum.csv")
-#futclim <- read.csv("../lodgepole_climate/processed/future_daily_temps.csv")
 
 # phenology
 phendat <- flowers::lodgepole_phenology_event %>%
@@ -34,9 +31,9 @@ phendat <- flowers::lodgepole_phenology_event %>%
 # meta
 spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv", header = TRUE, stringsAsFactors = FALSE)
 
-
 ## data preparation for phenology model ####
 phenf <- prepare_data(phendat, clim = histclim, spu = spudat)
+saveRDS(phenf, file = "objects/phenf.rds")
 
 # ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
 #   stat_ecdf() +
@@ -53,6 +50,8 @@ fedat <- filter_sex_event(sex = "FEMALE", event = "end", phenf)
 
 mbdat <- filter_sex_event(sex = "MALE", event = "begin", phenf)
 medat <- filter_sex_event(sex = "MALE", event = "end", phenf)
+
+saveRDS(list(fbdat = fbdat, fedat = fedat, mbdat = mbdat, medat = medat), file = "objects/datlist.rds")
 
 
 # model ####

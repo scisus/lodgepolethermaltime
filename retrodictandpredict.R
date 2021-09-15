@@ -1,9 +1,31 @@
 # retrodict and predict critical forcing for events
 
-alldatls <- list(fbdat, fedat, mbdat, medat)
-alldat <- rbind(fbdat, fedat, mbdat, medat)
+# depends
+library(dplyr)
+library(purrr)
+library(tidybayes)
+library(tidyr)
+
+source('phenology_functions.R')
+
+alldatls <- readRDS("objects/datlist.rds")
+modells <- readRDS("objects/modells.rds") #1.5GB
+
+# data
+histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
+  filter(forcing_type == "gdd")
+futclim <- read.csv("../lodgepole_climate/processed/future_daily_temps.csv")
+
+alldat <- alldatls %>% bind_rows()
+saveRDS(alldat, file = "objects/alldat.rds")
+
+# global
+
+seed <- 738
+
 
 # simulate forcing ####
+#
 # simulate 4 sets of data from the model - retrodictions, retrodictions accounting for censorship, predictions for 5 new sites/provenances/years with 10 clones per provenance in every site and year and 2 trees per clone (at different sites))
 # using 200 instead of 2000 samples from the posterior so my computer doesn't fall over
 
@@ -12,23 +34,7 @@ allsim <- purrr::map2(alldatls, modells, function(x,y) {simulate_from_model(data
                                                                             nsamples = 200,
                                                                             seed = seed)}) %>%
   bind_rows()
-
-ggplot(alldat, aes(x = sum_forcing, y = "observations" , colour = Sex)) +
-  stat_dotsinterval( .width = c(0.5, 0.89), point_interval = median_qi) +
-  stat_slab(data = allsim,
-            aes(x = .prediction, y = prediction_type, group=.draw),
-            .width = c(0.5, 0.89), point_interval = median_hdci,
-            slab_color = "gray65", alpha = 1/10, fill = NA) +
-  stat_pointinterval(data = allsim, aes(x = .prediction, y = prediction_type),
-                     .width = c(0.5, 0.89), point_interval = median_hdci ) +
-  # stat_dots(data = may15, aes(x = sum_forcing, y = "Forcing at May 15")) +
-  theme_bw(base_size = 18) +
-  facet_grid(event ~ Sex) +
-  labs(title = "Modeled and observed flowering events",  caption = "200 samples from the posterior, 5 for fully crossed predictions") +
-  xlab("GDD") +
-  ylab("") +
-  scale_colour_viridis_d() +
-  theme(legend.position = "none")
+saveRDS(allsim, file = "objects/allsim.rds")
 
 # historical forcing -> day of year ####
 
@@ -43,6 +49,7 @@ specific_doy_preds_temp <- forcing_to_doy(filter(histclim, forcing_type == "gdd"
 
 specific_doy_preds <- full_join(filter(allsim, prediction_type %in% c("retrodiction - uncensored", "prediction - full cross")), specific_doy_preds_temp)
 rm(specific_doy_preds_temp)
+saveRDS(specific_doy_preds, file = "objects/specific_doy_preds.rds")
 
 # get DoY predictions for the general predictions - which means assigning all sites and years to each prediction
 
@@ -70,30 +77,13 @@ general_doy_preds_med <- general_doy_preds %>% group_by(Sex, event, .row, Site, 
   summarise(median = median(newdoycol))
 
 general_doy_preds_med_siteyearsex <- general_doy_preds %>% group_by(Sex, event, Site, Year) %>%
-  point_interval(newdoycol, .width = c(0.5, 0.95), .point = median, .interval = hdci)
+  point_interval(newdoycol, .width = c(0.5, 0.95), .point = median, .interval = hdci) %>%
+  # change doy to dates for plotting
+  mutate(Date = as.Date("2020-12-31") + newdoycol,
+         .lowerdate = as.Date("2020-12-31") + .lower,
+         .upperdate = as.Date("2020-12-31") + .upper)
+saveRDS(general_doy_preds_med_siteyearsex, file = "objects/general_doy_preds_med_siteyearsex.rds")
 
-# time series lines with begin and end for one site a piece on each plot
-ggplot(general_doy_preds_med_siteyearsex, aes(x=Year, y = newdoycol, linetype = Sex, colour = event)) +
-  #geom_point() +
-  geom_line() +
-  scale_colour_viridis_d() +
-  facet_wrap("Site")
-
-
-# change doy to dates for plotting
-general_doy_preds_med_siteyearsex <- general_doy_preds_med_siteyearsex %>%
-  mutate(Date = as.Date("2020-12-31") + newdoycol, .lowerdate = as.Date("2020-12-31") + .lower, .upperdate = as.Date("2020-12-31") + .upper)
-
-# Plot to compare time series
-ggplot(general_doy_preds_med_siteyearsex, aes(y = Date, x = Year, colour = Sex, group = Year)) +
-  geom_line() +
-  facet_grid(Site ~ Sex) +
-  #scale_colour_viridis_d(end = 0.9) +
-  theme_dark(base_size = 18) +
-  labs(title = "Flowering period from 1945-2012 at 7 sites", subtitle = "median start day of year to median end day of year", caption = "1500 forcing observations simulated  from 200 draws of the posterior with new factor levels \n and matched to forcing data for plotted sites and years. Daily temperature data from PCIC \nand adjusted using monthly climateNA") +
-  theme(legend.position = "none") +
-  scale_y_date(date_labels = "%b %e") +
-  scale_colour_viridis_d()
 
 #  future forcing -> DoY predictions ####
 
@@ -124,19 +114,11 @@ doypredmatchfut <- purrr::map(futclimf, match_force_future, bdf = smallgs, aforc
   bind_rows() %>%
   full_join(generalsim)
 
+
 # calculate medians for each event at each site for each SSP and normal period
 doypredmatchfut_medians <- doypredmatchfut %>% group_by(Sex, event, Site, SSP, normal_period, climate_forcing) %>%
   point_interval(newdoycol, .width = c(0.5, 0.95), .point = median, .interval = hdci) %>%
   mutate(Date = as.Date("2020-12-31") + newdoycol, .lowerdate = as.Date("2020-12-31") + .lower, .upperdate = as.Date("2020-12-31") + .upper)
+saveRDS(doypredmatchfut_medians, "objects/doypredmatchfut_medians.rds")
 
-ggplot(filter(doypredmatchfut_medians, climate_forcing %in% c(4.5, 8.5)), aes(y = Date, x = normal_period, ymin = .lowerdate, ymax = .upperdate, group = interaction(normal_period, Sex), colour = Sex)) +
-  geom_pointinterval(position = "dodge", alpha = 0.5)  +
-  facet_grid(climate_forcing ~ Site) +
-  #scale_colour_viridis_d(end = 0.9) +
-  theme_dark(base_size = 18) +
-  labs(title = "Future flowering periods at 7 sites for 2 Climate forcing scenarios", subtitle = "median start day to median end day", caption = "medians of 1500 forcing observations simulated from 30 draws of the posterior with new factor levels and matched \nto day of year data for plotted sites and years. Daily temperature timeseries for 7 sites from PCIC & adjusted using ClimateNA") +
-  #theme(legend.position = "none") +
-  scale_colour_viridis_d() +
-  scale_y_date(date_labels = "%b %e") +
-  theme(axis.text.x = element_text(angle = 30, hjust=1), legend.position = "top") +
-  xlab("Normal period")
+

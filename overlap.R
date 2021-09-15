@@ -1,5 +1,13 @@
 # calculate historical and future overlap of phenological periods
 
+# depends
+library(dplyr)
+library(lubridate)
+library(forcats)
+
+general_doy_preds_med_siteyearsex <- readRDS("objects/general_doy_preds_med_siteyearsex.rds")
+doypredmatchfut_medians <- readRDS("objects/doypredmatchfut_medians.rds")
+factororder <- readRDS("objects/factororder.rds")
 
 # historical ####
 #
@@ -23,14 +31,9 @@ male_intervals <- filter(med_interval_sys, Sex == "MALE") %>%
   select(-Sex)
 
 med_overlap_sys <- full_join(female_intervals, male_intervals) %>%
-  mutate(overlap = day(as.period(intersect(female_med_interval, male_med_interval), "days")) + 1, Site = forcats::fct_relevel(Site, sitefactororder), male_Site = forcats::fct_relevel(male_Site, sitefactororder))
+  mutate(overlap = day(as.period(intersect(female_med_interval, male_med_interval), "days")) + 1, Site = forcats::fct_relevel(Site, factororder$site), male_Site = forcats::fct_relevel(male_Site, factororder$site))
 med_overlap_sys[is.na(med_overlap_sys)] <- 0
-
-ggplot(filter(med_overlap_sys, .width == 0.5), aes(x = 1, y = overlap, fill = Site )) +
-  geom_violin(draw_quantiles = c(0.5), alpha = 0.5) +
-  facet_grid(Site ~ male_Site) +
-  scale_fill_viridis_d(option = "cividis") +
-  labs(title = "Days of flowering overlap between sites", subtitle = "1945-2012", caption = "30 forcing samples from the model translated into DoY of flowering event for 7 Sites 1945-2012. Then calculated median DoY across samples and used those to construct flowering period intervals (begin to end). Then determined the intersection of those intervals for all sites and years")
+saveRDS(med_overlap_sys, file = "objects/med_overlap_sys.rds")
 
 # future ####
 
@@ -55,13 +58,10 @@ male_fut_intervals <- filter(med_interval_fut_sys, Sex == "MALE") %>%
   select(-Sex)
 
 fut_overlap_sys <- full_join(female_fut_intervals, male_fut_intervals) %>%
-  mutate(overlap = day(as.period(intersect(female_med_interval, male_med_interval), "days")) + 1, Site = forcats::fct_relevel(Site, sitefactororder), male_Site = forcats::fct_relevel(male_Site, sitefactororder))
+  mutate(overlap = day(as.period(intersect(female_med_interval, male_med_interval), "days")) + 1, Site = forcats::fct_relevel(Site, factororder$site), male_Site = forcats::fct_relevel(male_Site, factororder$site))
 fut_overlap_sys[is.na(fut_overlap_sys)] <- 0
+saveRDS(fut_overlap_sys, file = "objects/fut_overlap_sys.rds")
 
-ggplot(filter(fut_overlap_sys, .width == 0.5), aes(x = SSP, y = overlap, colour=normal_period )) +
-  geom_point(position = "jitter") +
-  facet_grid(Site ~ male_Site) +
-  scale_colour_brewer(type = "seq") +
-  labs(title = "Days of flowering overlap between sites", subtitle = "Normal period 2011-2040", caption = "30 forcing samples from the model translated into DoY of flowering event for 7 Sites 1945-2012. Then calculated median DoY across samples and used those to construct flowering period intervals (begin to end). Then determined the intersection of those intervals for all sites and years")
+
 
 # this might work better if calculated as a change in overlap
