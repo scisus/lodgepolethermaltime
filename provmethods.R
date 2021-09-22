@@ -22,7 +22,7 @@ source('phenology_functions.R')
 
 # climate
 histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
-   filter(forcing_type == "gdd")
+  filter(forcing_type == "gdd")
 provclim <- read.csv("../phd/data/OrchardInfo/lodgepole_SPU_climsum.csv") %>% # climate for provenances
   select(SPU_Number, Latitude, MAT, MCMT, MWMT)
 
@@ -76,8 +76,8 @@ bprior <- c(prior("normal(400,100)", class = "Intercept"),
             prior("normal(0,9)", class = "sd"))
 
 iobprior <- c(prior("normal(400,100)", class = "Intercept"),
-            prior("normal(0,15)", class = "sigma"),
-            prior("normal(0,9)", class = "sd"))
+              prior("normal(0,15)", class = "sigma"),
+              prior("normal(0,9)", class = "sd"))
 
 # mcmc/computation settings
 niter <- 4000
@@ -96,67 +96,29 @@ fbfit <- brm(bform, data = fbdat,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
              file_refit = "on_change")
-library(future)
-plan(multisession)
-loofb <- loo(fbfit, reloo = TRUE, reloo_args = list(prior=bprior),
-             future = TRUE, inits = initpars, iter = 3000)
-saveRDS("fbfitloo.rds")
+
+loofb <- brms::loo(fbfit, reloo = TRUE, reloo_args = list(prior=bprior),
+             cores=20, future =FALSE, inits = initpars, iter = 3000)
+saveRDS(loofb, "fbfitloo.rds")
 gc()
-plan(sequential)
 
 
 fbfitio <- brm(iobform, data = fbdat,
-                        save_model = "female_beginio.stan",
-                        file = "female_beginio",
-                        prior = iobprior,
-                        inits = initpars,
-                        iter = niter,
-                        cores = ncores,
-                        chains = nchains,
-                        sample_prior = TRUE,
-                        save_pars = save_pars(all = TRUE),
-                        file_refit = "on_change")
+               save_model = "female_beginio.stan",
+               file = "female_beginio",
+               prior = iobprior,
+               inits = initpars,
+               iter = niter,
+               cores = ncores,
+               chains = nchains,
+               sample_prior = TRUE,
+               save_pars = save_pars(all = TRUE),
+               file_refit = "on_change")
 loofbio <- loo(fbfitio, reloo = TRUE, reloo_args = list(prior=iobprior),
-             future = TRUE, inits = initpars, iter = 3000)
-saveRDS("fbfitioloo.rds")
+               cores = 20, inits = initpars, iter = 3000)
+saveRDS(loofbio, "fbfitioloo.rds")
+
+loofb <- readRDS("fbfitloo.rds")
+loofbio <- readRDS("fbfitioloo.rds")
 
 loo_compare(loofb, loofbio)
-
-# female/receptivity end
-fefit <- brm(bform, data = fedat,
-             save_model = "female_end.stan",
-             file = "female_end",
-             prior = bprior,
-             inits = initpars,
-             iter = niter,
-             cores = ncores,
-             chains = nchains,
-             sample_prior = TRUE,
-             save_pars = save_pars(all = TRUE),
-             file_refit = "on_change")
-
-# male/pollen shed begin
-mbfit <- brm(bform, data = mbdat,
-             save_model = "male_begin.stan",
-             file = "male_begin",
-             prior = bprior,
-             inits = initpars,
-             iter = niter,
-             cores = ncores,
-             chains = nchains,
-             sample_prior = TRUE,
-             save_pars = save_pars(all = TRUE),
-             file_refit = "on_change")
-
-# male/pollen shed end
-mefit <- brm(bform, data = medat,
-             save_model = "male_end.stan",
-             file = "male_end",
-             prior = bprior,
-             inits = initpars,
-             iter = niter,
-             cores = ncores,
-             chains = nchains,
-             sample_prior = TRUE,
-             save_pars = save_pars(all = TRUE),
-             file_refit = "on_change")
