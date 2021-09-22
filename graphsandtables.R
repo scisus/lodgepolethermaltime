@@ -146,17 +146,21 @@ ggplot(alldat, aes(x = sum_forcing, y = "observations" , colour = Sex)) +
   ylab("") +
   scale_colour_viridis_d() +
   theme(legend.position = "none")
-ggsave("plots/retrodictions.pdf", width = 6, height = 7)
+ggsave("plots/retrodictions.pdf", width = 7, height = 5)
 
-# day of year predictions
+# day_of_year_lines ####
 # time series line plot with begin and end faceted by site with general_doy_preds_med_siteyearsex from `retrodictandpredict.R`
 general_doy_preds_med_siteyearsex <- readRDS("objects/general_doy_preds_med_siteyearsex.rds")
 ggplot(general_doy_preds_med_siteyearsex, aes(x=Year, y = newdoycol, linetype = Sex, colour = event)) +
   #geom_point() +
   geom_line() +
   scale_colour_viridis_d() +
-  facet_wrap("Site")
+  facet_wrap("Site") +
+  theme(legend.position = "top")
+ggsave("plots/day_of_year_lines.pdf", width = 6, height = 5)
 
+
+# historical_flowering_periods ####
 # day of year predictions. Plot to compare time series.
 # with general_doy_preds_med_siteyearsex from `retrodictandpredict.R`
 general_doy_preds_med_siteyearsex <- readRDS("objects/general_doy_preds_med_siteyearsex.rds")
@@ -164,49 +168,62 @@ ggplot(general_doy_preds_med_siteyearsex, aes(y = Date, x = Year, colour = Sex, 
   geom_line() +
   facet_grid(Site ~ Sex) +
   #scale_colour_viridis_d(end = 0.9) +
-  theme_dark(base_size = 18) +
+ # theme_dark(base_size = 18) +
   labs(title = "Flowering period from 1945-2012 at 7 sites", subtitle = "median start day of year to median end day of year", caption = "1500 forcing observations simulated  from 200 draws of the posterior with new factor levels \n and matched to forcing data for plotted sites and years. Daily temperature data from PCIC \nand adjusted using monthly climateNA") +
   theme(legend.position = "none") +
   scale_y_date(date_labels = "%b %e") +
   scale_colour_viridis_d()
+ggsave("plots/historical_flowering_periods.pdf", width = 6, height = 7)
 
+# future_flowering_periods ####
 # plot flowering periods for 2 climate change scenarios over 21st century normal periods with doypredmatchfut_medians from `retrodictandpredict.R`
 doypredmatchfut_medians <- readRDS("objects/doypredmatchfut_medians.rds")
 ggplot(filter(doypredmatchfut_medians, climate_forcing %in% c(4.5, 8.5)), aes(y = Date, x = normal_period, ymin = .lowerdate, ymax = .upperdate, group = interaction(normal_period, Sex), colour = Sex)) +
   geom_pointinterval(position = "dodge", alpha = 0.5)  +
   facet_grid(climate_forcing ~ Site) +
   #scale_colour_viridis_d(end = 0.9) +
-  theme_dark(base_size = 18) +
-  labs(title = "Future flowering periods at 7 sites for 2 Climate forcing scenarios", subtitle = "median start day to median end day", caption = "medians of 1500 forcing observations simulated from 30 draws of the posterior with new factor levels and matched \nto day of year data for plotted sites and years. Daily temperature timeseries for 7 sites from PCIC & adjusted using ClimateNA") +
+  #theme_dark(base_size = 18) +
+  labs(title = "Future flowering periods at 7 sites for 2 Climate forcing scenarios", subtitle = "median start day to median end day", caption = "medians of 1500 forcing observations simulated from 30 draws of the posterior with new factor levels and\n matched to day of year data for plotted sites and years. Daily temperature timeseries for 7 sites from PCIC & adjusted using ClimateNA") +
   #theme(legend.position = "none") +
   scale_colour_viridis_d() +
   scale_y_date(date_labels = "%b %e") +
   theme(axis.text.x = element_text(angle = 30, hjust=1), legend.position = "top") +
   xlab("Normal period")
+ggsave("plots/future_flowering_periods.pdf", width = 8, height = 5)
 
+# length_histogram ####
 # histogram + intervals for flowering period length with specific_doy_preds_length from `floweringlength.R`
+# might work better as a boxplot, or with limits argument set
 specific_doy_preds_length <- readRDS("objects/specific_doy_preds_length.rds")
 ggplot(specific_doy_preds_length, aes(x = length, y = prediction_type, colour = Sex)) +
   stat_histinterval(position = "dodge", .width = c(0.5, 0.89)) +
   scale_colour_viridis_d() +
+  theme_bw() +
+  theme(legend.position = "top") +
   labs(title = "Length of phenological period for individuals")
+ggsave("plots/length_histogram.pdf", width = 6, height = 5)
 
+
+# length_beeswarm ####
 # beeswarm plots of flowering period length at each site, ordered warmest to coolest using specific_doy_preds_length_ts from `floweringlength.R`
+
 specific_doy_preds_length_ts <- readRDS("objects/specific_doy_preds_length_ts.rds")
 ggplot(filter(specific_doy_preds_length_ts, prediction_type == "prediction - full cross"), aes(x = Site, y = length, colour = Sex)) +
   geom_beeswarm(dodge.width =0.75) +
   scale_colour_viridis_d() +
   labs(title = "Median flowering period length at a site", subtitle = "Each point represents one year at one site 1997-2012", caption = "fully crossed predictions") +
-  theme(legend.position = "bottom") +
+  theme(legend.position = "top") +
   ylab("Length of flowering period (days)")
+ggsave("plots/length_beeswarm.pdf", width = 6.5, height = 5)
 
+# length_future ####
 # plots of flowering period length under different climate change scenarios using futlen from `floweringlength.R`
 futlen <- readRDS("objects/futlen.rds")
 ggplot(filter(futlen, climate_forcing %in% c(4.5, 8.5)), aes(y = period_length, x = normal_period, colour = Sex)) +
   geom_point()  +
   facet_grid(climate_forcing ~ Site) +
   #scale_colour_viridis_d(end = 0.9) +
-  theme_dark(base_size = 18) +
+  #theme_dark(base_size = 18) +
   #theme(legend.position = "none") +
   scale_colour_viridis_d() +
   theme(legend.position = "bottom") +
@@ -214,15 +231,23 @@ ggplot(filter(futlen, climate_forcing %in% c(4.5, 8.5)), aes(y = period_length, 
   labs(title = "Future flowering period median length", caption = "fully crossed - only 5 posterior samples!") +
   theme(axis.text.x = element_text(angle = 30, hjust=1), legend.position = "top") +
   xlab("Normal period")
+ggsave("plots/length_future.pdf", width = 7, height =5)
 
+# sitexsiteoverlap ####
 # violin plots of overlap between sites with med_overlap_sys from `overlap.R`
 med_overlap_sys <- readRDS("objects/med_overlap_sys.rds")
 ggplot(filter(med_overlap_sys, .width == 0.5), aes(x = 1, y = overlap, fill = Site )) +
   geom_violin(draw_quantiles = c(0.5), alpha = 0.5) +
   facet_grid(Site ~ male_Site) +
-  scale_fill_viridis_d(option = "cividis") +
-  labs(title = "Days of flowering overlap between sites", subtitle = "1945-2012", caption = "30 forcing samples from the model translated into DoY of flowering event for 7 Sites 1945-2012. Then calculated median DoY across samples and used those to construct flowering period intervals (begin to end). Then determined the intersection of those intervals for all sites and years")
+  scale_fill_viridis_d() +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        legend.position = "top") +
+  labs(title = "Days of flowering overlap between sites", subtitle = "1945-2012", caption = "30 forcing samples from the model translated into DoY of flowering event for 7 Sites 1945-2012. \nThen calculated median DoY across samples and used those to construct flowering period \nintervals (begin to end). Then determined the intersection of those intervals for all sites and years")
+ggsave("plots/sitexsiteoverlap.pdf", width = 7, height = 8)
 
+# site_overlap ####
 # histogram plots of overlap between sites with med_overlap_sys from `overlap.R`. Total number of days a site has overlap with any other site
 med_overlap_sys <- readRDS("objects/med_overlap_sys.rds")
 ggplot(filter(med_overlap_sys, .width == 0.5, overlap > 0), aes(x = overlap, fill = male_Site )) +
@@ -230,11 +255,21 @@ ggplot(filter(med_overlap_sys, .width == 0.5, overlap > 0), aes(x = overlap, fil
   geom_vline(xintercept = 0, linetype = 2) +
   facet_grid(Site ~ .) +
   scale_fill_brewer(type = "div", palette = 3) +
-  labs(title = "Days of flowering overlap between sites", subtitle = "1945-2012", caption = "30 forcing samples from the model translated into DoY of flowering event for 7 Sites 1945-2012. Then calculated median DoY across samples and used those to construct flowering period intervals (begin to end). Then determined the intersection of those intervals for all sites and years")
+  theme(legend.position = "top") +
+  labs(title = "Days receptivity overlaps with pollen shed at different sites", subtitle = "1945-2012", caption = "30 forcing samples from the model translated into DoY of flowering event for 7 Sites 1945-2012.\n Then calculated median DoY across samples and used those to construct flowering period \nintervals (begin to end). Then determined the intersection of those intervals for all sites and years") +
+  xlab("days") +
+  ylab("years")
+ggsave("plots/site_overlap.pdf", width = 6, height = 8)
 
-# dot plots of days of flowering overlap between sites for 3 normal periods across five climate change scenarios with fut_overlap_sys from `overlap.R`
-ggplot(filter(fut_overlap_sys, .width == 0.5), aes(x = climate_forcing, y = overlap, colour=normal_period )) +
-  geom_point(position = "jitter") +
+# future_overlap ####
+# bar plots of days of flowering overlap between sites for 3 normal periods across five climate change scenarios with fut_overlap_sys from `overlap.R`
+fut_overlap_sys <- readRDS("objects/fut_overlap_sys.rds")
+ggplot(filter(fut_overlap_sys, .width == 0.5), aes(x = as.factor(climate_forcing), y = overlap, fill=normal_period )) +
+  geom_bar(position = "dodge", stat = "identity") +
   facet_grid(Site ~ male_Site) +
-  scale_colour_brewer(type = "seq") +
-  labs(title = "Days of flowering overlap between sites", subtitle = "Normal period 2011-2040", caption = "30 forcing samples from the model translated into DoY of flowering event for 7 Sites 1945-2012. Then calculated median DoY across samples and used those to construct flowering period intervals (begin to end). Then determined the intersection of those intervals for all sites and years")
+  scale_fill_brewer(type = "seq") +
+  theme(legend.position = "top")+
+  labs(title = "Days of flowering overlap between sites", subtitle = "Normal period 2011-2040", caption = "30 forcing samples from the model translated into DoY of flowering event for 7 Sites 1945-2012. \nThen calculated median DoY across samples and used those to construct flowering period intervals (begin to end).\n Then determined the intersection of those intervals for all sites and years") +
+  xlab("climate forcing") +
+  ylab("number of overlap days")
+ggsave("plots/future_overlap.pdf", width = 7, height = 6)
