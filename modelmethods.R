@@ -24,7 +24,7 @@ source('phenology_functions.R')
 histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
    filter(forcing_type == "gdd")
 provclim <- read.csv("../phd/data/OrchardInfo/lodgepole_SPU_climsum.csv") %>% # climate for provenances
-  select(SPU_Number, Latitude, MAT, MCMT, MWMT)
+  select(SPU_Number, Latitude, MAT, MCMT, MWMT, bFFP)
 
 # phenology
 phendat <- flowers::lodgepole_phenology_event %>%
