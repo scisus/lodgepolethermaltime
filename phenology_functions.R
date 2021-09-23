@@ -131,7 +131,7 @@ prepare_data <- function(phendat, clim, spu) {
     summarize(count = n()) %>%
     filter(count > 4)
 
-  spu <- select(spu, SPU_Name, Orchard, MAT, Latitude, MCMT) # drop unnecessary columns
+  spu <- select(spu, SPU_Name, Orchard, MAT, Latitude, MCMT, bFFP) # drop unnecessary columns
 
   #add information about censoring
   phen <- phendat %>%

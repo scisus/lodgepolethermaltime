@@ -65,17 +65,17 @@ saveRDS(list(fbdat = fbdat, fedat = fedat, mbdat = mbdat, medat = medat), file =
 initpars <- lapply(1:6, function(id) list(sigma = 30, Intercept = 300))
 
 # model formula
-iobform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year) + (1|Tree))
+bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year) + (1|Tree))
 
-bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + MCMT + (1|Clone) + (1|Year) + (1|Tree))
+bformprov <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + bFFP + (1|Clone) + (1|Year) + (1|Tree))
 
 # model prior
 bprior <- c(prior("normal(400,100)", class = "Intercept"),
-            prior("normal(0,20)", class = "b"),
             prior("normal(0,15)", class = "sigma"),
             prior("normal(0,9)", class = "sd"))
 
-iobprior <- c(prior("normal(400,100)", class = "Intercept"),
+bpriorprov <- c(prior("normal(400,100)", class = "Intercept"),
+            prior("normal(0,10)", class = "b"),
             prior("normal(0,15)", class = "sigma"),
             prior("normal(0,9)", class = "sd"))
 
@@ -100,15 +100,15 @@ library(future)
 plan(multisession)
 loofb <- loo(fbfit, reloo = TRUE, reloo_args = list(prior=bprior),
              future = TRUE, inits = initpars, iter = 3000)
-saveRDS("fbfitloo.rds")
+saveRDS(loofb,"fbfitloo.rds")
 gc()
 plan(sequential)
 
 
-fbfitio <- brm(iobform, data = fbdat,
-                        save_model = "female_beginio.stan",
-                        file = "female_beginio",
-                        prior = iobprior,
+fbfitprov <- brm(bformprov, data = fbdat,
+                        save_model = "female_beginprov.stan",
+                        file = "female_beginprov",
+                        prior = bpriorprov,
                         inits = initpars,
                         iter = niter,
                         cores = ncores,
@@ -116,10 +116,13 @@ fbfitio <- brm(iobform, data = fbdat,
                         sample_prior = TRUE,
                         save_pars = save_pars(all = TRUE),
                         file_refit = "on_change")
-loofbio <- loo(fbfitio, reloo = TRUE, reloo_args = list(prior=iobprior),
-             future = TRUE, inits = initpars, iter = 3000)
-saveRDS("fbfitioloo.rds")
+loofbprov <- loo(fbfitprov, reloo = TRUE, reloo_args = list(prior=bpriorprov),
+             cores=20, inits = initpars, iter = 3000)
+saveRDS(loofbprov, "fbfitbFFPloo.rds")
 
+fbfitloo <- readRDS("fbfitloo.rds")
+fbfitMCMT <- readRDS("fbfitMCMTloo.rds")
+fbfitbFFP <- readRDS("fbfitFFPloo.rds")
 loo_compare(loofb, loofbio)
 
 # female/receptivity end
