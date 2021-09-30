@@ -25,6 +25,9 @@ histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
   filter(forcing_type == "gdd")
 provclim <- read.csv("../phd/data/OrchardInfo/lodgepole_SPU_climsum.csv") %>% # climate for provenances
   select(SPU_Number, Latitude, MAT, MCMT, MWMT)
+parentclim <- read.csv("../phd/data/OrchardInfo/ParentTrees/locations_for_climatena_Normal_1961_1990MSY.csv") %>%
+  rename(Clone = ID1, Provenance = ID2) #%>%
+  #mutate(Clone = as.character(Clone))
 
 # phenology
 phendat <- flowers::lodgepole_phenology_event %>%
@@ -32,7 +35,7 @@ phendat <- flowers::lodgepole_phenology_event %>%
 
 # meta
 spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv", header = TRUE, stringsAsFactors = FALSE) %>%
-  left_join(provclim)
+  right_join(parentclim, by = c("SPU_Name" = "Provenance"))
 
 ## data preparation for phenology model ####
 phenf <- prepare_data(phendat, clim = histclim, spu = spudat)
