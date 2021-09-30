@@ -92,7 +92,7 @@ model {
     }
   }
   // priors including constants
-  target += normal_lpdf(b | 0,10);
+  target += normal_lpdf(b | 0,2);
   target += normal_lpdf(Intercept | 400,100);
   target += normal_lpdf(sigma | 0,15)
     - 1 * normal_lccdf(0 | 0,15);
@@ -113,7 +113,7 @@ generated quantities {
   // actual population-level intercept
   real b_Intercept = Intercept - dot_product(means_X, b);
   // additionally sample draws from priors
-  real prior_b = normal_rng(0,10);
+  real prior_b = normal_rng(0,2);
   real prior_Intercept = normal_rng(400,100);
   real prior_sigma = normal_rng(0,15);
   real prior_sd_1 = normal_rng(0,9);
