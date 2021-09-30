@@ -75,7 +75,7 @@ bprior <- c(prior("normal(400,100)", class = "Intercept"),
             prior("normal(0,9)", class = "sd"))
 
 bpriorprov <- c(prior("normal(400,100)", class = "Intercept"),
-            prior("normal(0,10)", class = "b"),
+            prior("normal(0,2)", class = "b"),
             prior("normal(0,15)", class = "sigma"),
             prior("normal(0,9)", class = "sd"))
 
@@ -118,12 +118,14 @@ fbfitprov <- brm(bformprov, data = fbdat,
                         file_refit = "on_change")
 loofbprov <- loo(fbfitprov, reloo = TRUE, reloo_args = list(prior=bpriorprov),
              cores=20, inits = initpars, iter = 3000)
+
 saveRDS(loofbprov, "fbfitbFFPloo.rds")
 
 fbfitloo <- readRDS("fbfitloo.rds")
-fbfitMCMT <- readRDS("fbfitMCMTloo.rds")
-fbfitbFFP <- readRDS("fbfitFFPloo.rds")
-loo_compare(loofb, loofbio)
+fbfitMCMTloo <- readRDS("fbfitMCMTloo.rds")
+#fbfitbFFP <- readRDS("fbfitFFPloo.rds")
+fbfitbFFPloo <- readRDS("loofbbFFP.rds")
+loo_compare(fbfitloo, fbfitMCMTloo, fbfitbFFPloo)
 
 # female/receptivity end
 fefit <- brm(bform, data = fedat,
