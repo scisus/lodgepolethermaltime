@@ -85,7 +85,8 @@ fbfit <- brm(bform, data = fbdat,
              chains = nchains,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
-             file_refit = "on_change")
+             file_refit = "on_change",
+             control = list(adapt_delta=0.9))
 
 # female/receptivity end
 fefit <- brm(bform, data = fedat,
@@ -106,12 +107,13 @@ mbfit <- brm(bform, data = mbdat,
              file = "male_begin",
              prior = bprior,
              inits = initpars,
-             iter = niter,
+             iter = 5000,
              cores = ncores,
              chains = nchains,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
-             file_refit = "on_change")
+             file_refit = "on_change",
+             control = list(adapt_delta = 0.9))
 
 # male/pollen shed end
 mefit <- brm(bform, data = medat,
@@ -125,3 +127,4 @@ mefit <- brm(bform, data = medat,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
              file_refit = "on_change")
+
