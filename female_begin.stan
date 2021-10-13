@@ -6,6 +6,8 @@ data {
   vector[N] Y;  // response variable
   int<lower=-1,upper=2> cens[N];  // indicates censoring
   vector[N] rcens;  // right censor points for interval censoring
+  int<lower=1> K;  // number of population-level effects
+  matrix[N, K] X;  // population-level design matrix
   // data for group-level effects of ID 1
   int<lower=1> N_1;  // number of grouping levels
   int<lower=1> M_1;  // number of coefficients per level
@@ -39,8 +41,16 @@ data {
   int prior_only;  // should the likelihood be ignored?
 }
 transformed data {
+  int Kc = K - 1;
+  matrix[N, Kc] Xc;  // centered version of X without an intercept
+  vector[Kc] means_X;  // column means of X before centering
+  for (i in 2:K) {
+    means_X[i - 1] = mean(X[, i]);
+    Xc[, i - 1] = X[, i] - means_X[i - 1];
+  }
 }
 parameters {
+  vector[Kc] b;  // population-level effects
   real Intercept;  // temporary intercept for centered predictors
   real<lower=0> sigma;  // dispersion parameter
   vector<lower=0>[M_1] sd_1;  // group-level standard deviations
@@ -70,7 +80,7 @@ model {
   // likelihood including constants
   if (!prior_only) {
     // initialize linear predictor term
-    vector[N] mu = Intercept + rep_vector(0.0, N);
+    vector[N] mu = Intercept + Xc * b;
     for (n in 1:N) {
       // add more terms to the linear predictor
       mu[n] += r_1_1[J_1[n]] * Z_1_1[n] + r_2_1[J_2[n]] * Z_2_1[n] + r_3_1[J_3[n]] * Z_3_1[n] + r_4_1[J_4[n]] * Z_4_1[n] + r_5_1[J_5[n]] * Z_5_1[n];
@@ -113,7 +123,7 @@ model {
 }
 generated quantities {
   // actual population-level intercept
-  real b_Intercept = Intercept;
+  real b_Intercept = Intercept - dot_product(means_X, b);
   // additionally sample draws from priors
   real prior_Intercept = normal_rng(400,100);
   real prior_sigma = normal_rng(0,15);

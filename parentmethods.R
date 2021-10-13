@@ -22,23 +22,47 @@ source('phenology_functions.R')
 
 # data ####
 
+# provenance climate
+provclimdat <- read.csv("../phd/data/OrchardInfo/lodgepole_SPU_climsum.csv") %>%
+  select(-Pl_SPU, -X_FREQ_)
+climvarnames <- colnames(provclimdat)[-c(1:4)]
 # climate
 histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
   filter(forcing_type == "gdd")
 parclim <- read.csv("../phd/data/OrchardInfo/ParentTrees/locations_for_climatena_Normal_1961_1990MSY.csv") %>%
-  select(Clone = ID1, Provenance = ID2, MAT, MCMT, Eref) %>%
-  mutate(Clone = as.character(Clone))
+  select(Clone = ID1, Provenance = ID2, all_of(climvarnames)) %>% # keep only annual variables
+  mutate(Clone = as.character(Clone)) # for joining purposes later
+
+
+# meta provenance data
+spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv", header = TRUE, stringsAsFactors = FALSE)
 
 # phenology
 phendat <- flowers::lodgepole_phenology_event %>%
   mutate(Tree = paste0(Orchard, Clone, X, Y)) # create a unique Tree identifier since original data doesn't always have one
 
-# meta
-spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv", header = TRUE, stringsAsFactors = FALSE)
+# combine provenance climates with provenance names
+provclim <- spudat %>%
+  select(SPU_Number, SPU_Name) %>%
+  distinct() %>%
+  left_join(provclimdat) %>%
+  rename(Provenance = SPU_Name) %>%
+  select(-SPU_Number)
 
 ## data preparation for phenology model ####
-phenf <- prepare_data(phendat, clim = histclim, spu = spudat) %>%
-  right_join(parclim) # drop clones that lack parent info. better solution would be to give them the provenance climate
+phenftemp <- prepare_data(phendat, clim = histclim, spu = spudat) %>%
+  left_join(parclim)
+
+phenfpar <- phenftemp %>%
+  filter(!is.na(MAT))
+
+phenfprov <- phenftemp %>%
+  filter(is.na(MAT)) %>%
+  select(-all_of(climvarnames)) %>%
+  left_join(provclim) %>%
+  select(colnames(phenfpar))
+
+phenf <- full_join(phenfpar, phenfprov)
 saveRDS(phenf, file = "objects/phenf.rds")
 
 # ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
@@ -93,8 +117,9 @@ fbfit <- brm(bform, data = fbdat,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
              file_refit = "on_change")
-library(shinystan)
-launch_shinystan(fbfit)
+print(summary(fbfit))
+plot(conditional_effects(fbfit), points = TRUE)
+
 # female/receptivity end
 fefit <- brm(bform, data = fedat,
              save_model = "female_end.stan",
