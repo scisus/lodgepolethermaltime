@@ -50,7 +50,7 @@ ggplot(data = world) +
   annotation_north_arrow(location = "bl", which_north = "true",
                          style = north_arrow_fancy_orienteering) +
   coord_sf(xlim = c(-131, -112), ylim = c(48, 60), expand = FALSE) +
-  ggtitle("Parent trees & sites")
+  ggtitle("Parent trees")
 
 # add sites and maybe provenances to this map
 
