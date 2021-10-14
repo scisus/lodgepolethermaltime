@@ -50,6 +50,7 @@ provclim <- spudat %>%
   select(-SPU_Number)
 
 ## data preparation for phenology model ####
+## use provenance data when no known parent
 phenftemp <- prepare_data(phendat, clim = histclim, spu = spudat) %>%
   left_join(parclim)
 
@@ -63,7 +64,7 @@ phenfprov <- phenftemp %>%
   select(colnames(phenfpar))
 
 phenf <- full_join(phenfpar, phenfprov)
-saveRDS(phenf, file = "objects/phenf.rds")
+#saveRDS(phenf, file = "objects/phenf.rds")
 
 # ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
 #   stat_ecdf() +
@@ -81,7 +82,7 @@ fedat <- filter_sex_event(sex = "FEMALE", event = "end", phenf)
 mbdat <- filter_sex_event(sex = "MALE", event = "begin", phenf)
 medat <- filter_sex_event(sex = "MALE", event = "end", phenf)
 
-saveRDS(list(fbdat = fbdat, fedat = fedat, mbdat = mbdat, medat = medat), file = "objects/datlist.rds")
+#saveRDS(list(fbdat = fbdat, fedat = fedat, mbdat = mbdat, medat = medat), file = "objects/datlist.rds")
 
 
 # model ####
@@ -92,7 +93,7 @@ saveRDS(list(fbdat = fbdat, fedat = fedat, mbdat = mbdat, medat = medat), file =
 initpars <- lapply(1:6, function(id) list(sigma = 30, Intercept = 300))
 
 # model formula
-bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + MCMT + (1|Clone) + (1|Year) + (1|Tree))
+bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + Latitude + (1|Clone) + (1|Year) + (1|Tree))
 
 # model prior
 bprior <- c(prior("normal(400,100)", class = "Intercept"),
