@@ -63,7 +63,7 @@ phenfprov <- phenftemp %>%
   select(colnames(phenfpar))
 
 phenf <- full_join(phenfpar, phenfprov)
-saveRDS(phenf, file = "objects/phenf.rds")
+#saveRDS(phenf, file = "objects/phenf.rds")
 
 # ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
 #   stat_ecdf() +
@@ -81,7 +81,7 @@ fedat <- filter_sex_event(sex = "FEMALE", event = "end", phenf)
 mbdat <- filter_sex_event(sex = "MALE", event = "begin", phenf)
 medat <- filter_sex_event(sex = "MALE", event = "end", phenf)
 
-saveRDS(list(fbdat = fbdat, fedat = fedat, mbdat = mbdat, medat = medat), file = "objects/datlist.rds")
+#saveRDS(list(fbdat = fbdat, fedat = fedat, mbdat = mbdat, medat = medat), file = "objects/datlist.rds")
 
 
 # model ####
@@ -92,13 +92,13 @@ saveRDS(list(fbdat = fbdat, fedat = fedat, mbdat = mbdat, medat = medat), file =
 initpars <- lapply(1:6, function(id) list(sigma = 30, Intercept = 300))
 
 # model formula
-bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + MCMT + (1|Clone) + (1|Year) + (1|Tree))
+bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + MAT + (1|Clone) + (1|Year) + (1|Tree))
 
 # model prior
 bprior <- c(prior("normal(400,100)", class = "Intercept"),
             prior("normal(0,15)", class = "sigma"),
-            prior("normal(0,9)", class = "sd"))
-           # prior("normal(0,9)", class = "b")) # length of phenological period per degree difference
+            prior("normal(0,9)", class = "sd"),
+            prior("student_t(3,0,5)", class ="b")) # length of phenological period per degree difference
 
 # mcmc/computation settings
 niter <- 4000
@@ -107,8 +107,8 @@ nchains <- 6
 
 # female/receptivity begin
 fbfit <- brm(bform, data = fbdat,
-             save_model = "female_beginMCMT.stan",
-             file = "female_beginMCMT",
+             save_model = "female_beginMAT.stan",
+             file = "female_beginMAT",
              prior = bprior,
              inits = initpars,
              iter = niter,
@@ -116,14 +116,17 @@ fbfit <- brm(bform, data = fbdat,
              chains = nchains,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
-             file_refit = "on_change")
+             file_refit = "on_change",
+             control = list(adapt_delta = 0.9))
 print(summary(fbfit))
 
-loo_fbfit <- loo(fbfit, reloo = TRUE, reloo_args = list(prior = c(prior("normal(400,100)", class = "Intercept"),
-                                                            prior("normal(0,15)", class = "sigma"),
-                                                            prior("normal(0,9)", class = "sd"),
-                                                            prior("student_t(3,0,5)", class ="b")),
+loo_fbfit <- loo(fbfit, model_names = "fbfitmat",
+                 reloo = TRUE, reloo_args = list(prior = c(prior("normal(400,100)", class = "Intercept"),
+                                                                  prior("normal(0,15)", class = "sigma"),
+                                                                  prior("normal(0,9)", class = "sd"),
+                                                                  prior("student_t(3,0,5)", class ="b")),
 
-                                                  cores = 20,
-                                                  inits = initpars, iter = 3000, control=list(adapt_delta = 0.9)))
-saveRDS(loo_fbfit, "model_dev/loo_mcmt.rds")
+                                                        cores = 20,
+                                                        inits = initpars, iter = 3000,
+                                                        control=list(adapt_delta = 0.9)))
+saveRDS(loo_fbfit, "model_dev/loo_mat.rds")
