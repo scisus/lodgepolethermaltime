@@ -170,6 +170,7 @@ filter_sex_event <- function(sex, event, dat = phenf) {
     dplyr::filter(Sex == sex & Event_Obs %in% event_obs) %>%
     #dplyr::select(-DoY, -Date, -State, -contains("Event"), -mean_temp, -forcing, -sum_forcing) %>%
     dplyr::select(-DoY, -Date, -State, -contains("Event"), -mean_temp, -forcing) %>%
+    distinct() %>%
    # tidyr::pivot_wider(names_from = bound, values_from = sum_forcing_centered, values_fill = 0) %>%
    tidyr::pivot_wider(names_from = bound, values_from = sum_forcing, values_fill = 0) %>%
     dplyr::rename(sum_forcing = lower) %>%
