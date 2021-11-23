@@ -46,7 +46,7 @@ variation <- purrr::map(modells, gather_var_draws) %>%
   mutate(.variable = case_when(.variable != "sigma" ~ stringr::str_sub(.variable, 4, -12),
                                .variable == "sigma" ~ "sigma")) %>%
   mutate(.variable = factor(.variable)) %>%
-  mutate(.variable = forcats::fct_relevel(.variable, "sigma", "Year", "Site", "Provenance", "Clone", "Tree"))
+  mutate(.variable = forcats::fct_relevel(.variable, "sigma", "Year", "Site",  "Clone", "Tree"))
 saveRDS(variation, file = "objects/variation.rds")
 
 # offsets ####
@@ -64,12 +64,12 @@ colnames(varlevel) <- c("factor", "level")
 yearclonetree <- filter(varlevel, factor %in% c("Year", "Clone", "Tree")) %>% distinct()
 yctorder <- sort(yearclonetree$level)
 
-spyctorder <- unique(c(factororder$site, factororder$prov, yctorder))
+syctorder <- unique(c(factororder$site, yctorder))
 
 offsets <- offsets_raw %>% cbind(varlevel) %>%
   ungroup() %>%
-  mutate(factor = forcats::fct_relevel(factor, "Year", "Site", "Provenance", "Clone", "Tree")) %>%
-  mutate(level = forcats::fct_relevel(level, spyctorder))
+  mutate(factor = forcats::fct_relevel(factor, "Year", "Site", "Clone", "Tree")) %>%
+  mutate(level = forcats::fct_relevel(level, syctorder))
 
 # slow
 offsets_summary <- offsets %>%
@@ -82,9 +82,8 @@ siter <- filter(offsets, factor == "Site") %>%
   mutate(level = forcats::fct_relevel(level, factororder$site))
 saveRDS(siter, file = "objects/siter.rds")
 
-provr <- filter(offsets, factor == "Provenance") %>%
-  mutate(level = forcats::fct_relevel(level, factororder$prov))
-saveRDS(provr, file = "objects/provr.rds")
+cloner <- filter(offsets, factor == "Clone")
+saveRDS(cloner, file = "objects/cloner.rds")
 
 yearr <- filter(offsets, factor == "Year") %>%
   mutate(level = forcats::fct_relevel(level, as.character(factororder$year)))
