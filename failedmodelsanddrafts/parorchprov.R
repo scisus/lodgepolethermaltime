@@ -1,4 +1,4 @@
-# model with parent effects
+# model with parent effects + orchard effects + prov
 
 # This script creates a phenological model for lodgepole pine flowering
 
@@ -25,7 +25,8 @@ source('phenology_functions.R')
 provclimdat <- read.csv("../phd/data/OrchardInfo/lodgepole_SPU_climsum.csv") %>%
   select(-Pl_SPU, -X_FREQ_)
 climvarnames <- colnames(provclimdat)[-c(1:4)]
-# climate
+
+# site climate
 histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
   filter(forcing_type == "gdd")
 parclim <- read.csv("../phd/data/OrchardInfo/ParentTrees/locations_for_climatena_Normal_1961_1990MSY.csv") %>%
@@ -33,7 +34,7 @@ parclim <- read.csv("../phd/data/OrchardInfo/ParentTrees/locations_for_climatena
   mutate(Clone = as.character(Clone)) # for joining purposes later
 orchgen <- read.csv("../phd/data/OrchardInfo/OrchardGen.csv")
 
-
+# parent data
 parentdat <- read.csv("../phd/data/OrchardInfo/ParentTrees/parents.csv") %>%
   select(Clone = Parent.Tree.Number, Latitude, Longitude) %>%
   mutate(Clone = as.character(Clone))
@@ -56,6 +57,7 @@ provclim <- spudat %>%
   select(-SPU_Number)
 
 ## data preparation for phenology model ####
+## When missing parent location data, use provenance climate data
 phenftemp <- prepare_data(phendat, clim = histclim, spu = spudat) %>%
   left_join(parclim)
 
@@ -96,7 +98,7 @@ medat <- filter_sex_event(sex = "MALE", event = "end", phenf)
 initpars <- lapply(1:6, function(id) list(sigma = 10, Intercept = 300))
 
 # model formula
-bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + Latitude + EMT + MAT + SHM + mo(Generation) + (1|Provenance) + (1|Site) + (1|Clone) + (1|Year) + (1|Tree))
+bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + Latitude + EMT + MAT + SHM  + (1|Provenance) + (1|Site) + (1|Clone) + (1|Year) + (1|Tree) + (1|Orchard))
 
 
 # model prior
@@ -113,8 +115,8 @@ nchains <- 6
 
 # female/receptivity begin
 fbfit <- brm(bform, data = fbdat,
-             save_model = "female_begin.stan",
-             file = "female_begin",
+             save_model = "female_beginparorchprov.stan",
+             file = "female_beginparorchprov",
              prior = bprior,
              inits = initpars,
              iter = niter,
@@ -122,57 +124,17 @@ fbfit <- brm(bform, data = fbdat,
              chains = nchains,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
-             file_refit = "on_change",
+             file_refit = "always",
              control = list(adapt_delta = 0.9))
 print(summary(fbfit))
 
-# loo_fbfit <- loo(fbfit, model_names = "fbfit",
-#                  reloo = TRUE, reloo_args = list(prior = c(prior("normal(400,100)", class = "Intercept"),
-#                                                            prior("normal(0,15)", class = "sigma"),
-#                                                            prior("normal(0,9)", class = "sd"),
-#                                                            prior("student_t(3,0,5)", class ="b")),
-#
-#                                                  cores = 20,
-#                                                  inits = initpars, iter = 3000,
-#                                                  control=list(adapt_delta = 0.9)))
-# saveRDS(loo_fbfit, "model_dev/loo_lat.rds")
+loo_fbfit <- loo(fbfit, model_names = "fbfitparorchprov",
+                 reloo = TRUE, reloo_args = list(prior = c(prior("normal(400,100)", class = "Intercept"),
+                                                           prior("normal(0,15)", class = "sigma"),
+                                                           prior("normal(0,9)", class = "sd"),
+                                                           prior("student_t(3,0,5)", class ="b")),
 
-# female/receptivity end
-fefit <- brm(bform, data = fedat,
-             save_model = "female_end.stan",
-             file = "female_end",
-             prior = bprior,
-             inits = initpars,
-             iter = niter,
-             cores = ncores,
-             chains = nchains,
-             sample_prior = TRUE,
-             save_pars = save_pars(all = TRUE),
-             file_refit = "on_change")
-
-# male/pollen shed begin
-mbfit <- brm(bform, data = mbdat,
-             save_model = "male_begin.stan",
-             file = "male_begin",
-             prior = bprior,
-             inits = initpars,
-             iter = niter,
-             cores = ncores,
-             chains = nchains,
-             sample_prior = TRUE,
-             save_pars = save_pars(all = TRUE),
-             file_refit = "on_change")
-
-# male/pollen shed end
-mefit <- brm(bform, data = medat,
-             save_model = "male_end.stan",
-             file = "male_end",
-             prior = bprior,
-             inits = initpars,
-             iter = niter,
-             cores = ncores,
-             chains = nchains,
-             sample_prior = TRUE,
-             save_pars = save_pars(all = TRUE),
-             file_refit = "on_change")
-
+                                                 cores = 20,
+                                                 inits = initpars, iter = 3000,
+                                                 control=list(adapt_delta = 0.9)))
+saveRDS(loo_fbfit, "model_dev/loo_parorchprov.rds")
