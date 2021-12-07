@@ -21,7 +21,7 @@ Data is prepared with `combine_phenology_and_heatsum.R`. Climate data is from `P
 #####
 
 Modular analysis scripts write out objects needed in other scripts or for graphs and tables in `objects` folder
-- `modelmethods.R` thermal time models of flowering events in stan
+- `thermaltimemodel.R` thermal time models of flowering events in stan
   - stan code in `[sex]_[event].stan`
   - model output in `[sex]_[event].rds`
 - `censoring.R` end vs interval censoring
@@ -31,5 +31,7 @@ Modular analysis scripts write out objects needed in other scripts or for graphs
 - `floweringlength.R` length of flowering period
 - `overlap.R` calculate historical and future overlap of phenological periods
 - `variation.R` variation in flowering period
+
+- `provenancemodel.R` model clone effect as function of genotype provenance climate
 
 `graphsandtables.R` contains code for graphs and tables. relies on objects in `objects` folder created by modular analysis scripts
