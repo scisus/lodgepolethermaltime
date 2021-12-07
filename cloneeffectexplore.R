@@ -95,7 +95,7 @@ climcors %>%
 
 # Clone 3172 is from latitude 58.53. This is 2.6 degrees further north than the next most northerly collection in the dataset. This Clone affects correlations a fair amount.
 
-# graph clone effects and climate
+# graph clone effects and climate ####
 library(ggplot2)
 
 ggplot(filter(clonedat, modelname == "begin_MALE"), aes(x = climval, y = medianvalue)) +
@@ -109,4 +109,35 @@ ggplot(filter(clonedat, modelname == "begin_FEMALE"), aes(x = climval, y = media
   geom_smooth(method = "lm") +
   facet_wrap("climvar", scales = "free") +
   ggtitle("Female begin")
+
+# r2
+lm_function <- corr_function <- function(model.abb, variable){
+
+  dat <- filter(clonedat, modelname == model.abb, climvar == variable) %>%
+    filter(!is.na(climval))
+  model <- lm(dat$medianvalue ~ dat$climval)
+
+
+  output <- tidy(model, conf.int = TRUE) %>%
+    select(term, estimate, std.error, starts_with("conf")) %>%
+    mutate(modelname = model.abb, variable = variable) %>%
+    distinct()
+
+  metaout <- glance(model) %>%
+    mutate(modelname = model.abb, variable = variable) %>%
+    distinct()
+
+  return(list(pars = output, meta = metaout))
+  #return(list(model_name = model.abb, variable = variable, correlation = corr))
+}
+
+lm_df_clone <- map2_df(.x = modelplusvar$model_name, .y = modelplusvar$variable, .f = lm_function)
+
+r2 <- arrange(lm_df_clone$meta, desc(r.squared))
+
+ggplot(r2, aes(x = r.squared, y = variable, colour = modelname)) +
+  geom_point()
+
+lm_df_clone$pars %>% filter(term == "dat$climval") %>%
+  arrange(desc(abs(estimate)))
 
