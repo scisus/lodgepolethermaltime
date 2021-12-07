@@ -13,12 +13,12 @@ theme_set(theme_dark())
 phenf <- readRDS("objects/phenf.rds")
 ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
   stat_ecdf() +
-  labs(title = "Cumulative distribution of accumulated forcing for flowering events", caption = "raw data") +
+  labs(title = "Cumulative distribution of accumulated forcing at observation", caption = "raw data") +
   scale_colour_viridis_d() +
   #theme_dark(base_size = 18) +
   ylab("") +
   xlab("GDD")
-ggsave("plots/cumulative_distribution.pdf", width = 6, height = 5)
+ggsave("plots/cumulative_distribution.png", width = 6, height = 5)
 
 # censoring table ####
 censdf <- readRDS("objects/censdf.rds")
