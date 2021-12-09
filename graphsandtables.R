@@ -144,16 +144,22 @@ ggplot(alldat, aes(x = sum_forcing, y = "observations" , colour = Sex)) +
             slab_color = "gray65", alpha = 1/10, fill = NA) +
   stat_pointinterval(data = allsim, aes(x = .prediction, y = prediction_type),
                      .width = c(0.5, 0.89), point_interval = median_hdci ) +
-  # stat_dots(data = may15, aes(x = sum_forcing, y = "Forcing at May 15")) +
+  stat_slab(data = smallmeans, aes(x = .value, y = "population mean"),
+            .width = c(0.5, 0.89), point_interval = median_hdci,
+            slab_color = "gray65", fill = NA) +
+  stat_pointinterval(data = smallmeans, aes(x = .value, y = "population mean"),
+                     .width = c(0.5, 0.89), point_interval = median_hdci ) +
  # theme_bw(base_size = 18) +
   theme_bw() +
   facet_grid(event ~ Sex) +
-  labs(title = "Modeled and observed flowering events",  caption = "200 samples from the posterior, 5 for fully crossed predictions") +
+  labs(title = "Modeled and observed flowering events", caption = "200 samples from the posterior except 30 for fully crossed predictions") +
   xlab("GDD") +
   ylab("") +
   scale_colour_viridis_d() +
   theme(legend.position = "none")
-ggsave("plots/retrodictions.pdf", width = 7, height = 5)
+
+#ggsave("plots/retrodictions.pdf", width = 7, height = 5)
+ggsave("../flowering-cline/figures/retrodictions.png", width = 7, height = 5.5, units = "in")
 
 # day_of_year_lines ####
 # time series line plot with begin and end faceted by site with general_doy_preds_med_siteyearsex from `retrodictandpredict.R`
