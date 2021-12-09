@@ -4,6 +4,7 @@ library(ggplot2)
 library(forcats)
 library(ggbeeswarm)
 library(tidybayes)
+library(patchwork)
 #library(RColorBrewer)
 
 theme_set(theme_dark())
@@ -34,8 +35,8 @@ knitr::kable(censdf, caption="Proportion of observations for each event interval
 ## means ####
 # plot of population means using means from modelparameters.R - better as a table?
 means <- readRDS("objects/means.rds")
-ggplot(means, aes(y = fct_rev(event), x = .value, colour = Sex)) +
-  stat_halfeye(position = "dodge") +
+meanplot <- ggplot(means, aes(y = fct_rev(event), x = .value, colour = Sex)) +
+  stat_eye(position = "dodge") +
   scale_colour_viridis_d() +
   labs(title = "Population mean", caption = "2000 draws from the posterior") +
   ylab("") +
@@ -43,12 +44,14 @@ ggplot(means, aes(y = fct_rev(event), x = .value, colour = Sex)) +
  # theme_dark(base_size = 18) +
   theme(legend.position = "top") +
   scale_x_continuous(breaks = scales::pretty_breaks(n=10))
-ggsave("plots/means.pdf", width = 6, height = 6)
+
+smallmeans <- filter(means, .draw %in% sample(unique(means$.draw), size = 200))
+#ggsave("plots/means.pdf", width = 6, height = 6)
 
 ## sd ####
 # plot sd parameters using variation from modelparameters.R
 variation <- readRDS("objects/variation.rds")
-ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .variable, linetype = Sex)) +
+varplot <- ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .variable, linetype = Sex)) +
   stat_pointinterval(position = "dodge") +
   scale_colour_viridis_d() +
   labs(title = "Standard deviation of pop mean & offsets", caption = "2000 draws from the posterior") +
@@ -58,12 +61,12 @@ ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .variable, li
   guides(color = "none", size = "none") +
  # theme_dark(base_size = 18) +
   theme(legend.position = "top")
-ggsave("plots/sd.pdf", width = 6, height = 5)
+#ggsave("plots/sd.pdf", width = 6, height = 5)
 
 ## offset_medians ####
 # plot medians of offset parameters in point clouds (like beeswarm)
 offsets_summary <- readRDS("objects/offsets_summary.rds")
-offsets_summary %>%
+offsetplot <- offsets_summary %>%
   select(model, Sex, event, factor, level, .value, .point) %>% distinct() %>%
   ggplot(aes(y=.value, x = model, colour = Sex, shape = event)) +
   geom_quasirandom(alpha = 0.5) +
@@ -75,7 +78,11 @@ offsets_summary %>%
   scale_colour_viridis_d() +
   theme(legend.position = "top") +
   geom_hline(yintercept = 0, linetype = 3)
-ggsave("plots/offsets_medians.pdf", width = 6, height = 5)
+#ggsave("plots/offsets_medians.pdf", width = 6, height = 5)
+#
+
+meanplot + offsetplot
+ggsave("plots/mean")
 
 ## site_offsets ####
 # interval plot for site level offsets using siter from modelparameters.R
