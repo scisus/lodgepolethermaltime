@@ -250,29 +250,41 @@ simulate_from_model <- function(data, model, n_lct = c(5,10,2), nsamples = nsamp
 
   # simulate data for fully crossed version of real dataset. This is 82,000+ observations and my computer can't handle that unless I use *very* few posterior samples
 
-  crossdat <- data %>% tidyr::complete(Sex, event, Year, Site, tidyr::nesting(Provenance, Clone, Tree)) %>%
-    tidyr::complete(Year, nesting(Site, Tree)) %>%
-    select(Year, Site, Tree, Provenance, Clone) %>%
+  crossdat <- data %>% tidyr::complete(Sex, event, Year, Site, tidyr::nesting(Clone, Tree)) %>%
+    #tidyr::complete(Year, nesting(Site, Tree)) %>%
+    select(Year, Site, Tree, Clone) %>%
     distinct()
 
   ypred_fullcross <- tidybayes::add_predicted_draws(newdata = crossdat, object = model, ndraws = 30, seed = seed, cores = cores, value = ".prediction") %>%
     mutate(prediction_type = "prediction - full cross")
 
   # simulate data from new levels (out-of-sample predictions). The newdata simulation code took an embarrassingly long time to figure out
-  nlevels <- n_lct[1] # how many sites, provenances, and years
+  # nlevels <- n_lct[1] # how many sites, provenances, and years
+  # lv <- as.character(1:nlevels)
+  # nc <- n_lct[2] # clones per prov
+  # nt <- n_lct[3] # trees per clone
+  #
+  # Year <- data.frame(Year = lv)
+  # newdata <- data.frame(Site = rep(lv, nc*nt),
+  #                       Provenance = rep(lv, nc*nt),
+  #                       Clone = as.character(rep(1:(nlevels*nc), nt))) %>%
+  #   tidyr::complete(Site, tidyr::nesting(Provenance, Clone)) %>%
+  #   arrange(Site, Provenance, Clone) %>%
+  #   mutate(Tree = as.character(1:n())) %>%
+  #   merge(Year) %>%
+  #   complete(Site, Provenance, Year)
+
+  # number of c(Sites&Years, Clones, Trees per clone)
+  nlevels <- n_lct[1] # how many sites and years
   lv <- as.character(1:nlevels)
-  nc <- n_lct[2] # clones per prov
+  nc <- n_lct[2] # how many clones
   nt <- n_lct[3] # trees per clone
 
-  Year <- data.frame(Year = lv)
   newdata <- data.frame(Site = rep(lv, nc*nt),
-                        Provenance = rep(lv, nc*nt),
+                        Year = rep(lv, nc*nt),
                         Clone = as.character(rep(1:(nlevels*nc), nt))) %>%
-    tidyr::complete(Site, tidyr::nesting(Provenance, Clone)) %>%
-    arrange(Site, Provenance, Clone) %>%
-    mutate(Tree = as.character(1:n())) %>%
-    merge(Year) %>%
-    complete(Site, Provenance, Year)
+    tidyr::complete(Site, Year, Clone) %>%
+    mutate(Tree = as.character(1:n()))
 
   ypred_newlevels <- tidybayes::add_predicted_draws(newdata = newdata, object = model, allow_new_levels = TRUE, sample_new_levels = "gaussian", ndraws = nsamples, seed = seed, cores = cores, value = ".prediction") %>%
     mutate(prediction_type = "prediction - new levels")
