@@ -37,6 +37,10 @@ means <- purrr::map(modells, gather_means_draws) %>%
   left_join(labdf) # label the models for plotting
 saveRDS(means, file = "objects/means.rds")
 
+meanssummary <- means %>%
+  group_by(Sex, event) %>%
+  median_hdci(.value)
+
 
 # variation ####
 
