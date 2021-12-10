@@ -59,9 +59,10 @@ varplot <- ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .v
   xlab("GDD") +
   facet_grid(event ~ .) +
   guides(color = "none", size = "none") +
- # theme_dark(base_size = 18) +
+  theme_dark() +
   theme(legend.position = "top")
 #ggsave("plots/sd.pdf", width = 6, height = 5)
+ggsave("../flowering-cline/figures/sd.png", width = 6, height = 5)
 
 ## offset_medians ####
 # plot medians of offset parameters in point clouds (like beeswarm)
