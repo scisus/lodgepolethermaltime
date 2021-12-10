@@ -51,6 +51,20 @@ specific_doy_preds <- full_join(filter(allsim, prediction_type %in% c("retrodict
 rm(specific_doy_preds_temp)
 saveRDS(specific_doy_preds, file = "objects/specific_doy_preds.rds")
 
+# now do a median version of above
+# first get DoY predictions for specific predictions & retrodictions (uncensored, fully crossed)
+# filter simulations for only real sites and years, not new levels and simplify to only columns needed for matching
+specificsimmed <- filter(allsim, prediction_type %in% c("retrodiction - uncensored", "prediction - full cross")) %>%
+  ungroup() %>%
+  select(Year, Site, .prediction) %>%
+  distinct()
+
+specific_doy_preds_temp <- forcing_to_doy(filter(histclim, forcing_type == "gdd"), specificsim, aforce = "sum_forcing", bforce = ".prediction", newdoycolname = "newdoycol")
+
+specific_doy_preds <- full_join(filter(allsim, prediction_type %in% c("retrodiction - uncensored", "prediction - full cross")), specific_doy_preds_temp)
+rm(specific_doy_preds_temp)
+saveRDS(specific_doy_preds, file = "objects/specific_doy_preds.rds")
+
 # get DoY predictions for the general predictions - which means assigning all sites and years to each prediction
 
 # extract heat sum predictions at new sites and years and provs, clones, trees. downsample - 30 draws per "row"/new obs
