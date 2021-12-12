@@ -296,3 +296,10 @@ ggplot(filter(fut_overlap_sys, .width == 0.5), aes(x = as.factor(climate_forcing
   xlab("climate forcing") +
   ylab("number of overlap days")
 ggsave("plots/future_overlap.pdf", width = 7, height = 6)
+
+# clone model parameters ###
+
+## table ####
+clonemodells <- readRDS("objects/clonemodells.rds") # clonemodelanalysis.R
+
+tab_model(clonemodells, dv.labels = c("female begin", "male begin", "female end", "male end"), file = "../flowering-cline/tables/provclimeff.html")
