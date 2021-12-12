@@ -2,6 +2,7 @@
 
 library(dplyr)
 library(brms)
+library(report)
 
 # get data
 clone_offsets <- readRDS("objects/cloner.rds") %>%
@@ -38,19 +39,15 @@ nchains = 6
 niter = 1000
 
 fbfitclone <- brm(bformse, data = fbclone,
-             save_model = "female_begin_clone.stan",
-             file = "female_begin_clone",
-             prior = bprior,
-             #inits = initpars,
-             iter = niter,
-             cores = ncores,
-             chains = nchains,
-             sample_prior = TRUE,
-             save_pars = save_pars(all = TRUE),
-             file_refit = "on_change")
-
-plot(conditional_effects(fbfitclone), points = TRUE)
-bayes_R2(fbfitclone)
+            save_model = "female_begin_clone.stan",
+            file = "female_begin_clone",
+            prior = bprior,
+            iter = niter,
+            cores = ncores,
+            chains = nchains,
+            sample_prior = TRUE,
+            save_pars = save_pars(all = TRUE),
+            file_refit = "always")
 
 mbfitclone <- brm(bformse, data = mbclone,
                     save_model = "male_begin_clone.stan",
@@ -88,6 +85,3 @@ mefitclone <- brm(bformse, data = meclone,
                     save_pars = save_pars(all = TRUE),
                     file_refit = "on_change")
 
-plot(conditional_effects(fbfitclone), points = TRUE)
-plot(conditional_effects(mbfitclone), points = TRUE)
-plot(conditional_effects(fefitclone), points = TRUE)
