@@ -26,7 +26,7 @@ mbclone <- filter(dat, Sex == "MALE", event == "begin")
 meclone <- filter(dat, Sex == "MALE", event == "end")
 
 #bformsd <- brmsformula(meanoffset | mi(sdy = sdoffset) ~ 1 + MAT)
-bformse <- brmsformula(meanoffset | se(sdoffset, sigma = TRUE) ~ 1 + MAT)
+bformse <- brmsformula(meanoffset | se(sdoffset, sigma = TRUE) ~ MAT)
 #bformsef <- brmsformula(meanoffset | se(sdoffset, sigma = FALSE) ~ 1 + MAT)
 
 bprior <- c(prior("normal(0,10)", class = "Intercept"),
