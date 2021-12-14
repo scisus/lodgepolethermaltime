@@ -19,6 +19,7 @@ dat <- clone_offsets %>%
   summarise(meanoffset = mean(.value), sdoffset = sd(.value)) %>%
   # combine with parent info
   left_join(prov_climate)
+saveRDS(dat, "objects/clonedat.rds")
 
 fbclone <- filter(dat, Sex == "FEMALE", event == "begin")
 feclone <- filter(dat, Sex == "FEMALE", event == "end")
