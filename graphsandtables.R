@@ -5,6 +5,7 @@ library(forcats)
 library(ggbeeswarm)
 library(tidybayes)
 library(patchwork)
+library(sjPlot) #html tables
 #library(RColorBrewer)
 
 theme_set(theme_dark())
@@ -297,9 +298,28 @@ ggplot(filter(fut_overlap_sys, .width == 0.5), aes(x = as.factor(climate_forcing
   ylab("number of overlap days")
 ggsave("plots/future_overlap.pdf", width = 7, height = 6)
 
-# clone model parameters ###
+# clone model parameters ####
 
 ## table ####
 clonemodells <- readRDS("objects/clonemodells.rds") # clonemodelanalysis.R
 
-tab_model(clonemodells, dv.labels = c("female begin", "male begin", "female end", "male end"), file = "../flowering-cline/tables/provclimeff.html")
+tab_model(list(clonemodells$fb, clonemodells$mb), dv.labels = c("Female", "Male"), title = "Begin flowering", file = "../flowering-cline/tables/provclimeffstart.html")
+
+# clone model predictions ####
+clonedat <- readRDS("objects/clonedat.rds")
+clonepred <- readRDS("objects/clonepred.rds")
+
+# lines & points ####
+theme_set(theme_dark())
+# caption = "points: 1961-81 climate normal MAT, mean of clone offset estimates from thermal time model (2000 posterior samples). lines: posterior distribution of genotype offset from the provenance climate effect model"
+ggplot(clonepred, aes(x = MAT, y = meanoffset)) +
+  stat_lineribbon(aes(y = .prediction, colour = Sex)) +
+  geom_point(data = bind_rows(clonedat), aes(x = MAT, y = meanoffset, colour = Sex), pch = 1, alpha = 0.7) +
+  scale_fill_brewer(palette = "Greys") +
+  facet_grid(event ~ Sex) +
+  ylab("Genotype offset") +
+  xlab(expression("Provenance Mean Annual Temperature " ( degree*C))) +
+  scale_color_viridis_d() +
+  labs(title = "Predicted and observed genotype effects")
+ggsave("../flowering-cline/figures/genotype_effects_modeled_observed.pdf", width = 7, height = 6)
+
