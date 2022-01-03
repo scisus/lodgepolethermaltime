@@ -321,5 +321,5 @@ ggplot(clonepred, aes(x = MAT, y = meanoffset)) +
   xlab(expression("Provenance Mean Annual Temperature " ( degree*C))) +
   scale_color_viridis_d() +
   labs(title = "Predicted and observed genotype effects")
-ggsave("../flowering-cline/figures/genotype_effects_modeled_observed.pdf", width = 7, height = 6)
+ggsave("../flowering-cline/figures/genotype_effects_modeled_observed.png", width = 7, height = 6)
 

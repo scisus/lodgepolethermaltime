@@ -31,15 +31,7 @@ clonepred <- purrr::map2(clonedat, clonemodells, function(x,y) {add_predicted_dr
   select(-.chain, -.iteration) %>%
   filter(!is.na(MAT)) %>%
   ungroup()
-saveRDS(clonepred, "objects/clonepred")
+saveRDS(clonepred, "objects/clonepred.rds")
 
 
-theme_set(theme_tidybayes())
-ggplot(clonepred, aes(x = MAT, y = meanoffset)) +
-  stat_lineribbon(aes(y = .prediction, colour = Sex)) +
-  geom_point(data = bind_rows(clonedat), aes(x = MAT, y = meanoffset, colour = Sex), pch = 1, alpha = 0.7) +
-  scale_fill_brewer(palette = "Greys") +
-  facet_grid(Sex ~ event) +
-  ylab("Genotype offset") +
-  xlab(expression("Provenance Mean Annual Temperature " ( degree*C))) +
-  scale_color_viridis_d()
+
