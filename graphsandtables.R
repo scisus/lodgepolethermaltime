@@ -301,9 +301,14 @@ ggsave("plots/future_overlap.pdf", width = 7, height = 6)
 # clone model parameters ####
 
 ## table ####
-clonemodells <- readRDS("objects/clonemodells.rds") # clonemodelanalysis.R
+clonemodells <- readRDS("objects/clonemodells.rds") # from clonemodelanalysis.R
 
+## begin
 tab_model(list(clonemodells$fb, clonemodells$mb), dv.labels = c("Female", "Male"), title = "Begin flowering", file = "../flowering-cline/tables/provclimeffstart.html")
+
+## end
+tab_model(list(clonemodells$fe, clonemodells$me), dv.labels = c("Female", "Male"), title = "End flowering", file = "../flowering-cline/tables/provclimeffectend.html")
+
 
 # clone model predictions ####
 clonedat <- readRDS("objects/clonedat.rds")
