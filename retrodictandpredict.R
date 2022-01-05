@@ -26,7 +26,7 @@ seed <- 738
 
 # simulate forcing ####
 #
-# simulate 4 sets of data from the model - retrodictions, retrodictions accounting for censorship, predictions for 5 new sites/provenances/years with 10 clones per provenance in every site and year and 2 trees per clone (at different sites))
+# simulate 4 sets of data from the model - retrodictions, retrodictions accounting for censorship, predictions for 5 new sites/years with 10 clones per provenance in every site and year and 2 trees per clone (at different sites))
 # using 200 instead of 2000 samples from the posterior so my computer doesn't fall over
 
 allsim <- purrr::map2(alldatls, modells, function(x,y) {simulate_from_model(data = x, model = y,
