@@ -5,6 +5,20 @@
 library(dplyr)
 library(tidyr)
 
+
+# observations
+phenf <- readRDS("objects/phenf.rds")
+alldat <- readRDS("objects/alldat.rds")
+
+length_dat <- phenf %>%
+  filter(Event_Obs %in% c(2,3)) %>%
+  mutate(event = case_when( )) # start here and change event label to events
+  pivot_wider(names_from = "event", values_from = c("sum_"))
+
+# calculate the length of the flowering period for each clone
+
+# for the retrodictions, use censored simulation data
+
 censor_doy_retro <- readRDS("objects/censor_doy_retro.rds")
 
 meanstartend_censored <- censor_doy_retro %>%
