@@ -5,6 +5,18 @@
 library(dplyr)
 library(tidyr)
 
+censor_doy_retro <- readRDS("objects/censor_doy_retro.rds")
+
+meanstartend_censored <- censor_doy_retro %>%
+  group_by(Clone, Site, Year, Sex, event) %>%
+  summarise(meandoy = mean(newdoycol), sddoy = sd(newdoycol))
+
+length_censored <- meanstartend_censored %>%
+  pivot_wider(names_from = event, values_from = c("meandoy", "sddoy")) %>%
+  mutate(mean_length = meandoy_end - meandoy_begin, length_sd = sqrt(sddoy_begin^2 + sddoy_end^2))
+
+
+
 specific_doy_preds <- readRDS("objects/specific_doy_preds.rds")
 doypredmatchfut_medians <- readRDS("objects/doypredmatchfut_medians.rds")
 factororder <- readRDS("objects/factororder.rds")

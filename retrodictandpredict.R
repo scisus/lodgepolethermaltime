@@ -51,6 +51,20 @@ specific_doy_preds <- full_join(filter(allsim, prediction_type %in% c("retrodict
 rm(specific_doy_preds_temp)
 saveRDS(specific_doy_preds, file = "objects/specific_doy_preds.rds")
 
+# retrodict DoY using censored forcing estimates
+
+censorsim <- filter(allsim, prediction_type == "retrodiction - censored") %>%
+  ungroup() %>%
+  select(Year, Site, .prediction) %>%
+  distinct()
+
+censor_doy_retro_temp <- forcing_to_doy(filter(histclim, forcing_type == "gdd"), censorsim, aforce = "sum_forcing", bforce = ".prediction", newdoycolname = "newdoycol")
+
+censor_doy_retro <- full_join( filter(allsim, prediction_type == "retrodiction - censored"), censor_doy_retro_temp)
+
+rm(censor_doy_retro_temp)
+saveRDS(censor_doy_retro, file = "objects/censor_doy_retro.rds")
+
 # now do a median version of above
 # first get DoY predictions for specific predictions & retrodictions (uncensored, fully crossed)
 # filter simulations for only real sites and years, not new levels and simplify to only columns needed for matching
