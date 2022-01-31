@@ -10,12 +10,39 @@ library(tidyr)
 phenf <- readRDS("objects/phenf.rds")
 alldat <- readRDS("objects/alldat.rds")
 
+# calculate the length of the flowering period for each clone
+
 length_dat <- phenf %>%
   filter(Event_Obs %in% c(2,3)) %>%
-  mutate(event = case_when( )) # start here and change event label to events
-  pivot_wider(names_from = "event", values_from = c("sum_"))
+  mutate(event = case_when(Event_Obs == 2 ~ "begin",
+                           Event_Obs == 3 ~ "end")) %>%
+  select(-contains("censored"), -Source, -X, -Y, -bound, -mean_temp, -contains("forcing"), -Date, -contains("Event_"), -State) %>%
+  group_by(Index, Year, Sex, Site, Orchard, Clone, Tree) %>%
+  pivot_wider(names_from = event, values_from = DoY) %>%
+  mutate(length = end - begin)
 
-# calculate the length of the flowering period for each clone
+## using data that's only interval censored
+
+length_dat_interval <- phenf %>%
+  filter(Event_Obs %in% c(2,3)) %>%
+  mutate(event = case_when(Event_Obs == 2 ~ "begin",
+                           Event_Obs == 3 ~ "end")) %>%
+  filter(censored == "interval") %>%
+  select(-contains("censored"), -Source, -X, -Y, -bound, -mean_temp, -contains("forcing"), -Date, -contains("Event_"), -State) %>%
+  group_by(Index, Year, Sex, Site, Orchard, Clone, Tree) %>%
+  pivot_wider(names_from = event, values_from = DoY) %>%
+  mutate(length = end - begin)
+
+## using last day observed not flowering and first day observed past flowering instead of flowering period
+
+length_dat_long <- phenf %>%
+  filter(Event_Obs %in% c(1,4)) %>%
+  mutate(event = case_when(Event_Obs == 1 ~ "begin",
+                           Event_Obs == 4 ~ "end")) %>%
+  select(-contains("censored"), -Source, -X, -Y, -bound, -mean_temp, -contains("forcing"), -Date, -contains("Event_"), -State) %>%
+  group_by(Index, Year, Sex, Site, Orchard, Clone, Tree) %>%
+  pivot_wider(names_from = event, values_from = DoY) %>%
+  mutate(length = end - begin)
 
 # for the retrodictions, use censored simulation data
 
