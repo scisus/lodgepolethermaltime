@@ -23,15 +23,6 @@ length_dat <- phenf %>%
 
 ## using data that's only interval censored
 
-length_dat_interval <- phenf %>%
-  filter(Event_Obs %in% c(2,3)) %>%
-  mutate(event = case_when(Event_Obs == 2 ~ "begin",
-                           Event_Obs == 3 ~ "end")) %>%
-  filter(censored == "interval") %>%
-  select(-contains("censored"), -Source, -X, -Y, -bound, -mean_temp, -contains("forcing"), -Date, -contains("Event_"), -State) %>%
-  group_by(Index, Year, Sex, Site, Orchard, Clone, Tree) %>%
-  pivot_wider(names_from = event, values_from = DoY) %>%
-  mutate(length = end - begin)
 
 ## using last day observed not flowering and first day observed past flowering instead of flowering period
 
@@ -69,14 +60,6 @@ ggplot(length_comp, aes(x = length_mean, y = length)) +
 
 # model strongly biased to longer flowering length than observed.
 
-## compare retrodicted length and real observed length for interval censored obs only
-
-length_comp_int <- left_join(length_dat_interval, length_censored)
-
-ggplot(length_comp_int, aes(x = length_mean, y = length)) +
-  geom_point() +
-  facet_wrap("Sex") +
-  geom_abline(slope = 1, intercept = 0)
 
 ## compare retrodicted length using the full possible flowering period
 
