@@ -54,9 +54,42 @@ meanstartend_censored <- censor_doy_retro %>%
 
 length_censored <- meanstartend_censored %>%
   pivot_wider(names_from = event, values_from = c("meandoy", "sddoy")) %>%
-  mutate(mean_length = meandoy_end - meandoy_begin, length_sd = sqrt(sddoy_begin^2 + sddoy_end^2))
+  mutate(length_mean = meandoy_end - meandoy_begin, length_sd = sqrt(sddoy_begin^2 + sddoy_end^2))
+
+# compare retrodicted length and real observed length
+
+length_comp <- left_join(length_dat, length_censored)
+
+library(ggplot2)
+ggplot(length_comp, aes(x = length_mean, y = length)) +
+  geom_point() +
+  facet_wrap("Sex") +
+  geom_abline(slope = 1, intercept = 0)
 
 
+# model strongly biased to longer flowering length than observed.
+
+## compare retrodicted length and real observed length for interval censored obs only
+
+length_comp_int <- left_join(length_dat_interval, length_censored)
+
+ggplot(length_comp_int, aes(x = length_mean, y = length)) +
+  geom_point() +
+  facet_wrap("Sex") +
+  geom_abline(slope = 1, intercept = 0)
+
+## compare retrodicted length using the full possible flowering period
+
+length_comp_full <- left_join(length_dat_long, length_censored)
+
+ggplot(length_comp_full, aes(x = length_mean, y = length)) +
+  geom_point() +
+  facet_wrap("Sex") +
+  geom_abline(slope = 1, intercept = 0)
+
+# YES! Now the length estimates have a bias to be too short. Model is doing great!
+
+# even more obvious bias. maybe that's the expectation though? the type of censoring in my data *always* underestimates length. though these graphs suggest more extreme censoring than I'd expect for interval censoring fo just a day or two
 
 specific_doy_preds <- readRDS("objects/specific_doy_preds.rds")
 doypredmatchfut_medians <- readRDS("objects/doypredmatchfut_medians.rds")
