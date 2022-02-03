@@ -7,51 +7,27 @@ library(tidyr)
 library(ggplot2)
 library(forcats)
 
-# The exact flowering period is never observed because of censoring. Using the first and last observed flowering days we construct a minimum flowering period length for the data. Using the last observed before flowering day and the first observed after flowering day, we construct a maximum flowering period length for the data. We expect model estimates to be between the min and max ranges for the observations.
+
 
 # observations
-phenf <- readRDS("objects/phenf.rds")
+
 alldat <- readRDS("objects/alldat.rds")
 
-# calculate the minimum length of the flowering period for each clone
 
-length_dat_min <- phenf %>%
-  filter(Event_Obs %in% c(2,3)) %>%
-  mutate(event = case_when(Event_Obs == 2 ~ "begin",
-                           Event_Obs == 3 ~ "end")) %>%
-  select(-contains("censored"), -Source, -X, -Y, -bound, -mean_temp, -contains("forcing"), -Date, -contains("Event_"), -State) %>%
-  group_by(Index, Year, Sex, Site, Orchard, Clone, Tree) %>%
-  pivot_wider(names_from = event, values_from = DoY) %>%
-  mutate(length_min = end - begin)
 
 
 ## calculate the maximum length of the flowering period for each clone using last day observed not flowering and first day observed past flowering instead of flowering period
 
-length_dat_max <- phenf %>%
-  filter(Event_Obs %in% c(1,4)) %>%
-  mutate(event = case_when(Event_Obs == 1 ~ "begin",
-                           Event_Obs == 4 ~ "end")) %>%
-  select(-contains("censored"), -Source, -X, -Y, -bound, -mean_temp, -contains("forcing"), -Date, -contains("Event_"), -State) %>%
-  group_by(Index, Year, Sex, Site, Orchard, Clone, Tree) %>%
-  pivot_wider(names_from = event, values_from = DoY) %>%
-  mutate(length_max = end - begin)
+
 
 # try using noncensored retrodictions
 
-retro_doy <- readRDS("objects/specific_doy_preds.rds") %>% filter(prediction_type == "retrodiction - uncensored") # slow step, consider object that's only the uncensored obs
-
-meanstartend_retro <- retro_doy %>%
-  group_by(Tree, Clone, Site, Year, Sex, event) %>%
-  summarise(meandoy = mean(newdoycol), sddoy = sd(newdoycol))
-
-length_retro <- meanstartend_retro %>%
-  pivot_wider(names_from = event, values_from = c("meandoy", "sddoy")) %>%
-  mutate(length_mean = meandoy_end - meandoy_begin, length_sd = sqrt(sddoy_begin^2 + sddoy_end^2))
+retro_doy_summary <- readRDS("objects/retro_doy_summary.rds")
 
 # compare retrodicted length and min/max observed flowering
 
 length_comp <- full_join(select(length_dat_min, -begin, -end), select(length_dat_max, -begin, -end) ) %>%
-  left_join(length_retro) %>%
+  left_join(retro_doy_summary) %>%
   mutate(estimate_in_interval = case_when(!is.na(length_min) & !is.na(length_max) ~ length_mean >= length_min & length_mean <= length_max,
                                           is.na(length_max) ~ length_mean > length_min,
                                           is.na(length_min) ~ length_mean < length_max)) %>%

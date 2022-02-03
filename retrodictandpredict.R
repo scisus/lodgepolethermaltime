@@ -18,6 +18,7 @@ futclim <- read.csv("../lodgepole_climate/processed/future_daily_temps.csv")
 
 alldat <- alldatls %>% bind_rows()
 saveRDS(alldat, file = "objects/alldat.rds")
+phenf <- readRDS("objects/phenf.rds")
 
 # global
 
@@ -51,19 +52,60 @@ specific_doy_preds <- full_join(filter(allsim, prediction_type %in% c("retrodict
 rm(specific_doy_preds_temp)
 saveRDS(specific_doy_preds, file = "objects/specific_doy_preds.rds")
 
-# retrodict DoY using censored forcing estimates
+retro_doy_uncensored <- filter(specific_doy_preds, prediction_type %in% c("retrodiction - uncensored")) %>%
+  left_join(specific_doy_preds_temp)
 
-censorsim <- filter(allsim, prediction_type == "retrodiction - censored") %>%
+# summarise uncensored doy retrodictions by start, end, and length
+
+retro_doy_summary <- specific_doy_preds %>%
+  filter(prediction_type == "retrodiction - uncensored") %>%
+  group_by(Sex, Site, Year, Clone, Tree, event) %>%
+  summarise(meandoy = mean(newdoycol), sddoy = sd(newdoycol)) %>%
+  pivot_wider(names_from = event, values_from = c("meandoy", "sddoy")) %>%
+  mutate(length_mean = meandoy_end - meandoy_begin, length_sd = sqrt(sddoy_begin^2 + sddoy_end^2))
+
+saveRDS(retro_doy_summary, file = "objects/retro_doy_summary.rds")
+
+# are the mean begin, end, and length within the expected ranges?
+# The exact flowering period is never observed because of censoring.
+# Using the first and last observed flowering days we construct a the max begin and minimum end day and minimum flowering period length for the data.
+# Using the last observed before flowering day and the first observed after flowering day, we construct a minimum begin day, maximum end day, and maximum flowering period length for the data. We expect model estimates to be between the min and max ranges for the observations.
+
+bel_min <- phenf %>%
+  filter(Event_Obs %in% c(2,3)) %>%
+  mutate(event = case_when(Event_Obs == 2 ~ "begin",
+                           Event_Obs == 3 ~ "end")) %>%
+  select(-contains("censored"), -Source, -X, -Y, -bound, -mean_temp, -contains("forcing"), -Date, -contains("Event_"), -State) %>%
+  group_by(Index, Year, Sex, Site, Orchard, Clone, Tree) %>%
+  pivot_wider(names_from = event, values_from = DoY) %>%
+  mutate(length_min = end - begin) %>%
+  rename(begin_max = begin, end_min = end)
+
+bel_max <- phenf %>%
+  filter(Event_Obs %in% c(1,4)) %>%
+  mutate(event = case_when(Event_Obs == 1 ~ "begin",
+                           Event_Obs == 4 ~ "end")) %>%
+  select(-contains("censored"), -Source, -X, -Y, -bound, -mean_temp, -contains("forcing"), -Date, -contains("Event_"), -State) %>%
+  group_by(Index, Year, Sex, Site, Orchard, Clone, Tree) %>%
+  pivot_wider(names_from = event, values_from = DoY) %>%
+  mutate(length_max = end - begin) %>%
+  rename(begin_min = begin, end_max = end)
+
+bel <- full_join(bel_min, bel_max) %>%
+  left_join(retro_doy_summary) %>%
+  mutate(length_in_int = case_when(!is.na(length_min) & !is.na(length_max) ~ length_mean >= length_min & length_mean <= length_max,
+                                          is.na(length_max) ~ length_mean > length_min,
+                                          is.na(length_min) ~ length_mean < length_max),
+         begin_in_int = case_when(!is.na(begin_min) & !is.na(begin_max) ~ meandoy_begin >= begin_min & meandoy_begin <= begin_max,
+                                  is.na(begin_min) ~ meandoy_begin < begin_max),
+         end_in_int = case_when(!is.na(end_min) & !is.na(end_max) ~ meandoy_end >= end_min & meandoy_end <= end_max,
+                                is.na(end_max) ~ meandoy_end > end_min))
+
+bel_props <- bel %>%
   ungroup() %>%
-  select(Year, Site, .prediction) %>%
-  distinct()
-
-censor_doy_retro_temp <- forcing_to_doy(filter(histclim, forcing_type == "gdd"), censorsim, aforce = "sum_forcing", bforce = ".prediction", newdoycolname = "newdoycol")
-
-censor_doy_retro <- full_join( filter(allsim, prediction_type == "retrodiction - censored"), censor_doy_retro_temp)
-
-rm(censor_doy_retro_temp)
-saveRDS(censor_doy_retro, file = "objects/censor_doy_retro.rds")
+  summarise(length_in_int = length(which(length_in_int == TRUE))/n(),
+            begin_in_int = length(which(begin_in_int == TRUE))/n(),
+            end_in_int = length(which(end_in_int == TRUE))/n())
 
 # now do a median version of above
 # first get DoY predictions for specific predictions & retrodictions (uncensored, fully crossed)
@@ -73,11 +115,7 @@ specificsimmed <- filter(allsim, prediction_type %in% c("retrodiction - uncensor
   select(Year, Site, .prediction) %>%
   distinct()
 
-specific_doy_preds_temp <- forcing_to_doy(filter(histclim, forcing_type == "gdd"), specificsim, aforce = "sum_forcing", bforce = ".prediction", newdoycolname = "newdoycol")
 
-specific_doy_preds <- full_join(filter(allsim, prediction_type %in% c("retrodiction - uncensored", "prediction - full cross")), specific_doy_preds_temp)
-rm(specific_doy_preds_temp)
-saveRDS(specific_doy_preds, file = "objects/specific_doy_preds.rds")
 
 # get DoY predictions for the general predictions - which means assigning all sites and years to each prediction
 
