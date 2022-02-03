@@ -4,71 +4,70 @@
 
 library(dplyr)
 library(tidyr)
+library(ggplot2)
+library(forcats)
 
+# The exact flowering period is never observed because of censoring. Using the first and last observed flowering days we construct a minimum flowering period length for the data. Using the last observed before flowering day and the first observed after flowering day, we construct a maximum flowering period length for the data. We expect model estimates to be between the min and max ranges for the observations.
 
 # observations
 phenf <- readRDS("objects/phenf.rds")
 alldat <- readRDS("objects/alldat.rds")
 
-# calculate the length of the flowering period for each clone
+# calculate the minimum length of the flowering period for each clone
 
-length_dat <- phenf %>%
+length_dat_min <- phenf %>%
   filter(Event_Obs %in% c(2,3)) %>%
   mutate(event = case_when(Event_Obs == 2 ~ "begin",
                            Event_Obs == 3 ~ "end")) %>%
   select(-contains("censored"), -Source, -X, -Y, -bound, -mean_temp, -contains("forcing"), -Date, -contains("Event_"), -State) %>%
   group_by(Index, Year, Sex, Site, Orchard, Clone, Tree) %>%
   pivot_wider(names_from = event, values_from = DoY) %>%
-  mutate(length = end - begin)
-
-## using data that's only interval censored
+  mutate(length_min = end - begin)
 
 
-## using last day observed not flowering and first day observed past flowering instead of flowering period
+## calculate the maximum length of the flowering period for each clone using last day observed not flowering and first day observed past flowering instead of flowering period
 
-length_dat_long <- phenf %>%
+length_dat_max <- phenf %>%
   filter(Event_Obs %in% c(1,4)) %>%
   mutate(event = case_when(Event_Obs == 1 ~ "begin",
                            Event_Obs == 4 ~ "end")) %>%
   select(-contains("censored"), -Source, -X, -Y, -bound, -mean_temp, -contains("forcing"), -Date, -contains("Event_"), -State) %>%
   group_by(Index, Year, Sex, Site, Orchard, Clone, Tree) %>%
   pivot_wider(names_from = event, values_from = DoY) %>%
-  mutate(length = end - begin)
+  mutate(length_max = end - begin)
 
-# for the retrodictions, use censored simulation data
+# try using noncensored retrodictions
 
-censor_doy_retro <- readRDS("objects/censor_doy_retro.rds")
+retro_doy <- readRDS("objects/specific_doy_preds.rds") %>% filter(prediction_type == "retrodiction - uncensored") # slow step, consider object that's only the uncensored obs
 
-meanstartend_censored <- censor_doy_retro %>%
-  group_by(Clone, Site, Year, Sex, event) %>%
+meanstartend_retro <- retro_doy %>%
+  group_by(Tree, Clone, Site, Year, Sex, event) %>%
   summarise(meandoy = mean(newdoycol), sddoy = sd(newdoycol))
 
-length_censored <- meanstartend_censored %>%
+length_retro <- meanstartend_retro %>%
   pivot_wider(names_from = event, values_from = c("meandoy", "sddoy")) %>%
   mutate(length_mean = meandoy_end - meandoy_begin, length_sd = sqrt(sddoy_begin^2 + sddoy_end^2))
 
-# compare retrodicted length and real observed length
+# compare retrodicted length and min/max observed flowering
 
-length_comp <- left_join(length_dat, length_censored)
+length_comp <- full_join(select(length_dat_min, -begin, -end), select(length_dat_max, -begin, -end) ) %>%
+  left_join(length_retro) %>%
+  mutate(estimate_in_interval = case_when(!is.na(length_min) & !is.na(length_max) ~ length_mean >= length_min & length_mean <= length_max,
+                                          is.na(length_max) ~ length_mean > length_min,
+                                          is.na(length_min) ~ length_mean < length_max)) %>%
+  mutate(Clone = fct_reorder(Clone, length_mean))
+# how many trees have length out of expected interval?
+length(which(length_comp$estimate_in_interval))/nrow(length_comp) # The mean estimate of clone flowering period length is within the expected interval 90.4 % of the time.
 
-library(ggplot2)
-ggplot(length_comp, aes(x = length_mean, y = length)) +
-  geom_point() +
-  facet_wrap("Sex") +
-  geom_abline(slope = 1, intercept = 0)
+ggplot(length_comp, aes(x = Clone, y = length_mean, colour = estimate_in_interval)) +
+  geom_point(alpha = 0.5) +
+  scale_colour_viridis_d(option = "cividis") +
+  theme_dark() +
+  facet_grid(Sex ~ Site, scales = "free_x")
 
 
-# model strongly biased to longer flowering length than observed.
+#
 
-
-## compare retrodicted length using the full possible flowering period
-
-length_comp_full <- left_join(length_dat_long, length_censored)
-
-ggplot(length_comp_full, aes(x = length_mean, y = length)) +
-  geom_point() +
-  facet_wrap("Sex") +
-  geom_abline(slope = 1, intercept = 0)
 
 # YES! Now the length estimates have a bias to be too short. Model is doing great!
 
