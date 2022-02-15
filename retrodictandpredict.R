@@ -66,6 +66,7 @@ retro_doy_summary <- specific_doy_preds %>%
 
 saveRDS(retro_doy_summary, file = "objects/retro_doy_summary.rds")
 
+## begin, end, length retrodictions ####
 # are the mean begin, end, and length within the expected ranges?
 # The exact flowering period is never observed because of censoring.
 # Using the first and last observed flowering days we construct a the max begin and minimum end day and minimum flowering period length for the data.
@@ -93,19 +94,75 @@ bel_max <- phenf %>%
 
 bel <- full_join(bel_min, bel_max) %>%
   left_join(retro_doy_summary) %>%
+
   mutate(length_in_int = case_when(!is.na(length_min) & !is.na(length_max) ~ length_mean >= length_min & length_mean <= length_max,
                                           is.na(length_max) ~ length_mean > length_min,
                                           is.na(length_min) ~ length_mean < length_max),
          begin_in_int = case_when(!is.na(begin_min) & !is.na(begin_max) ~ meandoy_begin >= begin_min & meandoy_begin <= begin_max,
                                   is.na(begin_min) ~ meandoy_begin < begin_max),
          end_in_int = case_when(!is.na(end_min) & !is.na(end_max) ~ meandoy_end >= end_min & meandoy_end <= end_max,
-                                is.na(end_max) ~ meandoy_end > end_min))
+                                is.na(end_max) ~ meandoy_end > end_min)) %>%
+  select(Index, Sex, Year, Site, Orchard, Clone, Tree, contains("begin"), contains("end"), contains("length"))
+# calculate sd interval for model estimates
+sd <- 1
+bel_uncertain <- bel %>%
+  mutate(begin_min_mod = meandoy_begin - sd * sddoy_begin,
+         begin_max_mod = meandoy_begin + sd * sddoy_begin,
+         end_min_mod = meandoy_end - sd * sddoy_end,
+         end_max_mod = meandoy_end + sd * sddoy_end)
 
 bel_props <- bel %>%
   ungroup() %>%
   summarise(length_in_int = length(which(length_in_int == TRUE))/n(),
             begin_in_int = length(which(begin_in_int == TRUE))/n(),
             end_in_int = length(which(end_in_int == TRUE))/n())
+
+
+#
+do_intervals_overlap <- function(datmin, datmax, modmin, modmax) {
+  # left/right censored data
+  if (is.na(datmin) | is.na(datmax)) {
+    # censored begin date
+    if (is.na(datmin)) {
+      overlap <- modmin <= datmax # overlap if model predicts potential start date before first observed flowering
+    } #censored end date
+    if (is.na(datmax)) {
+      overlap <- modmax <= datmin # overlap if model predicts potential end date after last observed flowering
+    }
+  } else {
+  # interval censored data
+    overlap <- findInterval(datmin:datmax, modmin:modmax) %>% any()
+  }
+  return(overlap)
+}
+
+
+bel_overlap <- function(dat) {
+  n <- nrow(dat)
+  # begin
+  begin_overlap <-c()
+  for (i in 1:n) {
+    begin_overlap[i] <- do_intervals_overlap(dat$begin_min[i],
+                                             dat$begin_max[i],
+                                             dat$begin_min_mod[i],
+                                             dat$begin_max_mod[i])
+  }
+  # end
+  end_overlap <- c()
+  for (in in 1:n) { #START HERE
+
+  }
+}
+# interval censored
+foo <- findInterval(bel_uncertain$begin_min[1]:bel_uncertain$begin_max[1],
+                    bel_uncertain$begin_min_mod[1]:bel_uncertain$begin_max_mod[1])
+any(foo)
+
+# end censoring begin
+foo <- bel_uncertain$begin_min_mod[1] < bel_uncertain$begin_max[1]
+
+# end censoring end
+foo <- bel_uncertain$end_max_mod[1] > bel_uncertain$end_min[1]
 
 # now do a median version of above
 # first get DoY predictions for specific predictions & retrodictions (uncensored, fully crossed)
