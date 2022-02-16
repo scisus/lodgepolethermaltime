@@ -67,9 +67,9 @@ retro_doy_summary <- specific_doy_preds %>%
 saveRDS(retro_doy_summary, file = "objects/retro_doy_summary.rds")
 
 ## begin, end, length retrodictions ####
-# are the mean begin, end, and length within the expected ranges?
+# are the mean begin, end, and length retrodictions within the expected ranges?
 # The exact flowering period is never observed because of censoring.
-# Using the first and last observed flowering days we construct a the max begin and minimum end day and minimum flowering period length for the data.
+# Using the first and last observed flowering days we construct the max begin and minimum end day and minimum flowering period length for the data.
 # Using the last observed before flowering day and the first observed after flowering day, we construct a minimum begin day, maximum end day, and maximum flowering period length for the data. We expect model estimates to be between the min and max ranges for the observations.
 
 bel_min <- phenf %>%
@@ -164,17 +164,6 @@ inintprop <- inint %>% ungroup() %>%
   summarise_at(vars(contains("_")), mean)
 
 
-
-# interval censored
-foo <- findInterval(bel_uncertain$begin_min[1]:bel_uncertain$begin_max[1],
-                    bel_uncertain$begin_min_mod[1]:bel_uncertain$begin_max_mod[1])
-any(foo)
-
-# end censoring begin
-foo <- bel_uncertain$begin_min_mod[1] < bel_uncertain$begin_max[1]
-
-# end censoring end
-foo <- bel_uncertain$end_max_mod[1] > bel_uncertain$end_min[1]
 
 # now do a median version of above
 # first get DoY predictions for specific predictions & retrodictions (uncensored, fully crossed)
