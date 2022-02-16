@@ -127,7 +127,7 @@ do_intervals_overlap <- function(datmin, datmax, modmin, modmax) {
       overlap <- modmin <= datmax # overlap if model predicts potential start date before first observed flowering
     } #censored end date
     if (is.na(datmax)) {
-      overlap <- modmax <= datmin # overlap if model predicts potential end date after last observed flowering
+      overlap <- modmax >= datmin # overlap if model predicts potential end date after last observed flowering
     }
   } else {
   # interval censored data
@@ -137,22 +137,34 @@ do_intervals_overlap <- function(datmin, datmax, modmin, modmax) {
 }
 
 
-bel_overlap <- function(dat) {
+do_bel_overlap <- function(dat) {
   n <- nrow(dat)
   # begin
   begin_overlap <-c()
+  end_overlap <- c()
   for (i in 1:n) {
     begin_overlap[i] <- do_intervals_overlap(dat$begin_min[i],
                                              dat$begin_max[i],
                                              dat$begin_min_mod[i],
                                              dat$begin_max_mod[i])
-  }
-  # end
-  end_overlap <- c()
-  for (in in 1:n) { #START HERE
+    end_overlap[i] <- do_intervals_overlap(dat$end_min[i],
+                                           dat$end_max[i],
+                                           dat$end_min_mod[i],
+                                           dat$end_max_mod[i])
 
   }
+
+  return(data.frame(begin_overlap = begin_overlap, end_overlap = end_overlap))
 }
+
+inint <- select(bel_uncertain, contains("in_int")) %>%
+  bind_cols(do_bel_overlap(bel_uncertain))
+
+inintprop <- inint %>% ungroup() %>%
+  summarise_at(vars(contains("_")), mean)
+
+
+
 # interval censored
 foo <- findInterval(bel_uncertain$begin_min[1]:bel_uncertain$begin_max[1],
                     bel_uncertain$begin_min_mod[1]:bel_uncertain$begin_max_mod[1])
