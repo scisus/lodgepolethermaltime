@@ -94,7 +94,6 @@ bel_max <- phenf %>%
 
 bel <- full_join(bel_min, bel_max) %>%
   left_join(retro_doy_summary) %>%
-
   mutate(length_in_int = case_when(!is.na(length_min) & !is.na(length_max) ~ length_mean >= length_min & length_mean <= length_max,
                                           is.na(length_max) ~ length_mean > length_min,
                                           is.na(length_min) ~ length_mean < length_max),
