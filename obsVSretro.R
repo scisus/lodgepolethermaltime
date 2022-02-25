@@ -52,10 +52,21 @@ fsim <- fretro %>%
          dat_max = case_when(censored == "left" ~ sum_forcing,
                              censored == "right" ~ Inf,
                              censored == "interval" ~ upper)) %>%
-  select(-sum_forcing, -upper)
+  ungroup() %>%
+  select(-sum_forcing, -upper, -censored)
 
-
-#flen <-
+flen <- fsim %>%
+  select(-retro_min, -retro_max) %>%
+  tidyr::pivot_wider(id_cols = c(Index, Sex), names_from = event, values_from = contains("_")) %>%
+  mutate(dat_range_min = dat_min_end - dat_max_begin,
+         dat_range_max = dat_max_end - dat_min_begin,
+         retro_len_mean = retro_mean_end - retro_mean_begin,
+         retro_len_sd = sqrt(retro_sd_end^2 + retro_sd_begin^2),
+         retro_len_min = retro_len_mean - retro_len_sd,
+         retro_len_max = retro_len_mean + retro_len_sd) %>%
+  group_by(Index, Sex) %>%
+  mutate(inint_mean_len = between(x = retro_len_mean, left = dat_range_min, right = dat_range_max),
+         inint_onesd_len = any(findInterval(c(dat_range_min, dat_range_max), c(retro_len_min, retro_len_max))))
 
 retrocomp <- fsim %>%
   mutate(inint_mean = dplyr::between(x = retro_mean, left = dat_min, right = dat_max)) #%>%
