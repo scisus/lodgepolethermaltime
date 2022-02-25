@@ -68,8 +68,22 @@ flen <- fsim %>%
   mutate(inint_mean_len = between(x = retro_len_mean, left = dat_range_min, right = dat_range_max),
          inint_onesd_len = any(findInterval(c(dat_range_min, dat_range_max), c(retro_len_min, retro_len_max))))
 
+calc_prop_in_int <- function(x) {sum(x)/length(x)}
 retrocomp <- fsim %>%
-  mutate(inint_mean = dplyr::between(x = retro_mean, left = dat_min, right = dat_max)) #%>%
-  #mutate(inint_onesd = do_intervals_overlap(datmin = dat_min, datmax = dat_max, modmin = retro_min, modmax = retro_max))
-  # need to rewrite this line and probably function. might just be able to use the findInterval function now that my intervals are fully numeric. Not sure how it copes with infinity tho
+  group_by(Index, Sex, event) %>%
+  # are begin and end mean retrodictions in the obs interval
+  mutate(inint_mean = between(x = retro_mean, left = dat_min, right = dat_max)) %>%
+  # do begin and end 1 sigma interval retrodictions overlap the obs interval
+  mutate(inint_onesd = any(findInterval(c(dat_min,dat_max), c(retro_min,retro_max)))) %>%
+  # join with length interval tests
+  select(Index, Sex, event, contains("inint")) %>%
+  pivot_wider(id_cols = c(Index, Sex), names_from = event, values_from = contains("inint")) %>%
+  full_join(select(flen, Index, Sex, inint_mean_len, inint_onesd_len)) %>%
+  ungroup() %>%
+  group_by(Sex) %>%
+  summarise_at(vars(contains("inint")), calc_prop_in_int)
+
+
+
+
 
