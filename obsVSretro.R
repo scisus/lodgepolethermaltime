@@ -3,6 +3,7 @@
 library(dplyr)
 library(purrr)
 library(tidybayes)
+library(tidyr)
 
 # functions ####
 do_intervals_overlap <- function(datmin, datmax, modmin, modmax) {
