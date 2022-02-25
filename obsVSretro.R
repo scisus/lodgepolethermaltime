@@ -34,8 +34,11 @@ obsim <- readRDS(file = "objects/allsim.rds") %>%
 alldatls <- readRDS("objects/datlist.rds")
 modells <- readRDS("objects/modells.rds") #1.5GB
 
-fsim <- purrr::map2(alldatls, modells, function(x,y) {add_predicted_draws(newdata = x, object = y)}) %>%
-  bind_rows() %>%
+# this is a slow step. I'm using the full model to make retrodictions, not subsampling
+fretro <- purrr::map2(alldatls, modells, function(x,y) {add_predicted_draws(newdata = x, object = y)}) %>%
+  bind_rows()
+
+fsim <- fretro %>%
   # summarise by observation
   group_by(Index, Sex, event, censored, sum_forcing, upper) %>%
   summarise(retro_mean = mean(.prediction), retro_sd = sd(.prediction)) %>%
