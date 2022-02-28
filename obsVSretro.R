@@ -94,9 +94,90 @@ retrocomp <- fsim %>%
   full_join(select(flen, Index, Sex, inint_mean_len, inint_onesd_len)) %>%
   ungroup() %>%
   group_by(Sex) %>%
-  summarise_at(vars(contains("inint")), calc_prop_in_int)
+  summarise_at(vars(contains("inint")), calc_prop_in_int) %>%
+  select(Sex, contains("begin"), contains("end"), contains("len"))
+colnames(retrocomp) <- c("Sex", "Begin", "Begin_sd", "End", "End_sd", "Length", "Length_sd")
+
+# determine the proportion of doy retrodictions that match observations ####
+# are the mean begin, end, and length retrodictions within the expected ranges?
+# The exact flowering period is never observed because of censoring.
+# Using the first and last observed flowering days we construct the max begin and minimum end day and minimum flowering period length for the data.
+# Using the last observed before flowering day and the first observed after flowering day, we construct a minimum begin day, maximum end day, and maximum flowering period length for the data. We expect model estimates to be between the min and max ranges for the observations.
+#
+# doy data ####
+phenf <- readRDS("objects/phenf.rds")
+
+bel_min <- minmaxdat(phenf, minormax = "min")
+bel_max <- minmaxdat(phenf, minormax = "max")
 
 
+bel <- full_join(bel_min, bel_max) %>%
+  left_join(retro_doy_summary) %>%
+  mutate(length_in_int = case_when(!is.na(length_min) & !is.na(length_max) ~ length_mean >= length_min & length_mean <= length_max,
+                                   is.na(length_max) ~ length_mean > length_min,
+                                   is.na(length_min) ~ length_mean < length_max),
+         begin_in_int = case_when(!is.na(begin_min) & !is.na(begin_max) ~ meandoy_begin >= begin_min & meandoy_begin <= begin_max,
+                                  is.na(begin_min) ~ meandoy_begin < begin_max),
+         end_in_int = case_when(!is.na(end_min) & !is.na(end_max) ~ meandoy_end >= end_min & meandoy_end <= end_max,
+                                is.na(end_max) ~ meandoy_end > end_min)) %>%
+  select(Index, Sex, Year, Site, Orchard, Clone, Tree, contains("begin"), contains("end"), contains("length"))
+# calculate sd interval for model estimates
+
+bel_uncertain <- bel %>%
+  mutate(begin_min_mod = meandoy_begin -sddoy_begin,
+         begin_max_mod = meandoy_begin + sddoy_begin,
+         end_min_mod = meandoy_end - sddoy_end,
+         end_max_mod = meandoy_end + sddoy_end)
+
+bel_props <- bel %>%
+  ungroup() %>%
+  summarise(length_in_int = length(which(length_in_int == TRUE))/n(),
+            begin_in_int = length(which(begin_in_int == TRUE))/n(),
+            end_in_int = length(which(end_in_int == TRUE))/n())
 
 
+#
+do_intervals_overlap <- function(datmin, datmax, modmin, modmax) {
+  # left/right censored data
+  if (is.na(datmin) | is.na(datmax)) {
+    # censored begin date
+    if (is.na(datmin)) {
+      overlap <- modmin <= datmax # overlap if model predicts potential start date before first observed flowering
+    } #censored end date
+    if (is.na(datmax)) {
+      overlap <- modmax >= datmin # overlap if model predicts potential end date after last observed flowering
+    }
+  } else {
+    # interval censored data
+    overlap <- findInterval(datmin:datmax, modmin:modmax) %>% any()
+  }
+  return(overlap)
+}
+
+
+do_bel_overlap <- function(dat) {
+  n <- nrow(dat)
+  # begin
+  begin_overlap <-c()
+  end_overlap <- c()
+  for (i in 1:n) {
+    begin_overlap[i] <- do_intervals_overlap(dat$begin_min[i],
+                                             dat$begin_max[i],
+                                             dat$begin_min_mod[i],
+                                             dat$begin_max_mod[i])
+    end_overlap[i] <- do_intervals_overlap(dat$end_min[i],
+                                           dat$end_max[i],
+                                           dat$end_min_mod[i],
+                                           dat$end_max_mod[i])
+
+  }
+
+  return(data.frame(begin_overlap = begin_overlap, end_overlap = end_overlap))
+}
+
+inint <- select(bel_uncertain, contains("in_int")) %>%
+  bind_cols(do_bel_overlap(bel_uncertain))
+
+inintprop <- inint %>% ungroup() %>%
+  summarise_at(vars(contains("_")), mean)
 
