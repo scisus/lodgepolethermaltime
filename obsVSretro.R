@@ -6,24 +6,38 @@ library(tidybayes)
 library(tidyr)
 
 # functions ####
-do_intervals_overlap <- function(datmin, datmax, modmin, modmax) {
-  # left/right censored data
-  if (is.na(datmin) | is.na(datmax)) {
-    # censored begin date
-    if (is.na(datmin)) {
-      overlap <- modmin <= datmax # overlap if model predicts potential start date before first observed flowering
-    } #censored end date
-    if (is.na(datmax)) {
-      overlap <- modmax >= datmin # overlap if model predicts potential end date after last observed flowering
-    }
-  } else {
-    # interval censored data
-    overlap <- findInterval(datmin:datmax, modmin:modmax) %>% any()
+calc_prop_in_int <- function(x) {sum(x)/length(x)}
+
+minmaxdat <- function(df, minormax) {
+  if (minormax == "min") {
+    events <- c(2,3)
+    cols <- c("dat_max_begin", "dat_min_end", "dat_range_min")
   }
-  return(overlap)
+  if (minormax == "max") {
+    events <- c(1,4)
+    cols <- c("dat_min_begin", "dat_max_end", "dat_range_max")
+  }
+
+  stopifnot("argument minormax must be \"min\" or \"max\"" = minormax %in% c("min", "max"))
+
+  mmdf <- df %>%
+    filter(Event_Obs %in% events) %>%
+    mutate(event = case_when(Event_Obs == events[1] ~ "begin",
+                             Event_Obs == events[2] ~ "end")) %>%
+    select(-contains("censored"), -Source, -X, -Y, -bound, -mean_temp, -contains("forcing"), -Date, -contains("Event_"), -State) %>%
+    group_by(Index, Year, Sex, Site, Orchard, Clone, Tree) %>%
+    pivot_wider(names_from = event, values_from = DoY) %>%
+    mutate(length = end - begin)
+
+  colnames(mmdf)[9:11] <- cols
+
+  return(mmdf)
 }
 
-# data ####
+# determine the proportion of forcing retrodictions that match observations ####
+# observations are ranges that the event occurred in and retrodictions are from models with uncertainty intervals
+
+# forcing data ####
 
 obsim <- readRDS(file = "objects/allsim.rds") %>%
   filter(prediction_type == "retrodiction - uncensored")
@@ -68,7 +82,6 @@ flen <- fsim %>%
   mutate(inint_mean_len = between(x = retro_len_mean, left = dat_range_min, right = dat_range_max),
          inint_onesd_len = any(findInterval(c(dat_range_min, dat_range_max), c(retro_len_min, retro_len_max))))
 
-calc_prop_in_int <- function(x) {sum(x)/length(x)}
 retrocomp <- fsim %>%
   group_by(Index, Sex, event) %>%
   # are begin and end mean retrodictions in the obs interval
