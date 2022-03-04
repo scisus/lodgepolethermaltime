@@ -1,21 +1,71 @@
 # Compare retrodictions to observations
 #
+## this script determines the proportion of forcing retrodictions that match observations. Observations are ranges that the event occurred in and retrodictions are from models with uncertainty intervals
+
+## Are the mean begin, end, and length retrodictions within the expected ranges? The exact flowering period is never observed because of censoring.
+# Using the first and last observed flowering forcing/doy we construct the max begin and minimum end forcing/doy and minimum flowering period length in forcing and days for the data.
+# Using the last observed before flowering forcing/doy and the first observed after flowering forcing/doy, we construct a minimum begin day, maximum end day, and maximum flowering period length for the data. We expect model estimates to be between the min and max ranges for the observations.
+
+# libraries ####
 library(dplyr)
 library(purrr)
 library(tidybayes)
 library(tidyr)
 
 # functions ####
+# calculate the proportion of trues in a boolean vector x
 calc_prop_in_int <- function(x) {sum(x)/length(x)}
 
+# calculate the length of the phenological period in forcing units or days, depending on the df you feed in (fsim or dsim in this script). df must have columns dat_min_begin, dat_max_begin, dat_min_end, dat_max_end, retro_mean_end, retro_mean_begin, retro_sd_begin, and retro_sd
+calc_len <- function(df) {
+  lendf <- df %>%
+    dplyr::select(-retro_min, -retro_max) %>%
+    tidyr::pivot_wider(id_cols = c(Index, Sex), names_from = event, values_from = contains("_")) %>%
+    dplyr::mutate(dat_range_min = dat_min_end - dat_max_begin,
+                  dat_range_max = dat_max_end - dat_min_begin,
+                  retro_len_mean = retro_mean_end - retro_mean_begin,
+                  retro_len_sd = sqrt(retro_sd_end^2 + retro_sd_begin^2),
+                  retro_len_min = retro_len_mean - retro_len_sd,
+                  retro_len_max = retro_len_mean + retro_len_sd) %>%
+    dplyr::group_by(Index, Sex) %>%
+    dplyr::mutate(inint_mean_len = dplyr::between(x = retro_len_mean, left = dat_range_min, right = dat_range_max),
+                  inint_onesd_len = any(findInterval(c(dat_range_min, dat_range_max), c(retro_len_min, retro_len_max))))
+
+  return(lendf)
+}
+
+# build a table with the proportion of retrodiction means and 1 sigma retrodiction intervals that are contained by or overlap the event range
+comp_retro2dat <- function(simdf, lendf) {
+  retrocomp <- simdf %>%
+    group_by(Index, Sex, event) %>%
+    # are begin and end mean retrodictions in the obs interval
+    mutate(inint_mean = between(x = retro_mean,
+                                left = dat_min, right = dat_max)) %>%
+    # do begin and end 1 sigma interval retrodictions overlap the obs interval
+    mutate(inint_onesd = any(findInterval(c(dat_min,dat_max),
+                                          c(retro_min,retro_max)))) %>%
+    # join with length interval tests
+    select(Index, Sex, event, contains("inint")) %>%
+    pivot_wider(id_cols = c(Index, Sex), names_from = event, values_from = contains("inint")) %>%
+    full_join(select(lendf, Index, Sex, inint_mean_len, inint_onesd_len)) %>%
+    ungroup() %>%
+    group_by(Sex) %>%
+    summarise_at(vars(contains("inint")), calc_prop_in_int) %>%
+    select(Sex, contains("begin"), contains("end"), contains("len"))
+  colnames(retrocomp) <- c("Sex", "Begin", "Begin_sd", "End", "End_sd", "Length", "Length_sd")
+
+  return(retrocomp)
+}
+
+# for day observations, what are the min or max doy for begin and end events
 minmaxdat <- function(df, minormax) {
   if (minormax == "min") {
-    events <- c(2,3)
-    cols <- c("dat_max_begin", "dat_min_end", "dat_range_min")
+    events <- c(1,3)
+    cols <- c("dat_min")
   }
   if (minormax == "max") {
-    events <- c(1,4)
-    cols <- c("dat_min_begin", "dat_max_end", "dat_range_max")
+    events <- c(2,4)
+    cols <- c("dat_max")
   }
 
   stopifnot("argument minormax must be \"min\" or \"max\"" = minormax %in% c("min", "max"))
@@ -24,35 +74,27 @@ minmaxdat <- function(df, minormax) {
     filter(Event_Obs %in% events) %>%
     mutate(event = case_when(Event_Obs == events[1] ~ "begin",
                              Event_Obs == events[2] ~ "end")) %>%
-    select(-contains("censored"), -Source, -X, -Y, -bound, -mean_temp, -contains("forcing"), -Date, -contains("Event_"), -State) %>%
-    group_by(Index, Year, Sex, Site, Orchard, Clone, Tree) %>%
-    pivot_wider(names_from = event, values_from = DoY) %>%
-    mutate(length = end - begin)
+    select(Index, Sex, event, DoY) %>%
+    group_by(Index, Sex)
 
-  colnames(mmdf)[9:11] <- cols
+  colnames(mmdf)[4] <- cols
 
   return(mmdf)
 }
 
-# determine the proportion of forcing retrodictions that match observations ####
-# observations are ranges that the event occurred in and retrodictions are from models with uncertainty intervals
 
-# forcing data ####
 
-obsim <- readRDS(file = "objects/allsim.rds") %>%
-  filter(prediction_type == "retrodiction - uncensored")
+## forcing data ####
 
-# what proportion of retrodiction are within the true range?
-# not sure how best to do this. calculate a 68.2% HDPI and test overlap?
-# maybe better to calculate summary from full distribution? using add_epred_draws?
-#
 alldatls <- readRDS("objects/datlist.rds")
 modells <- readRDS("objects/modells.rds") #1.5GB
 
-# this is a slow step. I'm using the full model to make retrodictions, not subsampling
+## modeled forcing ####
+# simulate new forcing observations from the model. this is a slow step. I'm using the full model to make retrodictions, not subsampling
 fretro <- purrr::map2(alldatls, modells, function(x,y) {add_predicted_draws(newdata = x, object = y)}) %>%
   bind_rows()
 
+# begin & end retrodictions + data
 fsim <- fretro %>%
   # summarise by observation
   group_by(Index, Sex, event, censored, sum_forcing, upper) %>%
@@ -69,115 +111,55 @@ fsim <- fretro %>%
   ungroup() %>%
   select(-sum_forcing, -upper, -censored)
 
-flen <- fsim %>%
-  select(-retro_min, -retro_max) %>%
-  tidyr::pivot_wider(id_cols = c(Index, Sex), names_from = event, values_from = contains("_")) %>%
-  mutate(dat_range_min = dat_min_end - dat_max_begin,
-         dat_range_max = dat_max_end - dat_min_begin,
-         retro_len_mean = retro_mean_end - retro_mean_begin,
-         retro_len_sd = sqrt(retro_sd_end^2 + retro_sd_begin^2),
-         retro_len_min = retro_len_mean - retro_len_sd,
-         retro_len_max = retro_len_mean + retro_len_sd) %>%
-  group_by(Index, Sex) %>%
-  mutate(inint_mean_len = between(x = retro_len_mean, left = dat_range_min, right = dat_range_max),
-         inint_onesd_len = any(findInterval(c(dat_range_min, dat_range_max), c(retro_len_min, retro_len_max))))
+# length calculations
+flen <- calc_len(fsim)
 
-retrocomp <- fsim %>%
-  group_by(Index, Sex, event) %>%
-  # are begin and end mean retrodictions in the obs interval
-  mutate(inint_mean = between(x = retro_mean, left = dat_min, right = dat_max)) %>%
-  # do begin and end 1 sigma interval retrodictions overlap the obs interval
-  mutate(inint_onesd = any(findInterval(c(dat_min,dat_max), c(retro_min,retro_max)))) %>%
-  # join with length interval tests
-  select(Index, Sex, event, contains("inint")) %>%
-  pivot_wider(id_cols = c(Index, Sex), names_from = event, values_from = contains("inint")) %>%
-  full_join(select(flen, Index, Sex, inint_mean_len, inint_onesd_len)) %>%
-  ungroup() %>%
-  group_by(Sex) %>%
-  summarise_at(vars(contains("inint")), calc_prop_in_int) %>%
-  select(Sex, contains("begin"), contains("end"), contains("len"))
-colnames(retrocomp) <- c("Sex", "Begin", "Begin_sd", "End", "End_sd", "Length", "Length_sd")
+fretrocomp <- comp_retro2dat(fsim, flen)
+saveRDS(fretrocomp, "objects/fretrocomp.rds")
 
 # determine the proportion of doy retrodictions that match observations ####
-# are the mean begin, end, and length retrodictions within the expected ranges?
-# The exact flowering period is never observed because of censoring.
-# Using the first and last observed flowering days we construct the max begin and minimum end day and minimum flowering period length for the data.
-# Using the last observed before flowering day and the first observed after flowering day, we construct a minimum begin day, maximum end day, and maximum flowering period length for the data. We expect model estimates to be between the min and max ranges for the observations.
-#
-# doy data ####
+
+
+### historical climate data ###
+histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
+  filter(forcing_type == "gdd")
+
+## doy data ####
 phenf <- readRDS("objects/phenf.rds")
 
-bel_min <- minmaxdat(phenf, minormax = "min")
-bel_max <- minmaxdat(phenf, minormax = "max")
-
-
-bel <- full_join(bel_min, bel_max) %>%
-  left_join(retro_doy_summary) %>%
-  mutate(length_in_int = case_when(!is.na(length_min) & !is.na(length_max) ~ length_mean >= length_min & length_mean <= length_max,
-                                   is.na(length_max) ~ length_mean > length_min,
-                                   is.na(length_min) ~ length_mean < length_max),
-         begin_in_int = case_when(!is.na(begin_min) & !is.na(begin_max) ~ meandoy_begin >= begin_min & meandoy_begin <= begin_max,
-                                  is.na(begin_min) ~ meandoy_begin < begin_max),
-         end_in_int = case_when(!is.na(end_min) & !is.na(end_max) ~ meandoy_end >= end_min & meandoy_end <= end_max,
-                                is.na(end_max) ~ meandoy_end > end_min)) %>%
-  select(Index, Sex, Year, Site, Orchard, Clone, Tree, contains("begin"), contains("end"), contains("length"))
-# calculate sd interval for model estimates
-
-bel_uncertain <- bel %>%
-  mutate(begin_min_mod = meandoy_begin -sddoy_begin,
-         begin_max_mod = meandoy_begin + sddoy_begin,
-         end_min_mod = meandoy_end - sddoy_end,
-         end_max_mod = meandoy_end + sddoy_end)
-
-bel_props <- bel %>%
+## convert forcing retrodictions to doy ####
+## downsample to 200 draws for each obs to keep sizes manageable
+samp <- sample(1:max(fretro$.draw), size = 200)
+dretro <- forcing_to_doy(histclim, filter(fretro, .draw %in% samp), aforce = "sum_forcing", bforce = ".prediction", newdoycolname = "retro_doy") %>%
   ungroup() %>%
-  summarise(length_in_int = length(which(length_in_int == TRUE))/n(),
-            begin_in_int = length(which(begin_in_int == TRUE))/n(),
-            end_in_int = length(which(end_in_int == TRUE))/n())
+  select(Index, Sex, event, retro_doy)
+
+## historical climate data ###
+histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
+  filter(forcing_type == "gdd")
+
+## dat v model ####
+
+# calculate event ranges from data and add length
+ddat <- full_join(minmaxdat(phenf, minormax = "min"),
+                  minmaxdat(phenf, minormax = "max"))
+
+# calculate model estimate and 1 sigma ranges
+dsim <- dretro %>%
+  #summarise by observation
+  group_by(Index, Sex, event) %>%
+  summarise(retro_mean = mean(retro_doy), retro_sd = sd(retro_doy)) %>%
+  ungroup() %>%
+  #calculate min and max of a one sigma interval around the mean
+  mutate(retro_min = retro_mean - retro_sd, retro_max = retro_mean + retro_sd) %>%
+  full_join(ddat) %>%
+  mutate(dat_min = coalesce(dat_min, 0),
+         dat_max = coalesce(dat_max, Inf))
 
 
-#
-do_intervals_overlap <- function(datmin, datmax, modmin, modmax) {
-  # left/right censored data
-  if (is.na(datmin) | is.na(datmax)) {
-    # censored begin date
-    if (is.na(datmin)) {
-      overlap <- modmin <= datmax # overlap if model predicts potential start date before first observed flowering
-    } #censored end date
-    if (is.na(datmax)) {
-      overlap <- modmax >= datmin # overlap if model predicts potential end date after last observed flowering
-    }
-  } else {
-    # interval censored data
-    overlap <- findInterval(datmin:datmax, modmin:modmax) %>% any()
-  }
-  return(overlap)
-}
+# calculate length
+dlen <- calc_len(dsim)
 
-
-do_bel_overlap <- function(dat) {
-  n <- nrow(dat)
-  # begin
-  begin_overlap <-c()
-  end_overlap <- c()
-  for (i in 1:n) {
-    begin_overlap[i] <- do_intervals_overlap(dat$begin_min[i],
-                                             dat$begin_max[i],
-                                             dat$begin_min_mod[i],
-                                             dat$begin_max_mod[i])
-    end_overlap[i] <- do_intervals_overlap(dat$end_min[i],
-                                           dat$end_max[i],
-                                           dat$end_min_mod[i],
-                                           dat$end_max_mod[i])
-
-  }
-
-  return(data.frame(begin_overlap = begin_overlap, end_overlap = end_overlap))
-}
-
-inint <- select(bel_uncertain, contains("in_int")) %>%
-  bind_cols(do_bel_overlap(bel_uncertain))
-
-inintprop <- inint %>% ungroup() %>%
-  summarise_at(vars(contains("_")), mean)
-
+# calculate proportion of retrodictions in the data ranges
+dretrocomp <- comp_retro2dat(dsim, dlen)
+saveRDS(dretrocomp, "objects/dretrocomp.rds")
