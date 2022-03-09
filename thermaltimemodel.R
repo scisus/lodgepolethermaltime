@@ -17,7 +17,6 @@ library(brms)
 source('phenology_functions.R')
 
 
-
 # data ####
 
 # climate
