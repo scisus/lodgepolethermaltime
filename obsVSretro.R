@@ -163,3 +163,35 @@ dlen <- calc_len(dsim)
 # calculate proportion of retrodictions in the data ranges
 dretrocomp <- comp_retro2dat(dsim, dlen)
 saveRDS(dretrocomp, "objects/dretrocomp.rds")
+
+# Examine residuals ####
+## interval censored ####
+## residuals (expect uniformly random)
+fretro %>%
+  filter(censored == "interval") %>%
+  summarise(
+    p_lower = mean(.prediction < sum_forcing),
+    p_upper = mean(.prediction < upper),
+    p_residual = runif(1, p_lower, p_upper),
+    z_residual = qnorm(p_residual),
+    .groups = "drop_last"
+  ) %>%
+  ggplot(aes(x = .row, y = z_residual)) +
+  geom_point(pch = 1) +
+  facet_grid(Sex ~ event)
+
+# qqplot - should be straight line. But wow it's not
+fretro %>%
+  filter(censored == "interval") %>%
+  summarise(
+    p_lower = mean(.prediction < sum_forcing),
+    p_upper = mean(.prediction < upper),
+    p_residual = runif(1, p_lower, p_upper),
+    z_residual = qnorm(p_residual),
+    .groups = "drop_last"
+  ) %>%
+  ggplot(aes(sample = z_residual)) +
+  geom_qq() +
+  geom_abline() +
+  facet_grid(Sex ~ event)
+
