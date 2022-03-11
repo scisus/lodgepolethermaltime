@@ -3,6 +3,8 @@ title: "Phenology model workflow"
 author: "C. Susannah Tysor"
 date: '2021-08-24'
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup}
@@ -81,6 +83,14 @@ ggplot(ff, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
   geom_line() +
   theme(legend.position = "none") +
   ggtitle("forcing (gdd) accumulated at Day of Year", subtitle = "May 1 - June 30")
+
+hist(ff$sum_forcing, breaks=50)
+# gamma k shape = mean^2/sd^2
+k <- mean(ff$sum_forcing)^2/sd(ff$sum_forcing)^2
+# gamma theta scale = sd^2/mean
+theta <- sd(ff$sum_forcing)^2/mean(ff$sum_forcing)
+hist(brms::rskew_normal(1000, 100, 100, 2), breaks = 50)
+hist(rgamma(1000, shape = k, scale = theta), breaks = 50)
 ```
 
 
@@ -140,7 +150,7 @@ fextreme <- quantile(fortforc$fortforc, 0.99) #end
 
 ```
 
-The amount of forcing that can accumulate over any two week period between January and June can be quite large - 99th percentile is `r fextreme`. The sd required to obtain these values is
+The amount of forcing that can accumulate over any two week period between January and June can be quite large - 99th percentile is `r fextreme`. The sd required to obtain these values in a normal distribution is:
 
 ```{r}
 
@@ -149,21 +159,24 @@ ggplot(fortforc, aes(x=fortforc)) +
   ggtitle("Forcing accumulation over 14 day periods Jan-Jun") +
   geom_vline(xintercept = mean(fortforc$fortforc))
 
-pnorm(fextreme, 0, sd=50) # sd to cap at extreme
-hist(rnorm(1000, 0, sd=50), breaks=50) 
+# normal
+pnorm(fextreme, 0, sd=60) # sd to cap at extreme #50 prob fine too
+hist(rnorm(1000, 0, sd=60), breaks=50) 
 
 # pnorm(feextreme, 0, sd = 40)
 # hist(rnorm(1000, 0, sd = 40))
 
-
+#student
+pt(fextreme, 1)
+hist(rt(1000, 1), breaks = 50)
 ```
 And distributions that produce these standard deviations, for sampling sigma are
 ```{r}
-pnorm(50, 0, 15)
-pt(80, 1)
+pnorm(60, 0, 20) # 15 probably lower limit when using 50sd
+pt(60, 1)
 
-pnorm(40, 0, 12)
-pt(55, 1)
+# pnorm(40, 0, 12)
+# pt(55, 1)
 ```
 So,
 
