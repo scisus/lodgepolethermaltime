@@ -134,10 +134,6 @@ dretro <- forcing_to_doy(histclim, filter(fretro, .draw %in% samp), aforce = "su
   ungroup() %>%
   select(Index, Sex, event, retro_doy)
 
-## historical climate data ###
-histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
-  filter(forcing_type == "gdd")
-
 ## dat v model ####
 
 # calculate event ranges from data and add length
