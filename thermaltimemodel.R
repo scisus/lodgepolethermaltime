@@ -64,7 +64,7 @@ initpars <- lapply(1:6, function(id) list(sigma = 30, Intercept = 300))
 bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Clone) + (1|Year) + (1|Tree))
 
 # model prior
-bprior <- c(prior("normal(400,100)", class = "Intercept"),
+bprior <- c(prior("gamma(3.65, 0.01)", class = "Intercept"),
             prior("normal(0,15)", class = "sigma"),
             prior("normal(0,9)", class = "sd"))
 

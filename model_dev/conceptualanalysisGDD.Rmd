@@ -84,13 +84,7 @@ ggplot(ff, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
   theme(legend.position = "none") +
   ggtitle("forcing (gdd) accumulated at Day of Year", subtitle = "May 1 - June 30")
 
-hist(ff$sum_forcing, breaks=50)
-# gamma k shape = mean^2/sd^2
-k <- mean(ff$sum_forcing)^2/sd(ff$sum_forcing)^2
-# gamma theta scale = sd^2/mean
-theta <- sd(ff$sum_forcing)^2/mean(ff$sum_forcing)
-hist(brms::rskew_normal(1000, 100, 100, 2), breaks = 50)
-hist(rgamma(1000, shape = k, scale = theta), breaks = 50)
+
 ```
 
 
@@ -203,6 +197,8 @@ ffe1 <- quantile(ffend$sum_forcing, 0.01)
 ffs99 <- quantile(ffstart$sum_forcing, 0.99)
 ffe99 <- quantile(ffend$sum_forcing, 0.99)
 
+
+
 ```
 It must be positive and continuous. Values less 5 and greater than 1000 would be quite unbelievable for any phase.
 
@@ -236,7 +232,7 @@ hist(rnorm(1000, 438, 100), breaks=60)
 These are very weakly informative - I could use more detailed prior information from work by Owens regarding dates and heatsums.
 
 ### whole period
-I could be even broader and use the same prior for both.
+I could be even broader and use the same prior for both. Because the data is skewed, a skewed distribution, like gamma, might make more sense.
 
 ```{r}
 ffperiod <- dplyr::filter(forcing, DoY > may01 & DoY < jun30)
@@ -247,7 +243,16 @@ ffp99 <- quantile(ffperiod$sum_forcing, 0.99)
 
 pnorm(ffp99, mean = (ffp1 + ffp99)/2, sd = 100) #end
 hist(rnorm(1000, 400, 100), breaks=60)
+hist(ff$sum_forcing, breaks=50)
+# gamma k shape = mean^2/sd^2
+k <- mean(ff$sum_forcing)^2/sd(ff$sum_forcing)^2
+# gamma theta scale = sd^2/mean, rate = 1/theta
+theta <- sd(ff$sum_forcing)^2/mean(ff$sum_forcing)
+hist(brms::rskew_normal(1000, 100, 100, 2), breaks = 50)
+hist(rgamma(1000, shape = k, scale = theta), breaks = 50)
+hist(rnorm(1000, mean = 400, sd = 100), breaks = 50)
 ```
+Nice thing about gamma distribution is it's always positive, like forcing values, and accommodates skew.
 
 
 ## delta 

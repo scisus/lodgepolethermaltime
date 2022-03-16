@@ -1,4 +1,4 @@
-// generated with brms 2.16.1
+// generated with brms 2.16.3
 functions {
 }
 data {
@@ -82,7 +82,7 @@ model {
     }
   }
   // priors including constants
-  target += normal_lpdf(Intercept | 400,100);
+  target += gamma_lpdf(Intercept | 3.65, 0.01);
   target += normal_lpdf(sigma | 0,15)
     - 1 * normal_lccdf(0 | 0,15);
   target += normal_lpdf(sd_1 | 0,9)
@@ -102,7 +102,7 @@ generated quantities {
   // actual population-level intercept
   real b_Intercept = Intercept;
   // additionally sample draws from priors
-  real prior_Intercept = normal_rng(400,100);
+  real prior_Intercept = gamma_rng(3.65,0.01);
   real prior_sigma = normal_rng(0,15);
   real prior_sd_1 = normal_rng(0,9);
   real prior_sd_2 = normal_rng(0,9);
