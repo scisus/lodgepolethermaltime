@@ -91,7 +91,7 @@ modells <- readRDS("objects/modells.rds") #1.5GB
 
 ## modeled forcing ####
 # simulate new forcing observations from the model. this is a slow step. I'm using the full model to make retrodictions, not subsampling
-fretro <- purrr::map2(alldatls, modells, function(x,y) {add_predicted_draws(newdata = x, object = y)}) %>%
+fretro <- purrr::map2(alldatls, modells, function(x,y) {add_predicted_draws(newdata = x, object = y, ndraws = 2000)}) %>%
   bind_rows()
 
 # begin & end retrodictions + data
