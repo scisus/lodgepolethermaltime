@@ -91,7 +91,7 @@ modells <- readRDS("objects/modells.rds") #1.5GB
 
 ## modeled forcing ####
 # simulate new forcing observations from the model. this is a slow step. I'm using the full model to make retrodictions, not subsampling
-fretro <- purrr::map2(alldatls, modells, function(x,y) {add_predicted_draws(newdata = x, object = y)}) %>%
+fretro <- purrr::map2(alldatls, modells, function(x,y) {add_predicted_draws(newdata = x, object = y, ndraws = 2000)}) %>%
   bind_rows()
 
 # begin & end retrodictions + data
@@ -134,10 +134,6 @@ dretro <- forcing_to_doy(histclim, filter(fretro, .draw %in% samp), aforce = "su
   ungroup() %>%
   select(Index, Sex, event, retro_doy)
 
-## historical climate data ###
-histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
-  filter(forcing_type == "gdd")
-
 ## dat v model ####
 
 # calculate event ranges from data and add length
@@ -165,13 +161,23 @@ dretrocomp <- comp_retro2dat(dsim, dlen)
 saveRDS(dretrocomp, "objects/dretrocomp.rds")
 
 # Examine residuals ####
-## interval censored ####
-## residuals (expect uniformly random)
-fretro %>%
-  filter(censored == "interval") %>%
+## randomized quantile residuals ####
+## technically, I think these are only acceptable for the interval censored data and not the end censored data, but I think I can honestly transform end to interval with sufficiently wide interval estimates
+fq <- fretro %>%
+  mutate(dat_min = case_when(censored == "left" ~ 0,
+                             censored == "right" ~ sum_forcing,
+                             censored == "interval" ~ sum_forcing),
+         dat_max = case_when(censored == "left" ~ sum_forcing,
+                             censored == "right" ~ 800,
+                             censored == "interval" ~ upper))
+
+# Calculate randomized quantile residuals
+# https://mjskay.github.io/tidybayes/articles/tidybayes-residuals.html
+# Dunn & Smyth 1996
+fq %>%
   summarise(
-    p_lower = mean(.prediction < sum_forcing),
-    p_upper = mean(.prediction < upper),
+    p_lower = mean(.prediction < dat_min),
+    p_upper = mean(.prediction < dat_max),
     p_residual = runif(1, p_lower, p_upper),
     z_residual = qnorm(p_residual),
     .groups = "drop_last"
@@ -180,12 +186,12 @@ fretro %>%
   geom_point(pch = 1) +
   facet_grid(Sex ~ event)
 
-# qqplot - should be straight line. But wow it's not
-fretro %>%
-  filter(censored == "interval") %>%
+# qqplot - should be straight line.
+
+fq %>%
   summarise(
-    p_lower = mean(.prediction < sum_forcing),
-    p_upper = mean(.prediction < upper),
+    p_lower = mean(.prediction < dat_min),
+    p_upper = mean(.prediction < dat_max),
     p_residual = runif(1, p_lower, p_upper),
     z_residual = qnorm(p_residual),
     .groups = "drop_last"
@@ -194,4 +200,3 @@ fretro %>%
   geom_qq() +
   geom_abline() +
   facet_grid(Sex ~ event)
-
