@@ -163,3 +163,46 @@ dlen <- calc_len(dsim)
 # calculate proportion of retrodictions in the data ranges
 dretrocomp <- comp_retro2dat(dsim, dlen)
 saveRDS(dretrocomp, "objects/dretrocomp.rds")
+
+# Examine residuals ####
+
+## randomized quantile residuals ####
+## technically, I think these are only acceptable for the interval censored data and not the end censored data, but I think I can honestly transform end to interval with sufficiently wide interval estimates
+fq <- fretro %>%
+  mutate(dat_min = case_when(censored == "left" ~ 0,
+                             censored == "right" ~ sum_forcing,
+                             censored == "interval" ~ sum_forcing),
+         dat_max = case_when(censored == "left" ~ sum_forcing,
+                             censored == "right" ~ 800,
+                             censored == "interval" ~ upper))
+
+# Calculate randomized quantile residuals
+# https://mjskay.github.io/tidybayes/articles/tidybayes-residuals.html
+# Dunn & Smyth 1996
+fq %>%
+  summarise(
+    p_lower = mean(.prediction < dat_min),
+    p_upper = mean(.prediction < dat_max),
+    p_residual = runif(1, p_lower, p_upper),
+    z_residual = qnorm(p_residual),
+    .groups = "drop_last"
+  ) %>%
+  ggplot(aes(x = .row, y = z_residual, color = Year)) +
+  geom_point(pch = 1) +
+  facet_grid(Sex ~ event) +
+  geom_hline(yintercept = 0)
+
+# qqplot - should be straight line. But wow it's not
+fq %>%
+ #filter(censored == "interval") %>%
+  summarise(
+    p_lower = mean(.prediction < dat_min),
+    p_upper = mean(.prediction < dat_max),
+    p_residual = runif(1, p_lower, p_upper),
+    z_residual = qnorm(p_residual),
+    .groups = "drop_last"
+  ) %>%
+  ggplot(aes(sample = z_residual)) +
+  geom_qq() +
+  geom_abline() +
+  facet_grid(Sex ~ event)
