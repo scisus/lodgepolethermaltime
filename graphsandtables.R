@@ -84,7 +84,7 @@ offsetplot <- offsets_summary %>%
 #
 
 meanplot + offsetplot
-ggsave("plots/mean")
+ggsave("plots/meanandoffset.png", width = 7, height = 6)
 
 ## site_offsets ####
 # interval plot for site level offsets using siter from modelparameters.R
