@@ -212,6 +212,13 @@ gather_means_draws <- function(mod) {
   return(draws)
 }
 
+# convenience function for gathering generation parameters draws from the model `mod`
+gather_gen_draws <- function(mod) {
+  draws <- mod %>% spread_draws(`.*moGen.*`, regex = TRUE, ndraws = nsamp, seed = seed) %>%
+    select(-contains("prior"))
+  return(draws)
+}
+
 # convenience function for gathering sd (population and offset) draws from the model `mod`
 gather_var_draws <- function(mod) {
   draws <- mod %>% gather_draws(`sd_.*`, `sigma`, regex = TRUE, ndraws = nsamp, seed = seed)

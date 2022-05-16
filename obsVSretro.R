@@ -87,11 +87,11 @@ minmaxdat <- function(df, minormax) {
 ## forcing data ####
 
 alldatls <- readRDS("objects/datlist.rds")
-modells <- readRDS("objects/modells.rds") #1.5GB
+modells <- readRDS("objects/modells.rds") #1.6GB
 
 ## modeled forcing ####
 # simulate new forcing observations from the model. this is a slow step. I'm using the full model to make retrodictions, not subsampling
-fretro <- purrr::map2(alldatls, modells, function(x,y) {add_predicted_draws(newdata = x, object = y, ndraws = 2000)}) %>%
+fretro <- purrr::map2(alldatls, modells, function(x,y) {add_predicted_draws(newdata = x, object = y)}) %>%
   bind_rows()
 
 # begin & end retrodictions + data

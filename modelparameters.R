@@ -15,10 +15,10 @@ nsamp <- 2000 # how many samples from the posterior (full posterior is big and s
 seed <- 738
 
 # models #####
-modells <- list(fb = readRDS("female_begin.rds"),
-                fe = readRDS("female_end.rds"),
-                mb = readRDS("male_begin.rds"),
-                me = readRDS("male_end.rds"))
+modells <- list(fb = readRDS("female_begin_gen.rds"),
+                fe = readRDS("female_end_gen.rds"),
+                mb = readRDS("male_begin_gen.rds"),
+                me = readRDS("male_end_gen.rds"))
 saveRDS(modells, "objects/modells.rds")
 
 # data ####
@@ -41,6 +41,23 @@ meanssummary <- means %>%
   group_by(Sex, event) %>%
   median_hdci(.value)
 
+# generation ####
+get_variables(modells$fb)
+gens <- purrr::map(modells, gather_gen_draws) %>%
+  bind_rows(.id = "model") %>%
+  left_join(labdf)
+
+ggplot(gens, aes(y = forcats::fct_rev(event), x = bsp_moGeneration, colour = Sex)) +
+  stat_halfeye(position = "dodge") +
+  scale_colour_viridis_d() +
+  labs(title = "", caption = "2000 draws from the posterior") +
+  ylab("") +
+  xlab("GDD") +
+  # theme_dark(base_size = 18) +
+  theme(legend.position = "bottom") +
+  scale_x_continuous(breaks = scales::pretty_breaks(n=10))
+
+ggplot(gens)
 
 # variation ####
 

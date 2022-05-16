@@ -19,7 +19,7 @@ source('phenology_functions.R')
 
 # data ####
 
-# climate
+# forcing
 histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
    filter(forcing_type == "gdd")
 
@@ -29,9 +29,14 @@ phendat <- flowers::lodgepole_phenology_event %>%
 
 # meta
 spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv", header = TRUE, stringsAsFactors = FALSE)
+orchgen <- read.csv("../phd/data/OrchardInfo/OrchardGen.csv") %>% select(Orchard, Generation)
+orchgen$Generation <- forcats::fct_relevel(orchgen$Generation, "1", "1.5", "1.75", "Advanced", "Unknown")
+orchgen$Generation <- ordered(orchgen$Generation)
 
 ## data preparation for phenology model ####
-phenf <- prepare_data(phendat, clim = histclim, spu = spudat)
+phenf <- prepare_data(phendat, clim = histclim, spu = spudat) %>%
+  left_join(orchgen) %>%
+  droplevels()
 saveRDS(phenf, file = "objects/phenf.rds")
 
 # ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
@@ -61,7 +66,7 @@ saveRDS(list(fbdat = fbdat, fedat = fedat, mbdat = mbdat, medat = medat), file =
 initpars <- lapply(1:6, function(id) list(sigma = 30, Intercept = 300))
 
 # model formula
-bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Clone) + (1|Year) + (1|Tree))
+bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Clone) + (1|Year) + (1|Tree) + mo(Generation))
 
 # model prior
 bprior <- c(prior("gamma(3.65, 0.01)", class = "Intercept"),
@@ -75,8 +80,8 @@ nchains <- 6
 
 # female/receptivity begin
 fbfit <- brm(bform, data = fbdat,
-             save_model = "female_begin.stan",
-             file = "female_begin",
+             save_model = "female_begin_gen.stan",
+             file = "female_begin_gen",
              prior = bprior,
              inits = initpars,
              iter = niter,
@@ -88,8 +93,8 @@ fbfit <- brm(bform, data = fbdat,
 
 # female/receptivity end
 fefit <- brm(bform, data = fedat,
-             save_model = "female_end.stan",
-             file = "female_end",
+             save_model = "female_end_gen.stan",
+             file = "female_end_gen",
              prior = bprior,
              inits = initpars,
              iter = niter,
@@ -101,8 +106,8 @@ fefit <- brm(bform, data = fedat,
 
 # male/pollen shed begin
 mbfit <- brm(bform, data = mbdat,
-             save_model = "male_begin.stan",
-             file = "male_begin",
+             save_model = "male_begin_gen.stan",
+             file = "male_begin_gen",
              prior = bprior,
              inits = initpars,
              iter = niter,
@@ -114,8 +119,8 @@ mbfit <- brm(bform, data = mbdat,
 
 # male/pollen shed end
 mefit <- brm(bform, data = medat,
-             save_model = "male_end.stan",
-             file = "male_end",
+             save_model = "male_end_gen.stan",
+             file = "male_end_gen",
              prior = bprior,
              inits = initpars,
              iter = niter,
