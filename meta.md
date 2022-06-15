@@ -24,10 +24,10 @@ Modular analysis scripts write out objects needed in other scripts or for graphs
 - `thermaltimemodel.R` thermal time models of flowering events in stan
   - stan code in `[sex]_[event].stan`
   - model output in `[sex]_[event].rds`
-- `censoring.R` end vs interval censoring
+- `censoring.R` end vs interval censoring: what proportion of data is censored end vs. interval?
 - `factororder.R` order factors for making good graphs
 - `modelparameters.R` extract parameter values from models
-- `retrodictandpredict.R` predict thermal time for events from models and translate into day of year historical and future
+- `retrodictandpredict.R` predict thermal time for events from models and translate into day of year historical and future - possibly defunct? See `obsVSretro.R` & `predict.R`
 - `floweringlength.R` length of flowering period
 - `overlap.R` calculate historical and future overlap of phenological periods
 - `variation.R` variation in flowering period
