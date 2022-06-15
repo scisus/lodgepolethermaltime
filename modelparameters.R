@@ -42,7 +42,7 @@ meanssummary <- means %>%
   median_hdci(.value)
 
 # generation ####
-get_variables(modells$fb)
+#get_variables(modells$fb)
 gens <- purrr::map(modells, gather_gen_draws) %>%
   bind_rows(.id = "model") %>%
   left_join(labdf)
