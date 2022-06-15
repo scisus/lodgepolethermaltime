@@ -48,16 +48,27 @@ gens <- purrr::map(modells, gather_gen_draws) %>%
   left_join(labdf)
 
 ggplot(gens, aes(y = forcats::fct_rev(event), x = bsp_moGeneration, colour = Sex)) +
-  stat_halfeye(position = "dodge") +
+  stat_pointinterval(position = "dodge") +
   scale_colour_viridis_d() +
   labs(title = "", caption = "2000 draws from the posterior") +
   ylab("") +
   xlab("GDD") +
-  # theme_dark(base_size = 18) +
+  theme_dark(base_size = 18) +
   theme(legend.position = "bottom") +
   scale_x_continuous(breaks = scales::pretty_breaks(n=10))
 
-ggplot(gens)
+simos <- gens %>%
+  select(-contains("bsp")) %>%
+  pivot_longer(cols = contains("simo"), names_to = "simplex", values_to = "distance")
+
+ggplot(simos, aes(x=distance, y = simplex, color = Sex)) +
+  stat_pointinterval() +
+  facet_wrap("event") +
+  scale_colour_viridis_d() +
+  labs(title = "Relative distance between generations", caption = "2000 draws from the posterior") +
+
+
+plot(conditional_effects(modells$fb))
 
 # variation ####
 
