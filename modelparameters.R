@@ -110,4 +110,5 @@ yearr <- filter(offsets, factor == "Year") %>%
 saveRDS(yearr, file = "objects/yearr.rds")
 
 
-
+# priors
+get_variables(modells$fb)[grep("prior", get_variables(modells$fb),fixed = TRUE)]
