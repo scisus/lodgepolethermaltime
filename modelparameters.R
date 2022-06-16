@@ -94,7 +94,7 @@ offsets <- offsets_raw %>% cbind(varlevel) %>%
 # slow
 offsets_summary <- offsets %>%
   group_by(model, Sex, event, factor, level) %>%
-  median_hdci(.value, .width = c(0.5, 0.89)) %>%
+  median_hdci(.value) %>%
   ungroup()
 saveRDS(offsets_summary, file = "objects/offsets_summary.rds")
 
