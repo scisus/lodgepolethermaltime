@@ -65,6 +65,27 @@ varplot <- ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .v
 #ggsave("plots/sd.pdf", width = 6, height = 5)
 ggsave("../flowering-cline/figures/sd.png", width = 6, height = 5)
 
+## generations ####
+gens <- readRDS("objects/gens.rds")
+ggplot(gens, aes(y = forcats::fct_rev(event), x = bsp_moGeneration, colour = Sex)) +
+  stat_pointinterval(position = "dodge") +
+  scale_colour_viridis_d() +
+  labs(title = "", caption = "2000 draws from the posterior") +
+  ylab("") +
+  xlab("GDD") +
+  theme_dark(base_size = 18) +
+  theme(legend.position = "bottom") +
+  scale_x_continuous(breaks = scales::pretty_breaks(n=10))
+
+simos <- readRDS("objects/simos.rds")
+ggplot(simos, aes(x=simplex, y = distance, color = Sex)) +
+  stat_pointinterval(position = "dodge") +
+  facet_wrap("event") +
+  scale_colour_viridis_d() +
+  theme_dark(base_size = 18) +
+  theme(legend.position = "bottom") +
+  labs(title = "Relative distance between generations", caption = "2000 draws from the posterior")
+
 ## offset_medians ####
 # plot medians of offset parameters in point clouds (like beeswarm)
 offsets_summary <- readRDS("objects/offsets_summary.rds")

@@ -45,36 +45,24 @@ meanssummary <- means %>%
 #get_variables(modells$fb)
 gens <- purrr::map(modells, gather_gen_draws) %>%
   bind_rows(.id = "model") %>%
-  left_join(labdf)
+  left_join(labdf) %>%
+  rename(simo1 = `simo_moGeneration1[1]`, simo2 = `simo_moGeneration1[2]`, simo3 = `simo_moGeneration1[3]`)
+saveRDS(gens, file = "objects/gens.rds")
 
-ggplot(gens, aes(y = forcats::fct_rev(event), x = bsp_moGeneration, colour = Sex)) +
-  stat_pointinterval(position = "dodge") +
-  scale_colour_viridis_d() +
-  labs(title = "", caption = "2000 draws from the posterior") +
-  ylab("") +
-  xlab("GDD") +
-  theme_dark(base_size = 18) +
-  theme(legend.position = "bottom") +
-  scale_x_continuous(breaks = scales::pretty_breaks(n=10))
+gens %>%
+  group_by(Sex, event) %>%
+  median_hdci(bsp_moGeneration, simo1, simo2, simo3)
 
 simos <- gens %>%
   select(-contains("bsp")) %>%
   pivot_longer(cols = contains("simo"), names_to = "simplex", values_to = "distance")
-
-ggplot(simos, aes(x=distance, y = simplex, color = Sex)) +
-  stat_pointinterval() +
-  facet_wrap("event") +
-  scale_colour_viridis_d() +
-  labs(title = "Relative distance between generations", caption = "2000 draws from the posterior") +
-
-
-plot(conditional_effects(modells$fb))
+saveRDS(simos, file = "objects/simos.rds")
 
 # variation ####
 
 variation <- purrr::map(modells, gather_var_draws) %>%
   bind_rows(.id = "model") %>%
-  left_join(labdf) %>%
+  left_join(labdf) #%>%
   mutate(.variable = case_when(.variable != "sigma" ~ stringr::str_sub(.variable, 4, -12),
                                .variable == "sigma" ~ "sigma")) %>%
   mutate(.variable = factor(.variable)) %>%
