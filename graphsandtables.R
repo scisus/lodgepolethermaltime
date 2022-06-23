@@ -186,7 +186,7 @@ ggplot(alldat, aes(x = sum_forcing, y = "observations" , colour = Sex)) +
 #ggsave("plots/retrodictions.pdf", width = 7, height = 5)
 ggsave("../flowering-cline/figures/retrodictions.png", width = 7, height = 5.5, units = "in")
 
-# day of year ####
+## day of year ####
 specific_doy_preds <- readRDS("objects/specific_doy_preds.rds")
 specific_median <- specific_doy_preds %>%
   group_by(prediction_type, .draw) %>%
@@ -195,7 +195,7 @@ ggplot(filter(specific_doy_preds, prediction_type == "retrodiction - uncensored"
   geom_point(pch = 1) +
   facet_grid(event ~ Sex)
 
-# day_of_year_lines ####
+## day_of_year_lines ####
 # time series line plot with begin and end faceted by site with general_doy_preds_med_siteyearsex from `retrodictandpredict.R`
 general_doy_preds_med_siteyearsex <- readRDS("objects/general_doy_preds_med_siteyearsex.rds")
 ggplot(general_doy_preds_med_siteyearsex, aes(x=Year, y = newdoycol, linetype = Sex, colour = event)) +
@@ -206,6 +206,21 @@ ggplot(general_doy_preds_med_siteyearsex, aes(x=Year, y = newdoycol, linetype = 
   theme(legend.position = "top")
 ggsave("plots/day_of_year_lines.pdf", width = 6, height = 5)
 
+# predictions ####
+
+## grand mean posterior predictions ####
+fepred <- readRDS("objects/fepred.rds")
+ggplot(fepred,
+       aes(x = .epred, y = Generation, fill = Sex)) +
+  stat_halfeye(alpha = 0.8) +
+  scale_fill_okabe_ito() +
+  labs(title = "Grand mean",
+       x = "Predicted forcing", y = "Sex",
+       subtitle = "Posterior predictions") +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  theme_clean() +
+  facet_wrap("event") +
+  theme(legend.position = "bottom")
 
 # historical_flowering_periods ####
 # day of year predictions. Plot to compare time series.
