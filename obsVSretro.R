@@ -114,6 +114,7 @@ fsim <- fretro %>%
 # length calculations
 flen <- calc_len(fsim)
 
+# fretrocomp is a table that describes how many model forcing estimates are within the observed forcing ranges
 fretrocomp <- comp_retro2dat(fsim, flen)
 saveRDS(fretrocomp, "objects/fretrocomp.rds")
 
