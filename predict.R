@@ -26,11 +26,20 @@ saveRDS(fepred, file = "objects/fepred.rds")
 
 newfactors <- expand_grid(Site = c("SiteA", "SiteB", "SiteC"), Year = c("Year1", "Year2", "Year3"), Clone = c("Clone1", "Clone2", "Clone3")) #leaving out tree for now
 fepred_cenew <- purrr::map2(alldatls, modells, function(x,y) {
-  add_epred_draws(newdata = select(x, Sex, event) %>% merge(newfactors), object = y, re_formula = NULL, allow_new_levels = TRUE, sample_new_levels = "gaussian")}) %>%
+  add_predicted_draws(newdata = select(x, Sex, event, Generation) %>% distinct %>% merge(newfactors),
+                  object = y,
+                 re_formula = ~ 1 + (1|Site) + (1|Clone) + (1|Year) + mo(Generation),
+  allow_new_levels = TRUE, sample_new_levels = "gaussian")}) %>%
   bind_rows()
 
+fepred_cenew %>% group_by(Site) %>% summarise(mean = mean(.prediction), sd = sd(.prediction))
+fepred_cenew %>% group_by(Year) %>% summarise(mean = mean(.prediction), sd = sd(.prediction))
+fepred_cenew %>% group_by(Clone) %>% summarise(mean = mean(.prediction), sd = sd(.prediction))
+
+
+
 ggplot(fepred_cenew,
-       aes(x = .epred, y = Sex, fill = event)) +
+       aes(x = .prediction, y = Site, fill = Sex)) +
   stat_halfeye(alpha = 0.8) +
   scale_fill_okabe_ito() +
   labs(title = "new levels",
@@ -39,4 +48,22 @@ ggplot(fepred_cenew,
   scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
   theme_clean() +
   theme(legend.position = "bottom") +
-  facet_grid(Site ~ Year)
+  facet_grid(event ~ Generation)
+
+# conditional effects, existing groups ####
+
+fepred_ceold <- purrr::map2(alldatls, modells, function(x,y) {
+  add_epred_draws(newdata = select(x, Sex, event, Generation, Site, Year, Clone, Tree) %>% distinct(), object = y, re_formula = NULL)}) %>%
+  bind_rows()
+
+ggplot(fepred_ceold,
+       aes(x = .epred, y = Site, fill = Sex)) +
+  stat_halfeye(alpha = 0.8) +
+  scale_fill_okabe_ito() +
+  labs(title = "old levels",
+       x = "Predicted forcing", y = "Sex",
+       subtitle = "Posterior expectation") +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  theme_clean() +
+  theme(legend.position = "bottom") +
+  facet_grid(event ~ Generation)
