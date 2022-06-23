@@ -7,6 +7,8 @@ library(tidybayes)
 library(patchwork)
 library(sjPlot) #html tables
 #library(RColorBrewer)
+library(ggokabeito)   # Neat accessible color palette
+library(ggthemes)    # Nice themes
 
 theme_set(theme_dark())
 

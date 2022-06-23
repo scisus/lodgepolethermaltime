@@ -1,9 +1,8 @@
 # predict flowering events
 
 # libraries
-
-library(ggokabeito)   # Neat accessible color palette
-library(ggthemes)    # Nice themes
+library(purrr)
+library(dplyr)
 
 # data
 
