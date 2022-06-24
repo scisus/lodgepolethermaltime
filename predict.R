@@ -53,7 +53,7 @@ ggplot(fepred_cenew,
 # conditional effects, existing groups ####
 
 fepred_ceold <- purrr::map2(alldatls, modells, function(x,y) {
-  add_epred_draws(newdata = select(x, Sex, event, Generation, Site, Year, Clone, Tree) %>% distinct(), object = y, re_formula = NULL)}) %>%
+  add_epred_draws(newdata = select(x, Sex, event, Generation, Site, Year, Clone, Tree) %>% distinct(), object = y, re_formula = NULL, ndraws = 200)}) %>%
   bind_rows()
 
 ggplot(fepred_ceold,
