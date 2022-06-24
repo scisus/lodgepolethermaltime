@@ -216,7 +216,7 @@ ggplot(fepred,
   scale_fill_okabe_ito() +
   labs(title = "Grand mean",
        x = "Predicted forcing", y = "Sex",
-       subtitle = "Posterior predictions") +
+       subtitle = "Posterior expectations") +
   scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
   theme_clean() +
   facet_wrap("event") +
