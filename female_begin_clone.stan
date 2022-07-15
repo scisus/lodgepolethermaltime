@@ -1,4 +1,4 @@
-// generated with brms 2.16.3
+// generated with brms 2.17.0
 functions {
 }
 data {
@@ -25,6 +25,11 @@ parameters {
   real<lower=0> sigma;  // dispersion parameter
 }
 transformed parameters {
+  real lprior = 0;  // prior contributions to the log posterior
+  lprior += normal_lpdf(b | 0,5);
+  lprior += normal_lpdf(Intercept | 0,10);
+  lprior += normal_lpdf(sigma | 0,9)
+    - 1 * normal_lccdf(0 | 0,9);
 }
 model {
   // likelihood including constants
@@ -34,10 +39,7 @@ model {
     target += normal_lpdf(Y | mu, sqrt(square(sigma) + se2));
   }
   // priors including constants
-  target += normal_lpdf(b | 0,5);
-  target += normal_lpdf(Intercept | 0,10);
-  target += normal_lpdf(sigma | 0,9)
-    - 1 * normal_lccdf(0 | 0,9);
+  target += lprior;
 }
 generated quantities {
   // actual population-level intercept
