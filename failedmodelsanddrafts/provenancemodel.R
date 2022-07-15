@@ -37,7 +37,7 @@ bprior <- c(prior("normal(0,10)", class = "Intercept"),
 
 ncores = 6
 nchains = 6
-niter = 1000
+niter = 3000
 
 fbfitclone <- brm(bformse, data = fbclone,
             save_model = "female_begin_clone.stan",
