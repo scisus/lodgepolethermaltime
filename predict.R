@@ -23,14 +23,14 @@ n <- 1000 # when downsampling required
 
 ## expectation ####
 fepred <- purrr::map2(alldatls, modells, function(x,y) {
-  add_epred_draws(newdata = select(x, Sex, event, Generation) %>% distinct(), object = y, re_formula = NA)}) %>%
+  add_epred_draws(newdata = select(x, Sex, event) %>% distinct(), object = y, re_formula = NA)}) %>%
   bind_rows()
 saveRDS(fepred, file = "objects/fepred.rds")
 
 
 ## posterior predictive ####
 fpred <- purrr::map2(alldatls, modells, function(x,y) {
-  add_predicted_draws(newdata = select(x, Sex, event, Generation) %>% distinct(), object = y, re_formula = NA)}) %>%
+  add_predicted_draws(newdata = select(x, Sex, event) %>% distinct(), object = y, re_formula = NA)}) %>%
     bind_rows()
 saveRDS(fpred, file = "objects/fpred.rds")
 
@@ -41,7 +41,7 @@ newfactors <- data.frame(Site = "new_Site", Year = "new_Year", Clone = "new_Clon
 
 ## expectation ####
 fepred_cenew <- purrr::map2(alldatls, modells, function(x,y) {
-  add_epred_draws(newdata = select(x, Sex, event, Generation) %>% distinct %>% merge(newfactors),
+  add_epred_draws(newdata = select(x, Sex, event) %>% distinct %>% merge(newfactors),
                   object = y,
                  re_formula = NULL,
   allow_new_levels = TRUE, sample_new_levels = "gaussian")}) %>%
@@ -50,7 +50,7 @@ saveRDS(fepred_cenew, file = "objects/fepred_cenew.rds")
 
 ## posterior prediction ####
 fpred_cenew <- purrr::map2(alldatls, modells, function(x,y) {
-  add_predicted_draws(newdata = select(x, Sex, event, Generation) %>% distinct %>% merge(newfactors),
+  add_predicted_draws(newdata = select(x, Sex, event) %>% distinct %>% merge(newfactors),
                   object = y,
                   re_formula = NULL,
                   allow_new_levels = TRUE, sample_new_levels = "gaussian")}) %>%
@@ -63,13 +63,13 @@ saveRDS(fpred_cenew, file = "objects/fpred_cenew.rds")
 
 ## expectation ####
 fepred_ceold <- purrr::map2(alldatls, modells, function(x,y) {
-  add_epred_draws(newdata = select(x, Sex, event, Generation, Site, Year, Clone, Tree) %>% distinct(), object = y, re_formula = NULL, ndraws = n)}) %>%
+  add_epred_draws(newdata = select(x, Sex, event, Site, Year, Clone, Tree) %>% distinct(), object = y, re_formula = NULL, ndraws = n)}) %>%
   bind_rows()
 saveRDS(fepred_ceold, file = "objects/fepred_ceold.rds")
 
 ## posterior prediction ####
 fpred_ceold <- purrr::map2(alldatls, modells, function(x,y) {
-  add_predicted_draws(newdata = select(x, Sex, event, Generation, Site, Year, Clone, Tree) %>% distinct(), object = y, re_formula = NULL, ndraws = n)}) %>%
+  add_predicted_draws(newdata = select(x, Sex, event, Site, Year, Clone, Tree) %>% distinct(), object = y, re_formula = NULL, ndraws = n)}) %>%
   bind_rows()
 saveRDS(fpred_ceold, file = "objects/fpred_ceold.rds")
 

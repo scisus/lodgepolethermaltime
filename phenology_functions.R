@@ -319,8 +319,8 @@ split_df_to_lists <- function(a, b) {
   return(list(listainb = ainb, listb = listb))
 }
 
-# a = historical climate,  b= forcing for translation, aforce = name of forcing column in a, bforce = name of forcing columb in b
-forcing_to_doy <- function(histclim, b, aforce, bforce, newdoycolname) {
+# a = a,  b= forcing for translation, aforce = name of forcing column in a, bforce = name of forcing columb in b
+forcing_to_doy <- function(a, b, aforce, bforce, newdoycolname) {
   # prepare dataframes for interval finding by splitting into lists
   splitdfs <- split_df_to_lists(a, b)
 

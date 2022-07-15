@@ -15,10 +15,10 @@ nsamp <- 2000 # how many samples from the posterior (full posterior is big and s
 seed <- 738
 
 # models #####
-modells <- list(fb = readRDS("female_begin_gen.rds"),
-                fe = readRDS("female_end_gen.rds"),
-                mb = readRDS("male_begin_gen.rds"),
-                me = readRDS("male_end_gen.rds"))
+modells <- list(fb = readRDS("female_begin.rds"),
+                fe = readRDS("female_end.rds"),
+                mb = readRDS("male_begin.rds"),
+                me = readRDS("male_end.rds"))
 saveRDS(modells, "objects/modells.rds")
 
 # data ####
@@ -41,28 +41,11 @@ meanssummary <- means %>%
   group_by(Sex, event) %>%
   median_hdci(.value)
 
-# generation ####
-#get_variables(modells$fb)
-gens <- purrr::map(modells, gather_gen_draws) %>%
-  bind_rows(.id = "model") %>%
-  left_join(labdf) %>%
-  rename(simo1 = `simo_moGeneration1[1]`, simo2 = `simo_moGeneration1[2]`, simo3 = `simo_moGeneration1[3]`)
-saveRDS(gens, file = "objects/gens.rds")
-
-gens %>%
-  group_by(Sex, event) %>%
-  median_hdci(bsp_moGeneration, simo1, simo2, simo3)
-
-simos <- gens %>%
-  select(-contains("bsp")) %>%
-  pivot_longer(cols = contains("simo"), names_to = "simplex", values_to = "distance")
-saveRDS(simos, file = "objects/simos.rds")
-
 # variation ####
 
 variation <- purrr::map(modells, gather_var_draws) %>%
   bind_rows(.id = "model") %>%
-  left_join(labdf) #%>%
+  left_join(labdf) %>%
   mutate(.variable = case_when(.variable != "sigma" ~ stringr::str_sub(.variable, 4, -12),
                                .variable == "sigma" ~ "sigma")) %>%
   mutate(.variable = factor(.variable)) %>%
