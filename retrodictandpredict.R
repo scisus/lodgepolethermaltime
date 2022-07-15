@@ -1,4 +1,5 @@
 # retrodict and predict critical forcing for events
+# obsolete? - see predict.R
 
 # depends
 library(dplyr)
