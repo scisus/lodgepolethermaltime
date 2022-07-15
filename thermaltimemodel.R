@@ -39,14 +39,6 @@ phenf <- prepare_data(phendat, clim = histclim, spu = spudat) %>%
   droplevels()
 saveRDS(phenf, file = "objects/phenf.rds")
 
-# ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
-#   stat_ecdf() +
-#   labs(title = "Cumulative distribution of accumulated forcing for flowering events", caption = "raw data") +
-#   scale_colour_viridis_d() +
-#   theme_dark(base_size = 18) +
-#   ylab("") +
-#   xlab("GDD")
-
 # create 4 datasets for 4 models
 
 fbdat <- filter_sex_event(sex = "FEMALE", event = "begin", phenf)
@@ -66,7 +58,7 @@ saveRDS(list(fbdat = fbdat, fedat = fedat, mbdat = mbdat, medat = medat), file =
 initpars <- lapply(1:6, function(id) list(sigma = 30, Intercept = 300))
 
 # model formula
-bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Clone) + (1|Year) + (1|Tree) + mo(Generation))
+bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Clone) + (1|Year) + (1|Tree))
 
 # model prior
 bprior <- c(prior("gamma(3.65, 0.01)", class = "Intercept"),
@@ -74,14 +66,14 @@ bprior <- c(prior("gamma(3.65, 0.01)", class = "Intercept"),
             prior("normal(0,9)", class = "sd"))
 
 # mcmc/computation settings
-niter <- 4000
+niter <- 3000
 ncores <- 6
 nchains <- 6
 
 # female/receptivity begin
 fbfit <- brm(bform, data = fbdat,
-             save_model = "female_begin_gen.stan",
-             file = "female_begin_gen",
+             save_model = "female_begin.stan",
+             file = "female_begin",
              prior = bprior,
              init = initpars,
              iter = niter,
@@ -93,8 +85,8 @@ fbfit <- brm(bform, data = fbdat,
 
 # female/receptivity end
 fefit <- brm(bform, data = fedat,
-             save_model = "female_end_gen.stan",
-             file = "female_end_gen",
+             save_model = "female_end.stan",
+             file = "female_end",
              prior = bprior,
              init = initpars,
              iter = niter,
@@ -106,8 +98,8 @@ fefit <- brm(bform, data = fedat,
 
 # male/pollen shed begin
 mbfit <- brm(bform, data = mbdat,
-             save_model = "male_begin_gen.stan",
-             file = "male_begin_gen",
+             save_model = "male_begin.stan",
+             file = "male_begin",
              prior = bprior,
              init = initpars,
              iter = niter,
@@ -119,8 +111,8 @@ mbfit <- brm(bform, data = mbdat,
 
 # male/pollen shed end
 mefit <- brm(bform, data = medat,
-             save_model = "male_end_gen.stan",
-             file = "male_end_gen",
+             save_model = "male_end.stan",
+             file = "male_end",
              prior = bprior,
              init = initpars,
              iter = niter,
