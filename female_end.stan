@@ -1,4 +1,4 @@
-// generated with brms 2.16.3
+// generated with brms 2.17.0
 functions {
 }
 data {
@@ -51,10 +51,22 @@ transformed parameters {
   vector[N_2] r_2_1;  // actual group-level effects
   vector[N_3] r_3_1;  // actual group-level effects
   vector[N_4] r_4_1;  // actual group-level effects
+  real lprior = 0;  // prior contributions to the log posterior
   r_1_1 = (sd_1[1] * (z_1[1]));
   r_2_1 = (sd_2[1] * (z_2[1]));
   r_3_1 = (sd_3[1] * (z_3[1]));
   r_4_1 = (sd_4[1] * (z_4[1]));
+  lprior += gamma_lpdf(Intercept | 3.65, 0.01);
+  lprior += normal_lpdf(sigma | 0,15)
+    - 1 * normal_lccdf(0 | 0,15);
+  lprior += normal_lpdf(sd_1 | 0,9)
+    - 1 * normal_lccdf(0 | 0,9);
+  lprior += normal_lpdf(sd_2 | 0,9)
+    - 1 * normal_lccdf(0 | 0,9);
+  lprior += normal_lpdf(sd_3 | 0,9)
+    - 1 * normal_lccdf(0 | 0,9);
+  lprior += normal_lpdf(sd_4 | 0,9)
+    - 1 * normal_lccdf(0 | 0,9);
 }
 model {
   // likelihood including constants
@@ -82,20 +94,10 @@ model {
     }
   }
   // priors including constants
-  target += gamma_lpdf(Intercept | 3.65, 0.01);
-  target += normal_lpdf(sigma | 0,15)
-    - 1 * normal_lccdf(0 | 0,15);
-  target += normal_lpdf(sd_1 | 0,9)
-    - 1 * normal_lccdf(0 | 0,9);
+  target += lprior;
   target += std_normal_lpdf(z_1[1]);
-  target += normal_lpdf(sd_2 | 0,9)
-    - 1 * normal_lccdf(0 | 0,9);
   target += std_normal_lpdf(z_2[1]);
-  target += normal_lpdf(sd_3 | 0,9)
-    - 1 * normal_lccdf(0 | 0,9);
   target += std_normal_lpdf(z_3[1]);
-  target += normal_lpdf(sd_4 | 0,9)
-    - 1 * normal_lccdf(0 | 0,9);
   target += std_normal_lpdf(z_4[1]);
 }
 generated quantities {
