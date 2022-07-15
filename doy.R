@@ -1,4 +1,5 @@
 # convert predictions to DoY
+# obsolete
 
 gclim <- read.csv("../phenolology/data/all_clim_PCIC.csv", header=TRUE, stringsAsFactors=FALSE) %>%
   filter(forcing_type=="ristos") %>%
