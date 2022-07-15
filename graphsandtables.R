@@ -210,6 +210,9 @@ ggsave("plots/day_of_year_lines.pdf", width = 6, height = 5)
 
 ## grand mean posterior predictions ####
 fepred <- readRDS("objects/fepred.rds")
+fpred <- readRDS("objects/fpred.rds")
+
+# just expectations
 ggplot(fepred,
        aes(x = .epred, y = Generation, fill = Sex)) +
   stat_halfeye(alpha = 0.8) +
@@ -220,6 +223,23 @@ ggplot(fepred,
   scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
   theme_clean() +
   facet_wrap("event") +
+  theme(legend.position = "bottom")
+
+# expectations and full posterior
+gmean <- full_join(fepred, fpred) %>%
+  dplyr::rename(expectation = .epred, pp = .prediction) %>%
+  pivot_longer(cols = c("expectation", "pp"), names_to = "pred_type", values_to = "forcing")
+
+ggplot(gmean,
+       aes(x = forcing, y = Generation, fill = Sex, group = interaction(Sex,event))) +
+  stat_halfeye(alpha = 0.8) +
+  scale_fill_okabe_ito() +
+  labs(title = "Grand mean",
+       x = "Predicted forcing", y = "Sex",
+       subtitle = "Posterior expectations") +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  theme_clean() +
+  facet_grid(. ~ pred_type) +
   theme(legend.position = "bottom")
 
 # historical_flowering_periods ####

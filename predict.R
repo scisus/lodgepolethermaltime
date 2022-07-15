@@ -34,22 +34,6 @@ fpred <- purrr::map2(alldatls, modells, function(x,y) {
     bind_rows()
 saveRDS(fpred, file = "objects/fpred.rds")
 
-gmean <- full_join(fepred, fpred) %>%
-  dplyr::rename(expectation = .epred, pp = .prediction) %>%
-  pivot_longer(cols = c("expectation", "pp"), names_to = "pred_type", values_to = "forcing")
-
-ggplot(gmean,
-       aes(x = forcing, y = Generation, fill = Sex, group = interaction(Sex,event))) +
-  stat_halfeye(alpha = 0.8) +
-  scale_fill_okabe_ito() +
-  labs(title = "Grand mean",
-       x = "Predicted forcing", y = "Sex",
-       subtitle = "Posterior expectations") +
-  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
-  theme_clean() +
-  facet_grid(. ~ pred_type) +
-  theme(legend.position = "bottom")
-
 # conditional effects, new group ####
 # average predicted outcome for a new group based on random draws from the model (sample new levels from the (multivariate) normal distribution implied by the group-level standard deviations and correlations.). (That is, sampling for the new group from the "prior" estimated by the model)
 
