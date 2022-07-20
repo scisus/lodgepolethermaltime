@@ -24,6 +24,7 @@ Modular analysis scripts write out objects needed in other scripts or for graphs
 - `thermaltimemodel.R` thermal time models of flowering events in stan
   - stan code in `[sex]_[event].stan`
   - model output in `[sex]_[event].rds`
+- `obsVSretro.R` compare observations to retrodictions
 - `censoring.R` end vs interval censoring: what proportion of data is censored end vs. interval?
 - `factororder.R` order factors for making good graphs
 - `modelparameters.R` extract parameter values from models
