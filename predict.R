@@ -77,4 +77,5 @@ fpred_ceold <- purrr::map2(alldatls, modells, function(x,y) {
   bind_rows()
 saveRDS(fpred_ceold, file = "objects/fpred_ceold.rds")
 
+# predictions doy ####
 
