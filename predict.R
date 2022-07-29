@@ -27,6 +27,10 @@ fepred <- purrr::map2(alldatls, modells, function(x,y) {
   bind_rows()
 saveRDS(fepred, file = "objects/fepred.rds")
 
+fepred %>%
+  group_by(Sex, event) %>%
+  tidybayes::median_hdci(.epred)
+
 
 ## posterior predictive ####
 fpred <- purrr::map2(alldatls, modells, function(x,y) {

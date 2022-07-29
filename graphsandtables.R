@@ -214,7 +214,7 @@ fpred <- readRDS("objects/fpred.rds")
 
 # just expectations
 ggplot(fepred,
-       aes(x = .epred, y = Generation, fill = Sex)) +
+       aes(x = .epred, y = event, fill = Sex)) +
   stat_halfeye(alpha = 0.8) +
   scale_fill_okabe_ito() +
   labs(title = "Grand mean",
@@ -222,7 +222,6 @@ ggplot(fepred,
        subtitle = "Posterior expectations") +
   scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
   theme_clean() +
-  facet_wrap("event") +
   theme(legend.position = "bottom")
 
 # expectations and full posterior
