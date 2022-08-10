@@ -1,5 +1,16 @@
 
 library(purrr)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(tidybayes)
+library(tidyr)
+library(patchwork)
+
+source('phenology_functions.R')
+
+datetodoy <- data.frame(Scale = seq(ymd('2022-01-01'), ymd('2022-12-31'), by = "1 day")) %>%
+  mutate(DoY = yday(Scale))
 
 fepred <- readRDS("objects/fepred.rds")
 factororder <- readRDS("objects/factororder.rds")
@@ -11,47 +22,53 @@ typicalclim <- histclim %>%
   mutate(temporary = case_when(mean_mean_temp < 5 ~ 0,
                                       mean_mean_temp >=5 ~ mean_mean_temp),
          mean_sum_forcing = cumsum(temporary)) %>%
-  select(-temporary)
+  select(-temporary) %>%
+  left_join(datetodoy)
+
 
 # plot typical climate
-ggplot(filter(typicalclim, DoY < 180), aes(x = DoY, y = mean_sum_forcing, color = Site)) +
-  geom_line()
+ggplot(filter(typicalclim, DoY < 180), aes(x = Scale, y = mean_sum_forcing, color = Site)) +
+  geom_line() +
+  scale_x_date(date_breaks = "1 month", date_labels =  "%b")
+
 
 # in a typical year at all my sites (mean temp 1945-2012 to create sum_forcing), calculate average predicted DoY for flowering (excluding site effects)
 doy_typical <- map_dfr(split(typicalclim, f = list(typicalclim$Site), drop = TRUE),
     find_day_of_forcing, .id = ".id",
     bdf = fepred, aforce = "mean_sum_forcing", bforce = ".epred") %>%
   rename(Site = .id, DoY = newdoycol) %>%
-  mutate(Site = forcats::fct_relevel(Site, factororder$site))
+  mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site))) %>%
+  left_join(datetodoy)
 
-ggplot(filter(doy_typical, Sex == "FEMALE"), aes(x = DoY, y = Generation, color = event)) +
+# this contrast does not compare site effects - uses grand means to describe how different sites are on average. forcing the same for each site
+expdoy <- ggplot(doy_typical, aes(x = DoY, y = forcats::fct_rev(Sex), color = Sex, shape = event)) +
   stat_pointinterval() +
-  facet_wrap("Site") +
-  labs(title = "Female expected flowering day", subtite = "in a typical year", caption = "typical year based on mean daily heat sum accumulation at 7 sites between 1945 and 2012")
+  facet_grid(forcats::fct_rev(Site) ~ .) +
+  labs(caption = "typical year based on mean daily heat sum accumulation at 7 sites between 1945 and 2012") +
+  xlab("Day of Year") +
+  theme(strip.text.y.right = element_text(angle = 0),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_blank())
 
-ggplot(filter(doy_typical, Sex == "MALE"), aes(x = DoY, y = Generation, color = event)) +
-  stat_pointinterval() +
-  facet_wrap("Site") +
-  labs(title = "Female expected flowering day", subtitLe = "in a typical year", caption = "typical year based on mean daily heat sum accumulation at 7 sites between 1945 and 2012")
+# put side-by-side with forcing, which is the same for each site!
+expforc <- ggplot(fepred, aes(x=.epred, y = forcats::fct_rev(Sex), color = Sex, shape = event)) +
+  stat_halfeye() +
+  xlab("Accumulated Growing Degree Days") +
+  theme(legend.position = "none", axis.title.y = element_blank())
+  #labs(title = "Forcing requirements", subtitle = "in any year or site")
 
-gendiff <- doy_typical %>%
-  filter(Generation %in% c("1", "1.75", "Advanced")) %>%
-  group_by(Site, Sex, event, Generation) %>%
+expected <- expforc + expdoy
+expected + plot_annotation(title = "Event expectations",
+                           subtitle = "from thermal time model",
+                           tag_levels = "A")
+# how much do the max sites differ from one another
+sitediff <- doy_typical %>%
+  group_by(Site, Sex, event) %>%
   summarise(med_doy = mean(DoY)) %>%
-  pivot_wider(names_from = "Generation", values_from = "med_doy") %>%
-  mutate(contrast_1.75 = `1.75` - `1`, contrast_Advanced = Advanced - `1`)
+  pivot_wider(names_from = "Site", values_from = "med_doy") %>%
+  mutate(contrast_PGTIS = PGTIS - Kalamalka)
 
-ggplot(gendiff, aes(x = Site, y = contrast_1.75, color = Sex)) +
-  geom_point() +
-  facet_grid(Sex ~ event)
-
-ggplot(gendiff, aes(x = Site, y = contrast_Advanced, color = Sex)) +
-  geom_point() +
-  facet_grid(Sex ~ event)
-
-# In a typical year at each of my 7 sites, the change from 1st generation to 1.75 generation delays flowering by less than a day on average and hastens the end of flowering by less than a day on average. The change from 1st generation to Advanced generation orchard delays the start of flowering by about a day and hastens the end of flowering by about 4 days.
-# No need to do multiple sites - difference isn't that meaningful.
-# This was with means - i should calculate hpds
 
 
 
