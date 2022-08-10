@@ -231,14 +231,15 @@ ggplot(fepred,
 expdoy <- ggplot(doy_typical, aes(x = DoY, y = forcats::fct_rev(Sex), color = Sex, shape = event)) +
   stat_pointinterval() +
   facet_grid(forcats::fct_rev(Site) ~ .) +
-  labs(caption = "typical year based on mean daily heat sum accumulation at 7 sites between 1945 and 2012") +
+ # labs(caption = "typical year based on mean daily heat sum accumulation at 7 sites between 1945 and 2012") +
   xlab("Day of Year") +
   scale_color_viridis_d() +
   theme_dark() +
   theme(strip.text.y.right = element_text(angle = 0),
         axis.text.y = element_blank(),
         axis.ticks.y = element_blank(),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank(),
+        legend.position = "bottom")
 
 
 # forcing, which is the same for each site!
@@ -255,7 +256,7 @@ expected <- expforc + expdoy
 expected + plot_annotation(title = "Event expectations",
                            subtitle = "from thermal time model",
                            tag_levels = "A")
-ggsave("plots/eventexpecations.png", width = 8, height = 7 )
+ggsave("../flowering-cline/figures/eventexpecations.png", width = 8, height = 6 )
 
 ## expectations and full posterior ################
 gmean <- full_join(fepred, fpred) %>%
