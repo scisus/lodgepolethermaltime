@@ -41,27 +41,7 @@ doy_typical <- map_dfr(split(typicalclim, f = list(typicalclim$Site), drop = TRU
   left_join(datetodoy)
 
 # this contrast does not compare site effects - uses grand means to describe how different sites are on average. forcing the same for each site
-expdoy <- ggplot(doy_typical, aes(x = DoY, y = forcats::fct_rev(Sex), color = Sex, shape = event)) +
-  stat_pointinterval() +
-  facet_grid(forcats::fct_rev(Site) ~ .) +
-  labs(caption = "typical year based on mean daily heat sum accumulation at 7 sites between 1945 and 2012") +
-  xlab("Day of Year") +
-  theme(strip.text.y.right = element_text(angle = 0),
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.title.y = element_blank())
 
-# put side-by-side with forcing, which is the same for each site!
-expforc <- ggplot(fepred, aes(x=.epred, y = forcats::fct_rev(Sex), color = Sex, shape = event)) +
-  stat_halfeye() +
-  xlab("Accumulated Growing Degree Days") +
-  theme(legend.position = "none", axis.title.y = element_blank())
-  #labs(title = "Forcing requirements", subtitle = "in any year or site")
-
-expected <- expforc + expdoy
-expected + plot_annotation(title = "Event expectations",
-                           subtitle = "from thermal time model",
-                           tag_levels = "A")
 # how much do the max sites differ from one another
 sitediff <- doy_typical %>%
   group_by(Site, Sex, event) %>%
