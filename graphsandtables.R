@@ -211,6 +211,8 @@ ggsave("plots/day_of_year_lines.pdf", width = 6, height = 5)
 ## grand mean posterior predictions ####
 fepred <- readRDS("objects/fepred.rds")
 fpred <- readRDS("objects/fpred.rds")
+fepred_cenew <- readRDS("objects/fepred_cenew.rds")
+fepred_ceold <- readRDS("objects/fepred_ceold.rds")
 
 # just expectations
 ggplot(fepred,
