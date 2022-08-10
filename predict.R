@@ -19,7 +19,7 @@ n <- 1000 # when downsampling required
 # predict the global grand means: average predicted outcome ignoring group-specific deviations in intercept or slope
 
 # grand mean ####
-# build a dataframe with one entry for each dataset - just Sex, event, and Generation no groups, and calculate the average predicted outcome ignoring group specific deviations and individual level variation.
+# build a dataframe with one entry for each dataset - just Sex and event, no groups, and calculate the average predicted outcome ignoring group specific deviations and individual level variation.
 
 ## expectation ####
 fepred <- purrr::map2(alldatls, modells, function(x,y) {
