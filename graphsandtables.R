@@ -227,20 +227,22 @@ ggplot(fepred,
   theme(legend.position = "bottom")
 
 # expectations and full posterior
+## expectations and full posterior ################
 gmean <- full_join(fepred, fpred) %>%
-  dplyr::rename(expectation = .epred, pp = .prediction) %>%
-  pivot_longer(cols = c("expectation", "pp"), names_to = "pred_type", values_to = "forcing")
+  dplyr::rename(expectation = .epred, `full posterior` = .prediction) %>%
+  pivot_longer(cols = c("expectation", "full posterior"), names_to = "pred_type", values_to = "forcing")
 
 ggplot(gmean,
        aes(x = forcing, y = pred_type, fill = Sex, group = interaction(Sex,event))) +
   stat_halfeye(alpha = 0.8) +
-  scale_fill_okabe_ito() +
+  scale_fill_viridis_d() +
   labs(title = "Forcing requirements",
-       x = "Predicted forcing", y = "Sex",
+       x = "Predicted forcing (GDD)", y = "",
        subtitle = "Posterior expectations and posterior predictive")+
   scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
-  theme_clean() +
-  theme(legend.position = "bottom")
+  theme_dark() +
+  theme(legend.position = "right")
+ggsave("plots/forcing_fullandexpectation.png", width = 6, height = 5)
 
 factororder <- readRDS("objects/factororder.rds")
 
@@ -251,8 +253,8 @@ fepred_ce %>%
   sample_frac(0.25) %>%
   mutate(Site = forcats::fct_relevel(Site, c(factororder$site, "new_Site")))
 
-ggplot(fepred_ce,
-       aes(x = .epred, y = Site, fill = Sex, group = interaction(Sex,event))) +
+ggplot(fepred_cenew,
+       aes(x = .epred, y = Sex, fill = Sex)) +
   stat_halfeye(alpha = 0.7) +
   scale_fill_okabe_ito() +
   theme_clean() +
