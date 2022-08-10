@@ -232,16 +232,31 @@ gmean <- full_join(fepred, fpred) %>%
   pivot_longer(cols = c("expectation", "pp"), names_to = "pred_type", values_to = "forcing")
 
 ggplot(gmean,
-       aes(x = forcing, y = Generation, fill = Sex, group = interaction(Sex,event))) +
+       aes(x = forcing, y = pred_type, fill = Sex, group = interaction(Sex,event))) +
   stat_halfeye(alpha = 0.8) +
   scale_fill_okabe_ito() +
-  labs(title = "Grand mean",
+  labs(title = "Forcing requirements",
        x = "Predicted forcing", y = "Sex",
-       subtitle = "Posterior expectations") +
+       subtitle = "Posterior expectations and posterior predictive")+
   scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
   theme_clean() +
-  facet_grid(. ~ pred_type) +
   theme(legend.position = "bottom")
+
+factororder <- readRDS("objects/factororder.rds")
+
+fepred_ce <- full_join(fepred_cenew, fepred_ceold) #%>%
+
+fepred_ceold <- mutate(fepred_ceold, Site = forcats::fct_relevel(Site, factororder$site))
+fepred_ce %>%
+  sample_frac(0.25) %>%
+  mutate(Site = forcats::fct_relevel(Site, c(factororder$site, "new_Site")))
+
+ggplot(fepred_ce,
+       aes(x = .epred, y = Site, fill = Sex, group = interaction(Sex,event))) +
+  stat_halfeye(alpha = 0.7) +
+  scale_fill_okabe_ito() +
+  theme_clean() +
+  facet_grid(. ~ event)
 
 # historical_flowering_periods ####
 # day of year predictions. Plot to compare time series.
