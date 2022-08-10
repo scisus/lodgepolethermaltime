@@ -33,6 +33,7 @@ fepred %>%
 
 
 ## posterior predictive ####
+## same as expectation, but including individual level variation
 fpred <- purrr::map2(alldatls, modells, function(x,y) {
   add_predicted_draws(newdata = select(x, Sex, event) %>% distinct(), object = y, re_formula = NA)}) %>%
     bind_rows()
@@ -77,5 +78,4 @@ fpred_ceold <- purrr::map2(alldatls, modells, function(x,y) {
   bind_rows()
 saveRDS(fpred_ceold, file = "objects/fpred_ceold.rds")
 
-# predictions doy ####
 
