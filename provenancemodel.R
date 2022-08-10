@@ -1,16 +1,20 @@
-# Provenance model
+# Provenance model: clone offsets from thermal time model as a function of provenance
 
 library(dplyr)
 library(brms)
 library(report)
 
 # get data
+# response
 clone_offsets <- readRDS("objects/cloner.rds") %>%
   mutate(Clone = as.character(level))
+
+# predictors
 prov_climate <- read.csv("../phd/data/OrchardInfo/ParentTrees/locations_for_climatena_Normal_1961_1990MSY.csv") %>%
   rename(Clone = ID1, SPZ = ID2)  %>%
   select(Clone, SPZ, MAT) %>%
   mutate(Clone = as.character(Clone))
+
 
 # munge data
 dat <- clone_offsets %>%
@@ -27,9 +31,7 @@ feclone <- filter(dat, Sex == "FEMALE", event == "end")
 mbclone <- filter(dat, Sex == "MALE", event == "begin")
 meclone <- filter(dat, Sex == "MALE", event == "end")
 
-#bformsd <- brmsformula(meanoffset | mi(sdy = sdoffset) ~ 1 + MAT)
 bformse <- brmsformula(meanoffset | se(sdoffset, sigma = TRUE) ~ MAT)
-#bformsef <- brmsformula(meanoffset | se(sdoffset, sigma = FALSE) ~ 1 + MAT)
 
 bprior <- c(prior("normal(0,10)", class = "Intercept"),
             prior("normal(0,9)", class = "sigma"),
@@ -48,7 +50,7 @@ fbfitclone <- brm(bformse, data = fbclone,
             chains = nchains,
             sample_prior = TRUE,
             save_pars = save_pars(all = TRUE),
-            file_refit = "always")
+            file_refit = "on_change")
 
 mbfitclone <- brm(bformse, data = mbclone,
                     save_model = "male_begin_clone.stan",
