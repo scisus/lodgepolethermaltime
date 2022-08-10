@@ -226,6 +226,21 @@ ggplot(fepred,
   theme_clean() +
   theme(legend.position = "bottom")
 
+# expectations table
+
+etab <- fepred %>%
+  group_by(Sex, event) %>%
+  median_hdi(.epred)  %>%
+  #rename(Event = event, Median = .epred, `2.5 qi` = .lower, `97.5 qi` = .upper) %>%
+  select(-.width, -.interval) %>%
+  mutate(Expectation = paste(round(.epred,0), " (", round(.lower, 0), ", ", round(.upper,0), ")", sep = "")) %>%
+  select(- starts_with(".")) %>%
+  pivot_wider(names_from = event, values_from = Expectation) %>%
+  rename(Begin = begin, End = end)
+saveRDS(etab, "objects/etab.rds")
+
+
+
 ## forcing and day of year expectations ####
 # doy
 expdoy <- ggplot(doy_typical, aes(x = DoY, y = forcats::fct_rev(Sex), color = Sex, shape = event)) +
