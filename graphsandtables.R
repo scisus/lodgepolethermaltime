@@ -450,7 +450,7 @@ ggplot(clonepred, aes(x = MAT, y = meanoffset)) +
   geom_point(data = bind_rows(clonedat), aes(x = MAT, y = meanoffset, colour = Sex), pch = 1, alpha = 0.7) +
   scale_fill_brewer(palette = "Greys") +
   facet_grid(event ~ Sex) +
-  ylab("Genotype offset") +
+  ylab("Genotype offset (GDD)") +
   xlab(expression("Provenance Mean Annual Temperature " ( degree*C))) +
   scale_color_viridis_d() +
   labs(title = "Predicted and observed genotype effects")
