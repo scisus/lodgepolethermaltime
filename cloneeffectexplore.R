@@ -93,12 +93,19 @@ climcors %>%
   sort()
 
 
-# Clone 3172 is from latitude 58.53. This is 2.6 degrees further north than the next most northerly collection in the dataset. This Clone affects correlations a fair amount.
+# Clone 3172 is from latitude 58.53. This is 2.6 degrees further north than the next most northerly collection in the dataset.
 
 # graph clone effects and climate ####
 library(ggplot2)
 
 ggplot(filter(clonedat, modelname == "begin_MALE"), aes(x = climval, y = medianvalue)) +
+  geom_point(shape = 1, alpha = 0.6) +
+  geom_smooth(method = "lm") +
+  facet_wrap("climvar", scales = "free") +
+  ggtitle("Male begin")
+
+#without clone 3172
+ggplot(filter(clonedat, modelname == "begin_MALE", Clone != 3172), aes(x = climval, y = medianvalue)) +
   geom_point(shape = 1, alpha = 0.6) +
   geom_smooth(method = "lm") +
   facet_wrap("climvar", scales = "free") +
