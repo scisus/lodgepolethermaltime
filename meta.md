@@ -11,6 +11,9 @@ This analysis models the mean forcing accummulation required for lodgepole pine 
 - `retrodiction_prediction.R`
 - `simulatefrommodel.R`
 - `*simulations*` simulate from model with known pars and then see if you can fit the model and recover pars.
+- `parclimphencorr.R` exploratory analysis of phenology & provenance vars - graphs of genotype effects vs. all clim vars
+- `provclimatecorr.R` pearson correlations of provenance effects and provenance climates [obsolete - only 6 provenances and not true provenances]
+- `cloneinvest.R` how many clones are from locations where multiple clones were sourced from?
 
 Order of analysis is
 
@@ -33,6 +36,7 @@ Modular analysis scripts write out objects needed in other scripts or for graphs
 - `overlap.R` calculate historical and future overlap of phenological periods
 - `variation.R` variation in flowering period
 
-- `provenancemodel.R` model clone effect as function of genotype provenance climate
+- `provenancemodel.R` model genotype effect as function of genotype provenance climate
+- `provenancemodelanalysis.R` extracts and saves parameters from genotype provenance climate model 
 
 `graphsandtables.R` contains code for graphs and tables. relies on objects in `objects` folder created by modular analysis scripts

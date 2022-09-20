@@ -9,6 +9,7 @@ library(sjPlot) #html tables
 #library(RColorBrewer)
 library(ggokabeito)   # Neat accessible color palette
 library(ggthemes)    # Nice themes
+library(html2latex) # convert sjplot tables to tex and pdf
 
 theme_set(theme_dark())
 
@@ -427,9 +428,14 @@ clonemodells <- readRDS("objects/clonemodells.rds") # from clonemodelanalysis.R
 
 ## begin
 tab_model(list(clonemodells$fb, clonemodells$mb), dv.labels = c("Female", "Male"), title = "Begin flowering", file = "../flowering-cline/tables/provclimeffstart.html")
+provclimeffstart_knit <- tab_model(list(clonemodells$fb, clonemodells$mb), dv.labels = c("Female", "Male"), title = "Begin flowering")$knitr
+saveRDS(provclimeffstart_knit, "../flowering-cline/tables/proveclimeffstart_knit.rds")
 
 ## end
 tab_model(list(clonemodells$fe, clonemodells$me), dv.labels = c("Female", "Male"), title = "End flowering", file = "../flowering-cline/tables/provclimeffend.html")
+provclimeffend_knit <- tab_model(list(clonemodells$fe, clonemodells$me), dv.labels = c("Female", "Male"), title = "End flowering", file = "../flowering-cline/tables/provclimeffend.html")$knitr
+saveRDS(provclimeffend_knit, "../flowering-cline/tables/provclimeffend_knit.rds")
+
 
 
 # clone model predictions ####
@@ -444,7 +450,7 @@ ggplot(clonepred, aes(x = MAT, y = meanoffset)) +
   geom_point(data = bind_rows(clonedat), aes(x = MAT, y = meanoffset, colour = Sex), pch = 1, alpha = 0.7) +
   scale_fill_brewer(palette = "Greys") +
   facet_grid(event ~ Sex) +
-  ylab("Genotype offset") +
+  ylab("Genotype offset (GDD)") +
   xlab(expression("Provenance Mean Annual Temperature " ( degree*C))) +
   scale_color_viridis_d() +
   labs(title = "Predicted and observed genotype effects")

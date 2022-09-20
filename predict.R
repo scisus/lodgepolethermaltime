@@ -78,4 +78,7 @@ fpred_ceold <- purrr::map2(alldatls, modells, function(x,y) {
   bind_rows()
 saveRDS(fpred_ceold, file = "objects/fpred_ceold.rds")
 
-
+foo <- filter(histclim, DoY > 110 & DoY < 140)
+  ggplot(foo, aes(x = forcing)) +
+  geom_density() +
+    facet_wrap("Site")
