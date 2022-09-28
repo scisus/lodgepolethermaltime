@@ -19,11 +19,12 @@ Order of analysis is
 
 - conceptual
 
-Data is prepared with `combine_phenology_and_heatsum.R`. Climate data is from `PCIC_all_seed_orchard_sites_adjusted.csv` in the `lodgepole_climate` project. Phenology data is from the `flowers` project.
+Climate data is from `../processed/PNWNAmet_adjusted.csv` in the `lodgepole_climate` project. Phenology data is from the `flowers` package.
 
 #####
 
 Modular analysis scripts write out objects needed in other scripts or for graphs and tables in `objects` folder
+- `calc_forcing.R` calculate forcing and sum forcing for daily weather data
 - `thermaltimemodel.R` thermal time models of flowering events in stan
   - stan code in `[sex]_[event].stan`
   - model output in `[sex]_[event].rds`
