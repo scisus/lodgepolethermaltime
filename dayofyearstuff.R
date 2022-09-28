@@ -27,7 +27,7 @@ typicalclim <- histclim %>%
 
 
 # plot typical climate
-ggplot(filter(typicalclim, DoY < 180), aes(x = Scale, y = mean_sum_forcing, color = Site)) +
+ggplot(filter(typicalclim, DoY < 180 & DoY > 100), aes(x = Scale, y = mean_sum_forcing, color = Site)) +
   geom_line() +
   scale_x_date(date_breaks = "1 month", date_labels =  "%b")
 
