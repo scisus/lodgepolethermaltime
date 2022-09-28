@@ -25,6 +25,7 @@ phendat <- flowers::lodgepole_phenology_event %>%
 
 ## forcing
 dailyforc <- read.csv("data/dailyforc_1945_2012.csv", header=TRUE, stringsAsFactors = FALSE)
+#dailyforc <- read.csv("data/all_clim_PCIC.csv", header = TRUE, stringsAsFactors = FALSE)
 
 # meta
 spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv", header = TRUE, stringsAsFactors = FALSE)

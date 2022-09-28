@@ -90,7 +90,7 @@ alldatls <- readRDS("objects/datlist.rds")
 modells <- readRDS("objects/modells.rds") #1.5GB
 
 ## modeled forcing ####
-# simulate new forcing observations from the model. this is a slow step. I'm using the full model to make retrodictions, not subsampling. Makes an 18.5GB object without downsampling
+# simulate new forcing observations from the model. this is a slow step. I'm using the full model to make retrodictions, not subsampling. Makes an 12.8GB object without downsampling
 fretro <- purrr::map2(alldatls, modells, function(x,y) {add_predicted_draws(newdata = x, object = y)}) %>%
   bind_rows()
 
@@ -116,14 +116,15 @@ flen <- calc_len(fsim)
 
 # fretrocomp is a table that describes how many model forcing estimates are within the observed forcing ranges
 fretrocomp <- comp_retro2dat(fsim, flen)
-saveRDS(fretrocomp, "objects/fretrocomp.rds")
+saveRDS(fretrocomp, "objects/fretrocomp_cbc.rds")
+fretrocomp_na <- readRDS("objects/fretrocomp.rds")
 
 # determine the proportion of doy retrodictions that match observations ####
 
 
 ### historical climate data ###
-histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
-  filter(forcing_type == "gdd")
+histclim <- read.csv("data/dailyforc_1945_2012.csv")# site clim with forcing
+# might need to drop trench and border site
 
 ## doy data ####
 phenf <- readRDS("objects/phenf.rds")
