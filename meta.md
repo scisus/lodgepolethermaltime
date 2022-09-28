@@ -11,7 +11,7 @@ This analysis models the mean forcing accummulation required for lodgepole pine 
 - `retrodiction_prediction.R`
 - `simulatefrommodel.R`
 - `*simulations*` simulate from model with known pars and then see if you can fit the model and recover pars.
-- `parclimphencorr.R` exploratory analysis of phenology & provenance vars - graphs of genotype effects vs. all clim vars
+- `cloneeffectexplore.R` exploratory analysis of phenology & provenance vars - graphs of genotype effects vs. all clim vars
 - `provclimatecorr.R` pearson correlations of provenance effects and provenance climates [obsolete - only 6 provenances and not true provenances]
 - `cloneinvest.R` how many clones are from locations where multiple clones were sourced from?
 
