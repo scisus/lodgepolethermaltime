@@ -19,24 +19,23 @@ source('phenology_functions.R')
 
 # data ####
 
-# forcing
-histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
-   filter(forcing_type == "gdd")
-
-# phenology
+## phenology
 phendat <- flowers::lodgepole_phenology_event %>%
   mutate(Tree = paste0(Orchard, Clone, X, Y)) # create a unique Tree identifier since original data doesn't always have one
 
+## forcing
+dailyforc <- read.csv("data/dailyforc_1945_2012.csv", header=TRUE, stringsAsFactors = FALSE)
+
 # meta
 spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv", header = TRUE, stringsAsFactors = FALSE)
-orchgen <- read.csv("../phd/data/OrchardInfo/OrchardGen.csv") %>% select(Orchard, Generation)
-orchgen$Generation <- forcats::fct_relevel(orchgen$Generation, "1", "1.5", "1.75", "Advanced", "Unknown")
-orchgen$Generation <- ordered(orchgen$Generation)
+# orchgen <- read.csv("../phd/data/OrchardInfo/OrchardGen.csv") %>% select(Orchard, Generation)
+# orchgen$Generation <- forcats::fct_relevel(orchgen$Generation, "1", "1.5", "1.75", "Advanced", "Unknown")
+# orchgen$Generation <- ordered(orchgen$Generation)
 
 ## data preparation for phenology model ####
-phenf <- prepare_data(phendat, clim = histclim, spu = spudat) %>%
-  left_join(orchgen) %>%
-  droplevels()
+phenf <- prepare_data(phendat, clim = dailyforc, spu = spudat)
+  # left_join(orchgen) %>%
+  # droplevels()
 saveRDS(phenf, file = "objects/phenf.rds")
 
 # create 4 datasets for 4 models
@@ -54,7 +53,7 @@ saveRDS(list(fbdat = fbdat, fedat = fedat, mbdat = mbdat, medat = medat), file =
 
 # This model block is faster if you run models in parallel
 
-# initialize parameter values on the right order of magnitude
+# initialize parameter values with the right order of magnitude
 initpars <- lapply(1:6, function(id) list(sigma = 30, Intercept = 300))
 
 # model formula
