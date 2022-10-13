@@ -3,38 +3,62 @@
 library(dplyr)
 library(lubridate)
 
-# set threshold for GDD calculation
-threshold <- 5
+# functions #####
+
+# calculate accumulated forcing
+calc_forcing <- function(vec, threshold = 5) {
+  forc <- which(vec > threshold)
+
+  # calculate forcing
+  fcol <- rep(0, length(vec))
+  fcol[forc] <- vec[forc] - threshold
+
+  return(fcol)
+}
+
+calc_accumulated_forcing <- function(df, grouping_vars, mean_temp = mean_temp, threshold = 5) {
+  ndf <- df %>%
+    mutate(forcing = calc_forcing(vec = {{ mean_temp }}, threshold = threshold)) %>%
+    group_by(across(all_of(grouping_vars))) %>%
+    mutate(sum_forcing = cumsum(forcing))
+
+  return(ndf)
+
+}
+
+# globals #####
+# set threshold for gdd calculation
+th <- 5
+
+# data #####
 
 pnwnamet_adj <- read.csv("../lodgepole_climate/processed/PNWNAmet_adjusted.csv") %>%
   select(Date, Site, mean_temp_corrected) %>%
   rename(mean_temp = mean_temp_corrected) %>%
-  mutate(DoY = yday(Date))
+  mutate(DoY = yday(Date), Year = lubridate::year(Date))
 
-dailyforc_1945_2012 <- pnwnamet_adj %>%
-  mutate(Year = lubridate::year(Date)) %>%
-  arrange(Site, Date) %>%
-  mutate(forcing = case_when(mean_temp <= threshold ~ 0,
-                             mean_temp > threshold ~ mean_temp - threshold)) %>% # calculate forcing
-  group_by(Site, Year) %>%
-  mutate(sum_forcing = cumsum(forcing)) #calculate accumulated forcing
+typical_year <- read.csv("../lodgepole_climate/processed/typical_ts.csv") %>%
+  rename(mean_temp = mean_mean_temp)
+normals <- read.csv("../lodgepole_climate/processed/normal_daily.csv")
 
-allforc <- full_join(old_forc_man, dailyforc_1945_2012) %>%
-  select(-forcing, -sum_forcing, -old_sf, -old_f) %>%
-  pivot_longer(cols = c(mean_temp, old_mt)) %>%
-  rename(source = name) %>%
-  group_by(source, Site, DoY) %>%
-  summarise(mintemp = min(value), maxtemp = max(value), meantemp = mean(value))
+# forcing calculation #####
+dailyforc_1945_2012 <- calc_accumulated_forcing(pnwnamet_adj,
+                                                grouping_vars = c("Site", "Year"),
+                                                threshold = th)
+typical_year_forc <- calc_accumulated_forcing(typical_year,
+                                              grouping_vars = c("Site"),
+                                              threshold = th)
+normal_forc <- calc_accumulated_forcing(normals,
+                                        grouping_vars = c("Site", "period", "scenario"),
+                                        threshold = th)
 
-library(ggplot2)
-ggplot(allforc, aes(x = DoY, y = mintemp, linetype = source)) +
-  geom_line() +
-  facet_wrap("Site")
+
+# write out files #####
 
 write.csv(dailyforc_1945_2012, "data/dailyforc_1945_2012.csv", row.names = FALSE)
+write.csv(typical_year_forc, "data/typical_year_forc.csv", row.names = FALSE)
+write.csv(normal_forc, "data/normalforc_1901-2100.csv", row.names = FALSE)
 
-# test that forcing always > 0
-all(dailyforc_1945_2012$forcing >= 0)
 
 
 

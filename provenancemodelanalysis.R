@@ -4,7 +4,7 @@ library(dplyr)
 library(brms)
 library(purrr)
 library(tidybayes)
-library(shinystan)
+#library(shinystan)
 library(ggplot2)
 
 

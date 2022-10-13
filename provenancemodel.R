@@ -10,8 +10,8 @@ clone_offsets <- readRDS("objects/cloner.rds") %>%
   mutate(Clone = as.character(level))
 
 # predictors
-prov_climate <- read.csv("../phd/data/OrchardInfo/ParentTrees/locations_for_climatena_Normal_1961_1990MSY.csv") %>%
-  rename(Clone = ID1, SPZ = ID2)  %>%
+prov_climate <- read.csv("../lodgepole_climate/data/climateBC/climatebc_parent_locs_Normal_1961_1990Y_v730.csv") %>%
+  rename(Clone = id1, SPZ = id2)  %>%
   select(Clone, SPZ, MAT) %>%
   mutate(Clone = as.character(Clone))
 

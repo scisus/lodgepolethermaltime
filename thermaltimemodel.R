@@ -25,18 +25,13 @@ phendat <- flowers::lodgepole_phenology_event %>%
 
 ## forcing
 dailyforc <- read.csv("data/dailyforc_1945_2012.csv", header=TRUE, stringsAsFactors = FALSE)
-#dailyforc <- read.csv("data/all_clim_PCIC.csv", header = TRUE, stringsAsFactors = FALSE)
 
 # meta
 spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv", header = TRUE, stringsAsFactors = FALSE)
-# orchgen <- read.csv("../phd/data/OrchardInfo/OrchardGen.csv") %>% select(Orchard, Generation)
-# orchgen$Generation <- forcats::fct_relevel(orchgen$Generation, "1", "1.5", "1.75", "Advanced", "Unknown")
-# orchgen$Generation <- ordered(orchgen$Generation)
 
 ## data preparation for phenology model ####
 phenf <- prepare_data(phendat, clim = dailyforc, spu = spudat)
-  # left_join(orchgen) %>%
-  # droplevels()
+
 saveRDS(phenf, file = "objects/phenf.rds")
 
 # create 4 datasets for 4 models

@@ -69,7 +69,8 @@ saveRDS(fpred_cenew, file = "objects/fpred_cenew.rds")
 ## expectation ####
 fepred_ceold <- purrr::map2(alldatls, modells, function(x,y) {
   add_epred_draws(newdata = select(x, Sex, event, Site, Year, Clone, Tree) %>% distinct(), object = y, re_formula = NULL, ndraws = n)}) %>%
-  bind_rows()
+  bind_rows() %>%
+  ungroup()
 saveRDS(fepred_ceold, file = "objects/fepred_ceold.rds")
 
 ## posterior prediction ####
@@ -78,7 +79,3 @@ fpred_ceold <- purrr::map2(alldatls, modells, function(x,y) {
   bind_rows()
 saveRDS(fpred_ceold, file = "objects/fpred_ceold.rds")
 
-foo <- filter(histclim, DoY > 110 & DoY < 140)
-  ggplot(foo, aes(x = forcing)) +
-  geom_density() +
-    facet_wrap("Site")
