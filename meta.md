@@ -31,7 +31,8 @@ Modular analysis scripts write out objects needed in other scripts or for graphs
 - `censoring.R` end vs interval censoring: what proportion of data is censored end vs. interval?
 - `factororder.R` order factors for making good graphs
 - `modelparameters.R` extract parameter values from models
-- `retrodictandpredict.R` predict thermal time for events from models and translate into day of year historical and future - possibly defunct? See `obsVSretro.R` & `predict.R`
+- `predict.R` predict thermal time for events from models 
+- `dayofyear_translation.R` translate predictions into day of year 
 - `floweringlength.R` length of flowering period
 - `overlap.R` calculate historical and future overlap of phenological periods
 - `variation.R` variation in flowering period
