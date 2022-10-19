@@ -179,32 +179,32 @@ filter_sex_event <- function(sex, event, dat = phenf) {
   return(dat_prepped)
 }
 
-# fit an intercepts-only model to phenology data in brms. model accounts for both interval and end censoring and includes the effects of Site, Provenance, Clone, and Year.
-fit_model <- function(dat, init_sigma = lapply(1:4, function(id) list(sigma = 30 ))) {
-
-  fit <- brm(sum_forcing | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = dat,
-             prior = c(prior("normal(0,20)", class = "b"),
-                       prior("normal(0,10)", class = "sigma"),
-                       prior("normal(0,5)", class = "sd")),
-             cores = 5, inits = init_sigma, iter = 3000, control = list(adapt_delta = 0.9),
-             save_pars = save_pars(all = TRUE))
-
-  return(fit)
-}
+# # fit an intercepts-only model to phenology data in brms. model accounts for both interval and end censoring and includes the effects of Site, Provenance, Clone, and Year.
+# fit_model <- function(dat, init_sigma = lapply(1:4, function(id) list(sigma = 30 ))) {
+#
+#   fit <- brm(sum_forcing | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = dat,
+#              prior = c(prior("normal(0,20)", class = "b"),
+#                        prior("normal(0,10)", class = "sigma"),
+#                        prior("normal(0,5)", class = "sd")),
+#              cores = 5, inits = init_sigma, iter = 3000, control = list(adapt_delta = 0.9),
+#              save_pars = save_pars(all = TRUE))
+#
+#   return(fit)
+# }
 
 # pulls together above functions - most useful for running individual models as || jobs.
-model_phenology <- function(event, sex, inits = lapply(1:4, function(id) list(sigma = 30 )), phendat = phendat) {
-
-  phenf <- prepare_data(phendat)
-
-  dat <- filter_sex_event(sex, event, phenf)
-
-  fit <- fit_model(dat=dat, init_sigma = inits )
-
-  saveRDS(fit, paste0(sex, event, ".rds"))
-
-  return(list(dat = dat, fit = fit))
-}
+# model_phenology <- function(event, sex, inits = lapply(1:4, function(id) list(sigma = 30 )), phendat = phendat) {
+#
+#   phenf <- prepare_data(phendat)
+#
+#   dat <- filter_sex_event(sex, event, phenf)
+#
+#   fit <- fit_model(dat=dat, init_sigma = inits )
+#
+#   saveRDS(fit, paste0(sex, event, ".rds"))
+#
+#   return(list(dat = dat, fit = fit))
+# }
 
 # convenience function for gathering population mean draws from the model `mod`
 gather_means_draws <- function(mod) {

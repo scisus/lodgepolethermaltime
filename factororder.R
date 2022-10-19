@@ -3,7 +3,7 @@
 # depends
 library(dplyr)
 
-siteclim <- read.csv("../lodgepole_climate/processed/PCIC_all_seed_orchard_sites_adjusted.csv")
+siteclim <- read.csv("../lodgepole_climate/processed/PNWNAmet_adjusted.csv")
 provclim <- read.csv("../phd/data/OrchardInfo/lodgepole_SPU_climsum.csv")
 spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv", header = TRUE, stringsAsFactors = FALSE)
 

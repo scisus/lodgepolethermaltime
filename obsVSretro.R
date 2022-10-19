@@ -90,7 +90,7 @@ alldatls <- readRDS("objects/datlist.rds")
 modells <- readRDS("objects/modells.rds") #1.5GB
 
 ## modeled forcing ####
-# simulate new forcing observations from the model. this is a slow step. I'm using the full model to make retrodictions, not subsampling. Makes an 18.5GB object without downsampling
+# simulate new forcing observations from the model. this is a slow step. I'm using the full model to make retrodictions, not subsampling. Makes an 12.8GB object without downsampling
 fretro <- purrr::map2(alldatls, modells, function(x,y) {add_predicted_draws(newdata = x, object = y)}) %>%
   bind_rows()
 
@@ -122,8 +122,8 @@ saveRDS(fretrocomp, "objects/fretrocomp.rds")
 
 
 ### historical climate data ###
-histclim <- read.csv("data/all_clim_PCIC.csv") %>% # site clim with forcing
-  filter(forcing_type == "gdd")
+dailyforc <- read.csv("data/dailyforc_1945_2012.csv")# site clim with forcing
+# might need to drop trench and border site
 
 ## doy data ####
 phenf <- readRDS("objects/phenf.rds")
@@ -131,7 +131,7 @@ phenf <- readRDS("objects/phenf.rds")
 ## convert forcing retrodictions to doy ####
 ## downsample to 200 draws for each obs to keep sizes manageable
 samp <- sample(1:max(fretro$.draw), size = 200)
-dretro <- forcing_to_doy(histclim, filter(fretro, .draw %in% samp), aforce = "sum_forcing", bforce = ".prediction", newdoycolname = "retro_doy") %>%
+dretro <- forcing_to_doy(dailyforc, filter(fretro, .draw %in% samp), aforce = "sum_forcing", bforce = ".prediction", newdoycolname = "retro_doy") %>%
   ungroup() %>%
   select(Index, Sex, event, retro_doy)
 
@@ -163,7 +163,7 @@ saveRDS(dretrocomp, "objects/dretrocomp.rds")
 
 # Examine residuals ####
 ## randomized quantile residuals ####
-## technically, I think these are only acceptable for the interval censored data and not the end censored data, but I think I can honestly transform end to interval with sufficiently wide interval estimates
+## technically, I think these are only acceptable for the interval censored data and not the end censored data, but I think I can honestly transform end to interval with sufficiently wide interval estimates. though it might be more honest here to use prior info for extremes
 fq <- fretro %>%
   mutate(dat_min = case_when(censored == "left" ~ 0,
                              censored == "right" ~ sum_forcing,
