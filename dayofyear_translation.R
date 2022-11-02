@@ -35,7 +35,14 @@ factororder <- readRDS("objects/factororder.rds")
 ggplot(filter(typical_year_forc, DoY < 180 & DoY > 100), aes(x = Date, y = sum_forcing, color = Site)) +
   geom_line() +
   scale_x_date(date_breaks = "1 month", date_labels =  "%b")
+ggplot(typical_year_forc, aes(x = Date, y = sum_forcing, color = Site)) +
+  geom_line() +
+  scale_x_date(date_breaks = "1 month", date_labels =  "%b")
 
+typical_year_forc %>%
+  group_by(Site) %>%
+  summarise(meantemp = mean(mean_temp)) %>%
+  arrange(meantemp)
 
 # avg predicted DoY for flowering at seed orchard sites ####
 # in a typical year at all my sites (mean temp 1945-2012 to create sum_forcing), calculate average predicted DoY for flowering (excluding site effects)
@@ -97,7 +104,7 @@ ggplot(dplot2, aes(x = Year, ymin = .lower_begin, ymax = .upper_begin, fill = Se
   labs(title = "Predicted flowering periods", subtitle = "posterior expectation, ribbons = uncertainty, lines = medians") +
   ylab("Day of Year") +
   theme(legend.position = "bottom")
-ggsave("plots/yearly_phenology.png", width = 14, height = 7, units = "in")
+ggsave("..flowering-cline/figures/yearly_phenology.png", width = 14, height = 7, units = "in")
 
 # variation
 summary_doy_annual <- doy_annual %>%
@@ -113,7 +120,7 @@ ggplot(summary_doy_annual, aes(x = Site, y = sd_DoY, color = normal_period)) +
   labs(title = "Year-to-year variation in flowering phenology at 9 Sites", subtitle = "over two 30-year climate normal periods") +
   theme(legend.position = "bottom") +
   theme_bw()
-ggsave("plots/year2yearvar.png", width = 10, height = 6, units = "in")
+ggsave("../flowering-cline/figures/year2yearvar.png", width = 10, height = 6, units = "in")
 
 
 # graph normals ####
@@ -121,7 +128,8 @@ ggsave("plots/year2yearvar.png", width = 10, height = 6, units = "in")
 doy_normal_plotting <- doy_normal %>%
   filter(#! scenario %in% c( "ssp370"),
          period %in% c("1951-1980", "1981-2010", "2011-2040", "2041-2070", "2071-2100"),
-         Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")) %>%
+         Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border"),
+         scenario %in% c("historical", "ssp245", "ssp585")) %>%
   left_join(datetodoy)
 ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = scenario, y = DoY, colour = Site, shape = Sex)) +
   stat_pointinterval(position = "dodge") +
@@ -133,7 +141,7 @@ ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = scenario, y = DoY,
   labs(title = "Flowering period expectation", subtitle = "1951-2100 for 4 Shared Socioeconomic Pathways") +
   xlab("Shared Socioeconomic Pathway") +
   ylab("Day of Year")
-ggsave("plots/normal_predictions.png", width = 13, height = 5, units = "in")
+ggsave("../flowering-cline/figures/normal_predictions.png", width = 13, height = 5, units = "in")
 
 
 
