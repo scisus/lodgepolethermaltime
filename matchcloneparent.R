@@ -21,10 +21,6 @@ clones <- phenf %>%
 parentdat <- parentdat %>% filter(Parent.Tree.Number %in% clones$Clone) %>%
   left_join(clones, by = c("Parent.Tree.Number" = "Clone"))
 
-climatena <- parentdat %>%
-  select(ID1 = Parent.Tree.Number, ID2 = Provenance, lat = Latitude, long = Longitude, el = Elevation)
-
-write.csv(climatena, file = "../phd/data/OrchardInfo/ParentTrees/locations_for_climatena.csv", eol = "\r\n", row.names = FALSE)
 
 # map stuff
 library("ggplot2")
@@ -52,5 +48,49 @@ ggplot(data = world) +
   coord_sf(xlim = c(-131, -112), ylim = c(48, 60), expand = FALSE) +
   ggtitle("Parent trees")
 
-# add sites and maybe provenances to this map
+# Are parent trees from the provenances they're assigned to in the seed orchard
+library(terra)
+spu <- vect("../phd/maps/SPUmaps/SPU_Tongli/Pli_SPU.shp", layer = "Pli_SPU")
+#spu <- readOGR("..phd/maps/SPUmaps/SPU_Tongli", layer="Pli_SPU")
+#levels(spu$SPU) <- c("Bulkley Valley High", "Bulkley Valley Low", "Bulkley Valley-Central Plateau Transition High", "Bulkley Valley-Central Plateau Transition Low", "Bulkley Valley-Central Plateau Transition Mid",  "Bulkley Valley-Prince George Transition High", "Bulkley Valley-Prince George Transition Low", "Central Plateau High", "Central Plateau Low", "Central Plateau-Prince George Transition High", "Central Plateau-Prince George Transition Low", "Central Plateau-Prince George Transition Mid", "East Kootenay High", "East Kootenay Low", "Nelson High", "Nelson Low", "Nass Skeena High", "Nass Skeena Low", "Prince George High", "Prince George Low", "Prince George-Nelson Transition High", "Prince George-Nelson Transition Low", "Prince George-Nelson Transition Mid", "Thompson Okanagan High", "Thompson Okanagan Low", "Thompson Okanagan Mid", "Thompson Okanagan-Nelson Transition High", "Thompson Okanagan-Nelson Transition Low", "Thompson Okanagan-Nelson Transition Mid")
 
+par_pnts <- vect(cbind(parentdat$Longitude, parentdat$Latitude), crs="+proj=longlat") %>% project(crs(spu))
+
+par_pnts$id <- parentdat$Parent.Tree.Number
+intersect_vec <- terra::intersect(par_pnts, spu)
+
+
+shortnames <- clones %>% select(Provenance) %>% distinct() %>%
+  mutate(Prov_shortname = case_when(Provenance == "Bulkley Valley Low" ~ "PLI BV LOW",
+                                    Provenance == "Nelson Low" ~ "PLI NE LOW",
+                                    Provenance == "Prince George Low" ~ "PLI PG LOW",
+                                    Provenance == "Central Plateau Low" ~ "PLI CP LOW",
+                                    Provenance == "Thompson Okanagan Low" ~ "PLI TO LOW",
+                                    Provenance == "Thompson Okanagan High" ~ "PLI TO HIGH"))
+
+parinspu <- terra::relate(spu, par_pnts, "contains") %>%
+  data.frame() %>%
+  mutate(SPU_polygon = spu$SPU)
+
+par_spus <- data.frame(Clone = intersect_vec$id, SPU_Number = intersect_vec$SPU_ID, Parent_Provenance = intersect_vec$SPU) %>%
+  # add back clones that aren't in any SPU zone
+  full_join(clones) %>%
+  left_join(shortnames) %>%
+  mutate(Parent_in_Orch_Prov = Parent_Provenance == Prov_shortname)
+
+# clones not in spu
+nclone <- length(unique(par_spus$Clone)) # total number of clones
+
+clones_with_no_spu <- par_spus %>% filter(is.na(Parent_Provenance)) %>%
+  select(Clone) %>% distinct() %>% nrow()
+
+# percent of clones not from spu
+clones_with_no_spu/nclone  # 15%
+
+# how many clones are in multiple orchards
+par_spus %>%
+  group_by(Clone) %>%
+  summarise(Orchard_membership = length(Provenance)) %>%
+  filter(Orchard_membership > 1)
+
+46/nclone
