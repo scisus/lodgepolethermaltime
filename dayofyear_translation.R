@@ -35,12 +35,23 @@ factororder <- readRDS("objects/factororder.rds")
 ggplot(filter(typical_year_forc, DoY < 180 & DoY > 100), aes(x = Date, y = sum_forcing, color = Site)) +
   geom_line() +
   scale_x_date(date_breaks = "1 month", date_labels =  "%b")
-ggplot(typical_year_forc, aes(x = Date, y = sum_forcing, color = Site)) +
+
+ggplot(filter(typical_year_forc, Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")), aes(x = Date, y = sum_forcing, color = Site)) +
   geom_line() +
-  scale_x_date(date_breaks = "1 month", date_labels =  "%b")
+  scale_x_date(date_breaks = "1 month", date_labels =  "%b") +
+  title("Forcing accumulation in a typical year")
+ggsave("plots/forcing_accumulation_typical.png")
+
+ggplot(filter(typical_year_forc, Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")), aes(x = Date, y = mean_temp, color = Site)) +
+  geom_line() +
+  scale_x_date(date_breaks = "1 month", date_labels =  "%b") +
+  title("Mean daily temp in a typical year")
+ggsave("plots/mean_temp_typical.png")
+
 
 typical_year_forc %>%
   group_by(Site) %>%
+  filter(Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border"))
   summarise(meantemp = mean(mean_temp)) %>%
   arrange(meantemp)
 
@@ -104,7 +115,7 @@ ggplot(dplot2, aes(x = Year, ymin = .lower_begin, ymax = .upper_begin, fill = Se
   labs(title = "Predicted flowering periods", subtitle = "posterior expectation, ribbons = uncertainty, lines = medians") +
   ylab("Day of Year") +
   theme(legend.position = "bottom")
-ggsave("..flowering-cline/figures/yearly_phenology.png", width = 14, height = 7, units = "in")
+ggsave("../flowering-cline/figures/yearly_phenology.png", width = 14, height = 7, units = "in")
 
 # variation
 summary_doy_annual <- doy_annual %>%
