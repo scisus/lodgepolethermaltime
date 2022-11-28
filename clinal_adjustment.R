@@ -26,9 +26,31 @@ cepred <- purrr::map2(siteMATl, clonemodells, function(x,y) {
 #   bind_rows(.id = "model") %>%
 #   left_join(labdf) # label the models for plotting
 
-
 library(ggplot2)
 
 ggplot(cepred, aes(x = .epred, y = Site)) +
   stat_pointinterval() +
   facet_grid(Sex ~ event)
+
+# pull in predictions & calculate mean and variance of forcing
+fepred_summary <- readRDS("objects/fepred.rds") %>%
+  group_by(Sex, event) %>%
+  summarise(mean_forcing = mean(.epred), variance_forcing = var(.epred))
+
+# calculate mean and variance for adjustment at each site
+cepred_summary <- cepred %>%
+  group_by(Sex, event, MAT, Site) %>%
+  summarise(mean = mean(.epred), variance = var(.epred))
+
+# adjust forcing based on clinal model
+clinal_forcing_adjustment <- full_join(fepred_summary, cepred_summary) %>%
+  mutate(adjusted_forcing_mean = mean_forcing + mean, adjusted_forcing_variance = variance_forcing + variance, sd = sqrt(adjusted_forcing_variance))
+saveRDS(clinal_forcing_adjustment, "objects/clinal_forcing_adjustment.rds")
+
+ggplot(clinal_forcing_adjustment, aes(x = MAT, y = adjusted_forcing_mean, color = "adjusted")) +
+  geom_line() +
+  geom_line(aes(x= MAT, y = mean_forcing, color = "original")) +
+  facet_grid(Sex ~ event)
+
+
+
