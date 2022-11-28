@@ -68,6 +68,17 @@ doy_typical <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site)
   left_join(select(typical_year_forc, Date, DoY) %>% distinct())
 saveRDS(doy_typical, "objects/doy_typical.rds")
 
+# in a typical year adjusted for clinal variation
+
+clinal_forcing_adjustment <- readRDS("objects/clinal_forcing_adjustment.rds")
+
+doy_typical_cline <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site), drop = TRUE),
+                             find_day_of_forcing, .id = ".id",
+                             bdf = clinal_forcing_adjustment, aforce = "sum_forcing", bforce = "adjusted_forcing_mean") %>%
+  filter(.id == Site) %>%
+  select(-.id) %>%
+  rename(DoY = newdoycol)
+
 
 # in various climate normal periods ####
 # 9000 draws per normal period
@@ -134,7 +145,7 @@ ggplot(summary_doy_annual, aes(x = Site, y = sd_DoY, color = normal_period)) +
 ggsave("../flowering-cline/figures/year2yearvar.png", width = 10, height = 6, units = "in")
 
 
-# graph normals ####
+ # graph normals ####
 
 doy_normal_plotting <- doy_normal %>%
   filter(#! scenario %in% c( "ssp370"),
