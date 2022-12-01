@@ -68,7 +68,7 @@ doy_typical <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site)
   left_join(select(typical_year_forc, Date, DoY) %>% distinct())
 saveRDS(doy_typical, "objects/doy_typical.rds")
 
-# in a typical year adjusted for clinal variation
+# clinal variation typical year####
 
 clinal_forcing_adjustment <- readRDS("objects/clinal_forcing_adjustment.rds")
 
@@ -77,8 +77,20 @@ doy_typical_cline <- map_dfr(split(typical_year_forc, f = list(typical_year_forc
                              bdf = clinal_forcing_adjustment, aforce = "sum_forcing", bforce = "adjusted_forcing_mean") %>%
   filter(.id == Site) %>%
   select(-.id) %>%
-  rename(DoY = newdoycol)
+  rename(DoY = newdoycol) %>%
+  mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site)))
 
+#add MAT to doy_typical doy predictions for typical years
+doy_typical_mat <- select(doy_typical_cline, Site, Sex, event, MAT) %>%
+  distinct() %>%
+  full_join(doy_typical)
+
+
+ggplot(filter(doy_typical_cline,  Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")), aes(x = MAT, y = DoY, shape = "adjusted"), color = "black") +
+  geom_point(position = position_dodge(width = 0.25)) +
+  stat_pointinterval(data = filter(doy_typical_mat,  Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")), aes(x = MAT, y = DoY,  shape = "thermal time", color = MAT), position = "dodge") +
+  facet_grid(event ~ Sex) +
+  ggtitle("Thermal time model predictions - raw and adjusted with cline model")
 
 # in various climate normal periods ####
 # 9000 draws per normal period
