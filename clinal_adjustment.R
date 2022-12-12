@@ -44,13 +44,23 @@ cepred_summary <- cepred %>%
 
 # adjust forcing based on clinal model
 clinal_forcing_adjustment <- full_join(fepred_summary, cepred_summary) %>%
-  mutate(adjusted_forcing_mean = mean_forcing + mean, adjusted_forcing_variance = variance_forcing + variance, sd = sqrt(adjusted_forcing_variance))
+  mutate(adjusted_forcing_mean = mean_forcing + mean, adjusted_forcing_variance = variance_forcing + variance, sd = sqrt(adjusted_forcing_variance),
+         diff = mean_forcing - adjusted_forcing_mean)
 saveRDS(clinal_forcing_adjustment, "objects/clinal_forcing_adjustment.rds")
 
 ggplot(clinal_forcing_adjustment, aes(x = MAT, y = adjusted_forcing_mean, color = "adjusted")) +
   geom_line() +
-  geom_line(aes(x= MAT, y = mean_forcing, color = "original")) +
+  geom_point(aes(x= MAT, y = mean_forcing, color = "original")) +
   facet_grid(Sex ~ event)
+
+forcing_on_flowering_day <- readRDS("objects/phenf.rds") %>%
+  filter(Event_Obs %in% c(2,3)) %>%
+  left_join(select(cepred_summary, Site, MAT) %>% distinct())
+
+ggplot(clinal_forcing_adjustment, aes(x = MAT, y = diff, color = Sex, shape = event)) +
+  geom_line() +
+  geom_jitter(data = forcing_on_flowering_day, aes(x = MAT, y = forcing)) +
+  ggtitle("difference between predictions with and without cline", subtitle = "points actual forcing day of event")
 
 
 
