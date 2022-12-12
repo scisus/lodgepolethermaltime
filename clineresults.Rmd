@@ -1,0 +1,69 @@
+---
+title: "Source effect"
+author: "C. Susannah Tysor"
+date: '2022-12-02'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Model
+
+The thermal time model predicts how much forcing is required for a given flowering event as
+
+$f_i = \mu + \alpha_{tree_i} + \alpha_{genotype_i} + \alpha_{site_i} + \alpha_{year_i}$
+
+Fitting that model estimates an random effect $\alpha_{genotype_i}$ for each genotype.
+
+Then I estimate how much of the genotype effect can be explained by the MAT of that genotypes geographic source (cline model)
+
+$\alpha_{genotype_i} = \beta_0 + \beta_1MAT$
+
+(The above are stylized representations of the model that leave out all the layers of the Bayesian modelling and how I handle uncertainty and censoring and such.)
+
+### Model results in terms of forcing
+In the graph below, the blue dots show the thermal time model's grand mean ($\mu$) - the forcing required for flowering to occur, dropping heterogeneity from tree, genotype, site, and year.
+
+Each dot is for one of the sites I'm considering - Border, Trench, Prince George, etc. All the dots are in a line for each event because the estimates of forcing are identical by definition - forcing requirements don't vary by site or year or whatever. They do vary by day of year.
+
+The pink line shows the expectation of forcing requirements according to the cline model. 
+
+```{r modelestimates}
+knitr::include_graphics("dec1graphs/Rplot.png")
+```
+
+Genotypes from colder environments require less forcing than those from warmer environments in order to flower.
+
+How much difference do these differences make?
+
+The lines in the graph below show the difference between the expectations of the thermal time model and the cline model. The points on the graph are how much forcing occurred on the day each flowering observation in our dataset. They are included to give you a reference for what a normal day's forcing looks like - to help you understand the scale of the lines.
+
+```{r diffs}
+knitr::include_graphics("dec1graphs/diffs.png")
+```
+
+Over the range of MATs at the sites we're considering, the effect of source can change predictions by ~ 12 GDD, which is one relatively warm day or several relatively cool ones.
+
+GDD can be translated into any year-site context. While GDD is always the same, the day of year or number of days it translates into is context dependent.
+
+## Day of year predictions
+
+In the plot below, triangles show the thermal time model prediction translated into day of year for flowering events and circles show the cline model prediction.
+
+The predictions were made for a typical (mean) year at 5 sites (Border, Trench, PGTIS, Kettle River, Kalamalka). We assume that genotypes growing at the site are from the site.
+
+```{r doy}
+knitr::include_graphics("dec1graphs/predictions.png")
+```
+
+The effect of source is never more than a few days. Phenology is advanced slightly for cold sources (because they require less forcing) and delayed slightly for warm sources (because they require more forcing).
+
+## MAT as environmental gradient proxy
+
+I used MAT in the thermal cline model because so much clinal variation in lodgepole pine is tied to temperature and MAT is quite correlated with many other climate variables one might also consider. I also don't have a strong hypothesis for exactly which climate variable would be the most likely to be associated with clinal variation in phenology. In an exploratory analysis where I plotted all genotype effects vs all source annual climate variables, temperature variables all had the same kind of effect - less forcing for cold areas and more for warm. Precip variable correlations were less forcing for wet areas and more for dry. While no variable was a standout in terms of correlation, temperature vars had more obvious correlations than precip.
+
+The thermal time model expectations for the Border and Trench sites (the two coldest) are quite similar even though their MATs differ by ~2 degrees. This is because most of the difference between the sites is in the winter when temperatures are below 5 degrees - when forcing isn't accumulating.
+
+While the thermal time model predicts Border and Trench should have the same flowering time, the cline model results suggest that the Border site should flower a bit earlier than the Trench site because it has a colder MAT and thus requires less forcing to flower. I expect that a variable that focused more on spring or summer temperatures would not have this effect. There is a cline - but I don't really know what environmental or geographic variable the cline most closely follows. If this is a cline caused by the linkage disequilibrium between spring phenology & cold hardiness, then perhaps the MAT predictions are right. If it's a cline caused just by assortative mating (Soularoue & Kremer 2012), I think Border & Trench would stay more similar to each other?
