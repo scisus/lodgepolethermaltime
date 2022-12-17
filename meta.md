@@ -35,10 +35,14 @@ Modular analysis scripts write out objects needed in other scripts or for graphs
 - `predict.R` predict thermal time for events from models 
 - `dayofyear_translation.R` translate predictions into day of year 
 - `floweringlength.R` length of flowering period
-- `overlap.R` calculate historical and future overlap of phenological periods
-- `variation.R` variation in flowering period
+- `overlap.R` calculate historical and future overlap of phenological periods [defunct]
+- `variation.R` variation in flowering period [defunct]
 
 - `provenancemodel.R` model genotype effect as function of genotype provenance climate
 - `provenancemodelanalysis.R` extracts and saves parameters from genotype provenance climate model 
+
+- `clinal_adjustment.R` adjust thermal time model predictions by results of the genotype effect ~ MAT model (provenance model)
+
+- `clineresults.Rmd` provides a short writeup of the cline results
 
 `graphsandtables.R` contains code for graphs and tables. relies on objects in `objects` folder created by modular analysis scripts
