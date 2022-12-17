@@ -277,7 +277,7 @@ ggplot(fepred_cenew,
 clonemodells <- readRDS("objects/clonemodells.rds") # from clonemodelanalysis.R
 
 ## begin
-tab_model(list(clonemodells$fb, clonemodells$mb), dv.labels = c("Female", "Male"), title = "Begin flowering", file = "../flowering-cline/tables/provclimeffstart.html")
+sjPlot::tab_model(list(clonemodells$fb, clonemodells$mb), dv.labels = c("Female", "Male"), title = "Begin flowering", file = "../flowering-cline/tables/provclimeffstart.html")
 provclimeffstart_knit <- tab_model(list(clonemodells$fb, clonemodells$mb), dv.labels = c("Female", "Male"), title = "Begin flowering")$knitr
 saveRDS(provclimeffstart_knit, "../flowering-cline/tables/proveclimeffstart_knit.rds")
 
