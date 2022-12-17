@@ -1,11 +1,12 @@
 # provenance model analysis
 
+
 library(dplyr)
 library(brms)
 library(purrr)
 library(tidybayes)
 #library(shinystan)
-library(ggplot2)
+#library(ggplot2)
 
 
 
@@ -34,4 +35,26 @@ clonepred <- purrr::map2(clonedat, clonemodells, function(x,y) {add_predicted_dr
 saveRDS(clonepred, "objects/clonepred.rds")
 
 
+# make a table summarising the model
+#
+summary(clonemodells$fb)
+
+# r2 values
+bayesr2 <- purrr::map_dfr(clonemodells, function(x) brms::bayes_R2(x) %>% as.data.frame(), .id = "model")
+rownames(bayesr2) <- NULL
+bayesr2$Parameter = "R2"
+
+build_summary_table <- function(model) {
+  df <- rbind(summary(model)$fixed, summary(model)$spec_pars)
+  df$Parameter <- rownames(df)
+  rownames(df) <- NULL
+  return(df)
+}
+
+
+model_results <- purrr::map_dfr(clonemodells, build_summary_table, .id = "model") %>%
+  rename(Q2.5 = "l-95% CI", Q97.5 = "u-95% CI") %>%
+  select(-Rhat, -contains("ESS")) %>%
+  rbind(bayesr2) %>%
+  full_join(labdf)
 
