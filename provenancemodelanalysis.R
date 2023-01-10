@@ -36,8 +36,7 @@ saveRDS(clonepred, "objects/clonepred.rds")
 
 
 # make a table summarising the model
-#
-summary(clonemodells$fb)
+
 
 # r2 values
 bayesr2 <- purrr::map_dfr(clonemodells, function(x) brms::bayes_R2(x) %>% as.data.frame(), .id = "model")
@@ -57,4 +56,19 @@ model_results <- purrr::map_dfr(clonemodells, build_summary_table, .id = "model"
   select(-Rhat, -contains("ESS")) %>%
   rbind(bayesr2) %>%
   full_join(labdf)
+
+library(tidyr)
+library(kableExtra)
+
+model_results_table <- model_results %>%
+  select(Parameter, Estimate, Q2.5, Q97.5, Sex, event) %>%
+  mutate_at(c("Estimate", "Q2.5", "Q97.5"), round, digits = 2) %>%
+  mutate(Estimates = paste0(Estimate, " ", "[", Q2.5, "\u2013", Q97.5, "]")) %>%
+  select(-starts_with("Q"), -Estimate) %>%
+  pivot_wider(names_from = c("Sex", "event"), values_from = c(Estimates))
+
+saveRDS(model_results_table, file = "../flowering-cline/tables/fc_model_results_table.rds")
+
+
+
 
