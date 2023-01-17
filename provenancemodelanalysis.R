@@ -63,7 +63,7 @@ library(kableExtra)
 model_results_table <- model_results %>%
   select(Parameter, Estimate, Q2.5, Q97.5, Sex, event) %>%
   mutate_at(c("Estimate", "Q2.5", "Q97.5"), round, digits = 2) %>%
-  mutate(Estimates = paste0(Estimate, " ", "[", Q2.5, "\u2013", Q97.5, "]")) %>%
+  mutate(Estimates = paste0(Estimate, " ", "(", Q2.5, ",", Q97.5, ")")) %>%
   select(-starts_with("Q"), -Estimate) %>%
   pivot_wider(names_from = c("Sex", "event"), values_from = c(Estimates))
 
