@@ -27,17 +27,28 @@ saveRDS(modells, "objects/modells.rds")
 phenf <- readRDS("objects/phenf.rds")
 
 # extract and summarise parameter values from the posterior
+tidybayes::get_variables(modells$fb)
 
-# means ####
 
 labdf <- data.frame(Sex = c("FEMALE", "FEMALE", "MALE", "MALE"), event = c('begin', 'end', 'begin', 'end'), model = c('fb', 'fe', 'mb', 'me'))
 
-means <- purrr::map(modells, gather_means_draws) %>%
+# slope ####
+slopes <- purrr::map(modells, gather_slope_draws) %>%
+  bind_rows(.id = "model") %>%
+  left_join(labdf)
+saveRDS(slopes, file = "objects/slopes.rds")
+
+slopesummary <- slopes %>%
+  group_by(Sex, event) %>%
+  median_hdci(.value)
+
+# intercept ####
+intercepts <- purrr::map(modells, gather_intercept_draws) %>%
   bind_rows(.id = "model") %>%
   left_join(labdf) # label the models for plotting
-saveRDS(means, file = "objects/means.rds")
+saveRDS(intercepts, file = "objects/intercepts.rds") # this is equivalent to the mean in model with no mat effect
 
-meanssummary <- means %>%
+interceptssummary <- intercepts %>%
   group_by(Sex, event) %>%
   median_hdci(.value)
 
