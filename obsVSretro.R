@@ -149,7 +149,7 @@ dsim <- dretro %>%
   ungroup() %>%
   #calculate min and max of a one sigma interval around the mean
   mutate(retro_min = retro_mean - retro_sd, retro_max = retro_mean + retro_sd) %>%
-  full_join(ddat) %>%
+  left_join(ddat) %>%
   mutate(dat_min = coalesce(dat_min, 0),
          dat_max = coalesce(dat_max, Inf))
 
@@ -185,7 +185,10 @@ fq %>%
   ) %>%
   ggplot(aes(x = .row, y = z_residual)) +
   geom_point(pch = 1) +
-  facet_grid(Sex ~ event)
+  facet_grid(Sex ~ event) +
+  ggtitle("Randomized quantile residuals")
+
+# should be uniform around 0
 
 # qqplot - should be straight line.
 
@@ -200,4 +203,5 @@ fq %>%
   ggplot(aes(sample = z_residual)) +
   geom_qq() +
   geom_abline() +
-  facet_grid(Sex ~ event)
+  facet_grid(Sex ~ event) +
+  ggtitle("qqplot")
