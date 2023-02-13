@@ -18,15 +18,15 @@ siteMAT <- siteclim %>%
 
 sitefactororder <- siteMAT$Site
 
-provMAT <- provclim %>% select(SPU_Number, MAT) %>%
-  full_join(spudat) %>%
-  filter(SPU_Name %in% unique(phenf$Provenance)) %>%
-  select(MAT, SPU_Name) %>%
-  distinct() %>%
-  arrange(MAT)
-
-provfactororder <- provMAT$SPU_Name %>%
-  stringr::str_replace_all(pattern = "\\s", replacement = "\\.")  # format names to work with stan output
+# provMAT <- provclim %>% select(SPU_Number, MAT) %>%
+#   full_join(spudat) %>%
+#   filter(SPU_Name %in% unique(phenf$Provenance)) %>%
+#   select(MAT, SPU_Name) %>%
+#   distinct() %>%
+#   arrange(MAT)
+#
+# provfactororder <- provMAT$SPU_Name %>%
+#   stringr::str_replace_all(pattern = "\\s", replacement = "\\.")  # format names to work with stan output
 
 yearMAT <- siteclim %>%
   mutate(Year = lubridate::year(Date)) %>%
@@ -37,5 +37,5 @@ yearMAT <- siteclim %>%
 
 yearfactororder <- yearMAT$Year
 
-factororder <- list(site = sitefactororder, prov = provfactororder, year = yearfactororder)
+factororder <- list(site = sitefactororder, year = yearfactororder)
 saveRDS(factororder, "objects/factororder.rds")
