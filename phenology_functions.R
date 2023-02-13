@@ -76,7 +76,8 @@ filter_sex_event <- function(sex, event, dat = phenf) {
    # tidyr::pivot_wider(names_from = bound, values_from = sum_forcing_centered, values_fill = 0) %>%
    tidyr::pivot_wider(names_from = bound, values_from = sum_forcing, values_fill = 0) %>%
     dplyr::rename(sum_forcing = lower) %>%
-    dplyr::mutate(event = event)
+    dplyr::mutate(event = event) %>%
+    filter(!is.na(MAT))
 
   return(dat_prepped)
 }
