@@ -110,8 +110,13 @@ filter_sex_event <- function(sex, event, dat = phenf) {
 # }
 
 # convenience function for gathering population mean draws from the model `mod`
-gather_means_draws <- function(mod) {
+gather_intercept_draws <- function(mod) {
   draws <- mod %>% tidybayes::gather_draws(b_Intercept, ndraws = nsamp, seed = seed)
+  return(draws)
+}
+
+gather_slope_draws <- function(mod) {
+  draws <- mod %>% tidybayes::gather_draws(b_MAT, ndraws = nsamp, seed = seed)
   return(draws)
 }
 
