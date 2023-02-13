@@ -29,8 +29,15 @@ dailyforc <- read.csv("data/dailyforc_1945_2012.csv", header=TRUE, stringsAsFact
 # meta
 spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv", header = TRUE, stringsAsFactors = FALSE)
 
+prov_climate <- read.csv("../lodgepole_climate/data/climateBC/climatebc_parent_locs_Normal_1961_1990Y_v730.csv") %>%
+  rename(Clone = id1, SPZ = id2)  %>%
+  select(Clone, SPZ, MAT) %>%
+  mutate(Clone = as.character(Clone))
+
 ## data preparation for phenology model ####
-phenf <- prepare_data(phendat, clim = dailyforc, spu = spudat)
+phenf <- prepare_data(phendat, clim = dailyforc, spu = spudat) %>%
+  left_join(prov_climate) %>%
+  filter(!is.na(MAT)) # Only keep clones with an associated source MAT - no breeding
 
 saveRDS(phenf, file = "objects/phenf.rds")
 
@@ -38,7 +45,6 @@ saveRDS(phenf, file = "objects/phenf.rds")
 
 fbdat <- filter_sex_event(sex = "FEMALE", event = "begin", phenf)
 fedat <- filter_sex_event(sex = "FEMALE", event = "end", phenf)
-
 mbdat <- filter_sex_event(sex = "MALE", event = "begin", phenf)
 medat <- filter_sex_event(sex = "MALE", event = "end", phenf)
 
@@ -53,15 +59,16 @@ saveRDS(list(fbdat = fbdat, fedat = fedat, mbdat = mbdat, medat = medat), file =
 initpars <- lapply(1:6, function(id) list(sigma = 30, Intercept = 300))
 
 # model formula
-bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Clone) + (1|Year) + (1|Tree))
+bform <- brmsformula(sum_forcing | cens(censored, upper) ~ MAT + (1|Site) + (1|Clone) + (1|Year) + (1|Tree))
 
 # model prior
 bprior <- c(prior("gamma(3.65, 0.01)", class = "Intercept"),
             prior("normal(0,15)", class = "sigma"),
-            prior("normal(0,9)", class = "sd"))
+            prior("normal(0,9)", class = "sd"),
+            prior("normal(0,5)", class = "b"))
 
 # mcmc/computation settings
-niter <- 3000
+niter <- 4000
 ncores <- 6
 nchains <- 6
 
@@ -76,7 +83,7 @@ fbfit <- brm(bform, data = fbdat,
              chains = nchains,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
-             file_refit = "on_change")
+             file_refit = "always")
 
 # female/receptivity end
 fefit <- brm(bform, data = fedat,
@@ -89,7 +96,7 @@ fefit <- brm(bform, data = fedat,
              chains = nchains,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
-             file_refit = "on_change")
+             file_refit = "always")
 
 # male/pollen shed begin
 mbfit <- brm(bform, data = mbdat,
@@ -102,7 +109,7 @@ mbfit <- brm(bform, data = mbdat,
              chains = nchains,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
-             file_refit = "on_change")
+             file_refit = "always")
 
 # male/pollen shed end
 mefit <- brm(bform, data = medat,
@@ -115,4 +122,5 @@ mefit <- brm(bform, data = medat,
              chains = nchains,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
-             file_refit = "on_change")
+             file_refit = "always")
+
