@@ -5,9 +5,9 @@ date: "10 March 2023"
 output: html_document
 ---
 
-```{r setup}
+```{r setup, results='asis', include = FALSE}
 
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
 library(ggplot2)
 library(ggalt)
@@ -75,7 +75,7 @@ Countergradient variation reduces the length of the flowering period across the 
 
 ```{r overlap, echo=FALSE}
 typical_overlap <- readRDS("objects/typical_overlap.rds")
-matlabels <- filter(typical_overlap, SiteM == SiteF)
+#matlabels <- filter(typical_overlap, SiteM == SiteF)
 
 ggplot(typical_overlap, aes(x = SiteM, y=SiteF, fill = overlap)) +
   geom_tile() +
@@ -86,6 +86,7 @@ ggplot(typical_overlap, aes(x = SiteM, y=SiteF, fill = overlap)) +
   ylab("Female flowering") 
 
 ```
+
 Overlap depends on both site and provenance climates. This overlap heatmap shows expected overlap when provenances are grown at home. Given very high levels of individual variation, I actually expect a bit more overlap, but this is the "mean" flowering period at each site.
 
 ```{r, echo = FALSE}
