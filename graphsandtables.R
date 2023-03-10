@@ -175,6 +175,7 @@ fepred <- readRDS("objects/fepred.rds")
 fpred <- readRDS("objects/fpred.rds")
 fepred_cenew <- readRDS("objects/fepred_cenew.rds")
 fepred_ceold <- readRDS("objects/fepred_ceold.rds")
+fepred_newsites <- readRDS("objects/fepred_newsites.rds")
 
 # just expectations
 ggplot(fepred,

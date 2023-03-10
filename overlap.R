@@ -4,64 +4,77 @@
 library(dplyr)
 library(lubridate)
 library(forcats)
+library(tidyr)
 
-general_doy_preds_med_siteyearsex <- readRDS("objects/general_doy_preds_med_siteyearsex.rds")
-doypredmatchfut_medians <- readRDS("objects/doypredmatchfut_medians.rds")
+doy_typical_allsites <- readRDS("objects/doy_typical_allsites.rds")
 factororder <- readRDS("objects/factororder.rds")
 
-# historical ####
-#
-med_sys_begin <- filter(general_doy_preds_med_siteyearsex, event == "begin") %>%
-rename(b.newdoycol = newdoycol, b.lower = .lower, b.upper = .upper, b.date = Date, b.lowerdate = .lowerdate, b.upperdate = .upperdate) %>%
-  select(-event)
-med_sys_end <- filter(general_doy_preds_med_siteyearsex, event == "end") %>%
-  rename(e.newdoycol = newdoycol, e.lower = .lower, e.upper = .upper, e.date = Date, e.lowerdate = .lowerdate, e.upperdate = .upperdate) %>%
-  select(-event)
+# typical #######
 
-med_interval_sys <- full_join(med_sys_begin, med_sys_end) %>%
-  mutate(med_interval = lubridate::interval(b.date, e.date, tzone = "UTC")) %>% # calculate interval for phenology
-  select(Sex, Site, Year, .width, .point, .interval, med_interval)
+## provenance at home #########
 
-female_intervals <- filter(med_interval_sys, Sex == "FEMALE") %>%
-  rename(female_med_interval = med_interval) %>%
-  select(-Sex)
+typical_intervals <- doy_typical_allsites %>%
+  filter(Site == Source) %>%
+  select(Site, MAT, DoY, Sex, event) %>%
+  group_by(Site, MAT, Sex, event) %>%
+  median_hdci(DoY) %>%
+  select(Site, MAT, Sex, event, DoY) %>%
+  distinct() %>%
+  mutate(Date = ymd("2023-12-31") + DoY) %>%
+  select(-DoY) %>%
+  pivot_wider(values_from = Date, names_from = event) %>%
+  mutate(flowering_period = interval(begin,end)) %>%
+  select(-begin, -end, MAT) %>%
+  pivot_wider(values_from = flowering_period, names_from = Sex)
 
-male_intervals <- filter(med_interval_sys, Sex == "MALE") %>%
-  rename(male_med_interval = med_interval, male_Site = Site) %>%
-  select(-Sex)
+# thank you Brian on [Stack Overflow](https://stackoverflow.com/questions/58517015/lubridate-find-overlap-time-between-interval-and-a-date)
+int_overlaps_numeric <- function (int1, int2) {
+  stopifnot(c(is.interval(int1), is.interval(int2)))
 
-med_overlap_sys <- full_join(female_intervals, male_intervals) %>%
-  mutate(overlap = day(as.period(intersect(female_med_interval, male_med_interval), "days")) + 1, Site = forcats::fct_relevel(Site, factororder$site), male_Site = forcats::fct_relevel(male_Site, factororder$site))
-med_overlap_sys[is.na(med_overlap_sys)] <- 0
-saveRDS(med_overlap_sys, file = "objects/med_overlap_sys.rds")
+  x <- intersect(int1, int2)@.Data
+  x[is.na(x)] <- 0
+  days_of_overlap = as.numeric(as.duration(x), "days")
+}
 
-# future ####
+male_typical <- select(typical_intervals, SiteM = Site, MALE, MATM = MAT)
+female_typical <- select(typical_intervals, SiteF = Site, FEMALE, MATF = MAT)
 
-# this could be functionalised - see historical overlap
-med_fut_begin <- filter(doypredmatchfut_medians, event == "begin") %>%
-  rename(b.newdoycol = newdoycol, b.lower = .lower, b.upper = .upper, b.date = Date, b.lowerdate = .lowerdate, b.upperdate = .upperdate) %>%
-  select(-event)
-med_fut_end <- filter(doypredmatchfut_medians, event == "end") %>%
-  rename(e.newdoycol = newdoycol, e.lower = .lower, e.upper = .upper, e.date = Date, e.lowerdate = .lowerdate, e.upperdate = .upperdate) %>%
-  select(-event)
+typical_overlap <- merge(male_typical, female_typical) %>%
+  mutate(overlap = int_overlaps_numeric(FEMALE, MALE))
+saveRDS(typical_overlap, "objects/typical_overlap.rds")
 
-med_interval_fut_sys <- full_join(med_fut_begin, med_fut_end) %>%
-  mutate(med_interval = lubridate::interval(b.date, e.date, tzone = "UTC")) %>% # calculate interval for phenology
-  select(Sex, Site, .width, .point, .interval, med_interval, SSP, normal_period, climate_forcing)
+library(viridis)
+ggplot(typical_overlap, aes(x = SiteM, y=SiteF, fill = overlap)) +
+  geom_tile() +
+  scale_fill_viridis() +
+  ggtitle("Days of overlap in a typical year") +
+  geom_text(data = filter(typical_overlap, SiteM == SiteF), aes(x = SiteM, y = SiteF, label = MATM))
 
-female_fut_intervals <- filter(med_interval_fut_sys, Sex == "FEMALE") %>%
-  rename(female_med_interval = med_interval) %>%
-  select(-Sex)
+## with only PGTIS provenance ###
+typical_intervals_only_PGTIS <- doy_typical_allsites %>%
+  #filter(Source == "Border") %>%
+  select(Site, MAT, DoY, Sex, event) %>%
+  group_by(Site, MAT, Sex, event) %>%
+  median_hdci(DoY) %>%
+  select(Site, MAT, Sex, event, DoY) %>%
+  distinct() %>%
+  mutate(Date = ymd("2023-12-31") + DoY) %>%
+  select(-DoY) %>%
+  pivot_wider(values_from = Date, names_from = event) %>%
+  mutate(flowering_period = interval(begin,end)) %>%
+  select(-begin, -end) %>%
+  pivot_wider(values_from = flowering_period, names_from = Sex)
 
-male_fut_intervals <- filter(med_interval_fut_sys, Sex == "MALE") %>%
-  rename(male_med_interval = med_interval, male_Site = Site) %>%
-  select(-Sex)
+male_typical_only_PGTIS <- select(typical_intervals_only_PGTIS, SiteM = Site, MALE, MATM = MAT)
+female_typical_only_PGTIS <- select(typical_intervals_only_PGTIS, SiteF = Site, FEMALE, MATF = MAT)
 
-fut_overlap_sys <- full_join(female_fut_intervals, male_fut_intervals) %>%
-  mutate(overlap = day(as.period(intersect(female_med_interval, male_med_interval), "days")) + 1, Site = forcats::fct_relevel(Site, factororder$site), male_Site = forcats::fct_relevel(male_Site, factororder$site))
-fut_overlap_sys[is.na(fut_overlap_sys)] <- 0
-saveRDS(fut_overlap_sys, file = "objects/fut_overlap_sys.rds")
+typical_overlap_only_PGTIS <- merge(male_typical_only_PGTIS, female_typical_only_PGTIS) %>%
+  mutate(overlap = int_overlaps_numeric(FEMALE, MALE))
+saveRDS(typical_overlap_only_PGTIS, "objects/typical_overlap_only_PGTIS.rds")
 
+ggplot(typical_overlap_only_PGTIS, aes(x = SiteM, y=SiteF, fill = overlap)) +
+  geom_tile() +
+  scale_fill_viridis() +
+  ggtitle("Days of overlap in a typical year - no MAT effect") +
+  geom_text(data = filter(typical_overlap_only_PGTIS, SiteM == SiteF), aes(x = SiteM, y = SiteF, label = MATM))
 
-
-# this might work better if calculated as a change in overlap

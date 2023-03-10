@@ -12,6 +12,7 @@ library(tidybayes)
 
 modells <- readRDS("objects/modells.rds")
 alldatls <- readRDS("objects/datlist.rds")
+sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv") %>% filter(id == "site")
 
 n <- 1000 # when downsampling required
 
@@ -27,14 +28,6 @@ fepred <- purrr::map2(alldatls, modells, function(x,y) {
   bind_rows()
 saveRDS(fepred, file = "objects/fepred.rds")
 
-mtcars %>%
-  data_grid(hp = seq_range(hp, n = 101)) %>%
-  add_predicted_draws(m_mpg) %>%
-  ggplot(aes(x = hp, y = mpg)) +
-  stat_lineribbon(aes(y = .prediction), .width = c(.99, .95, .8, .5), color = "#08519C") +
-  geom_point(data = mtcars, size = 2) +
-  scale_fill_brewer()
-
 fepred %>%
   group_by(Sex, event) %>%
   tidybayes::median_hdci(.epred)
@@ -45,6 +38,30 @@ ggplot(fepred, aes(x = MAT, y = sum_forcing)) +
   scale_fill_brewer() +
   facet_grid(Sex ~ event) +
   geom_point(data = alldat, shape = 16, alpha = .3)
+
+## expectation for trees sourced from all sites ####
+fepred_allsites <- purrr::map(modells, function(x) {
+  add_epred_draws(newdata = select(sitedat, Site, MAT), object = x, re_formula = NA)}) %>%
+  bind_rows(.id = "model") %>%
+  select(-.chain, -.iteration)
+saveRDS(fepred_allsites, file = "objects/fepred_allsites.rds")
+
+intercepts_summary <- readRDS("objects/intercepts.rds") %>%
+  group_by(model, Sex, event) %>%
+  mean_hdci(.value) %>%
+  merge(select(sitedat, MAT, Site)) %>%
+  arrange(model, MAT) %>%
+  ungroup()
+
+ggplot(fepred_allsites, aes(x = MAT, y = .epred)) +
+  stat_lineribbon(aes(y = .epred), .width = c(.99, .95, .8, .5)) +
+  geom_lineribbon(data = intercepts_summary, aes(x = MAT, y = .value, ymin = .lower, ymax =.upper, fill = "no MAT"), alpha = 0.5) +
+  scale_fill_brewer() +
+  facet_wrap("model") +
+  ggtitle("Forcing requirements for trees sourced from focal sites", subtitle = "expectation (mean) predictions") +
+  ylab("Forcing (Growing Degree Days)")
+#geom_boxplot(data = fepred_allsites, shape = 16, alpha = .3, aes(group = MAT))
+
 
 
 ## posterior predictive ####

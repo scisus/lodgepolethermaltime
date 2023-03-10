@@ -9,6 +9,7 @@ library(tidyr)
 
 
 source('phenology_functions.R')
+focalsites <- c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")
 
 # daily forcing data
 
@@ -24,8 +25,10 @@ normal_forc <- read.csv("data/normalforc_1901-2100.csv") %>% # averaged over 30 
 datetodoy <- data.frame(Scale = seq(ymd('2022-01-01'), ymd('2022-12-31'), by = "1 day")) %>%
   mutate(DoY = yday(Scale))
 
-fepred <- readRDS("objects/fepred.rds")
+fepred <- readRDS("objects/fepred.rds") ## expectation for observed trees (sources)
+fepred_allsites <- readRDS("objects/fepred_allsites.rds") ## expectation for trees sourced from all sites
 factororder <- readRDS("objects/factororder.rds")
+sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv")
 
 # for each site, generate a timeseries of mean temperatures and associated accumulated forcing that reflects the general pattern of temperatures throughout the year. Do this by averaging temperatures on each day between 1945 and 2011 at each site.
 # alternate source for this data would be typical_ts.csv in lodgepole_climate project
@@ -39,21 +42,20 @@ ggplot(filter(typical_year_forc, DoY < 180 & DoY > 100), aes(x = Date, y = sum_f
 ggplot(filter(typical_year_forc, Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")), aes(x = Date, y = sum_forcing, color = Site)) +
   geom_line() +
   scale_x_date(date_breaks = "1 month", date_labels =  "%b") +
-  title("Forcing accumulation in a typical year")
+  ggtitle("Forcing accumulation in a typical year")
 ggsave("plots/forcing_accumulation_typical.png")
 
 ggplot(filter(typical_year_forc, Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")), aes(x = Date, y = mean_temp, color = Site)) +
   geom_line() +
   scale_x_date(date_breaks = "1 month", date_labels =  "%b") +
-  title("Mean daily temp in a typical year")
+  ggtitle("Mean daily temp in a typical year")
 ggsave("plots/mean_temp_typical.png")
 
 
-typical_year_forc %>%
-  group_by(Site) %>%
-  filter(Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border"))
-  summarise(meantemp = mean(mean_temp)) %>%
-  arrange(meantemp)
+siteMAT <- sitedat %>%
+  filter(id == "site") %>%
+  select(Site, MAT, Elevation) %>%
+  mutate(MAT = round(MAT, 1))
 
 # avg predicted DoY for flowering at seed orchard sites ####
 # in a typical year at all my sites (mean temp 1945-2012 to create sum_forcing), calculate average predicted DoY for flowering (excluding site effects)
@@ -68,33 +70,116 @@ doy_typical <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site)
   left_join(select(typical_year_forc, Date, DoY) %>% distinct())
 saveRDS(doy_typical, "objects/doy_typical.rds")
 
-# clinal variation typical year####
 
-clinal_forcing_adjustment <- readRDS("objects/clinal_forcing_adjustment.rds")
+# very tight. What about with some noise?
 
-doy_typical_cline <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site), drop = TRUE),
-                             find_day_of_forcing, .id = ".id",
-                             bdf = clinal_forcing_adjustment, aforce = "sum_forcing", bforce = "adjusted_forcing_mean") %>%
-  filter(.id == Site) %>%
-  select(-.id) %>%
-  rename(DoY = newdoycol) %>%
-  mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site)))
+# doy_typical_uncertainty <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site), drop = TRUE),
+#                        find_day_of_forcing, .id = ".id",
+#                        bdf = fpred, aforce = "sum_forcing", bforce = ".prediction") %>%
+#   rename(Site = .id, DoY = newdoycol) %>%
+#   ungroup() %>%
+#   select(-.row, -.chain, -.iteration, -.draw) %>%
+#   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site))) %>%
+#   left_join(select(typical_year_forc, Date, DoY) %>% distinct()) %>%
+#   right_join(siteMAT) %>%
+#   group_by(Site, Sex, event, MAT, siteMAT) %>%
+#   sample_n(2000)
+#
+# ggplot(filter(doy_typical_uncertainty, Sex == "FEMALE", event == "begin"), aes(x = MAT, y = DoY)) +
+#   geom_point(shape = 16) +
+#   facet_wrap("Site")
 
-#add MAT to doy_typical doy predictions for typical years
-doy_typical_mat <- select(doy_typical_cline, Site, Sex, event, MAT) %>%
-  distinct() %>%
-  full_join(doy_typical)
+# typical year where trees grown only at their source ###########
+# now consider doy expectations in a typical year for trees from each of the sites of interest grown at those sites of interest
 
+## intercept only #######
+intercepts <- readRDS("objects/intercepts.rds")
+doy_typical_allsites_interceptonly <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site), drop = TRUE),
+                                              find_day_of_forcing, .id = ".id",
+                                              bdf = intercepts, aforce = "sum_forcing", bforce = ".value") %>%
+  rename(Site = .id, DoY = newdoycol) %>%
+  ungroup() %>%
+  select(-.chain, -.iteration, -.draw) %>%
+  mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site))) %>%
+  left_join(select(typical_year_forc, Date, DoY) %>% distinct()) %>%
+  mutate(provenance_effect = FALSE) %>%
+  left_join(siteMAT) %>%
+  filter(Site %in% focalsites)
+saveRDS(doy_typical_allsites_interceptonly, "objects/doy_typical_allsites_interceptonly.rds")
 
-ggplot(filter(doy_typical_cline,  Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")), aes(x = MAT, y = DoY, shape = "adjusted"), color = "black") +
-  geom_point(position = position_dodge(width = 0.25)) +
-  stat_pointinterval(data = filter(doy_typical_mat,  Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")), aes(x = MAT, y = DoY,  shape = "thermal time", color = MAT), position = "dodge") +
-  facet_grid(event ~ Sex) +
-  ggtitle("Thermal time model predictions - raw and adjusted with cline model")
+# including MAT #######
+doy_typical_allsites <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site), drop = TRUE),
+                       find_day_of_forcing, .id = ".id",
+                       bdf = rename(fepred_allsites, Source = Site), aforce = "sum_forcing", bforce = ".epred") %>%
+  rename(Site = .id, DoY = newdoycol) %>%
+  ungroup() %>%
+  select(-.row, -.draw) %>%
+  mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site))) %>%
+  left_join(select(typical_year_forc, Date, DoY) %>% distinct()) %>%
+  left_join(select(ungroup(intercepts), model, Sex, event) %>% distinct) %>% # add sex and event
+  mutate(provenance_effect = TRUE)
+saveRDS(doy_typical_allsites, "objects/doy_typical_allsites.rds")
 
-# in various climate normal periods ####
-# 9000 draws per normal period
+# only when provenances are grown at home
+doy_typical_home <- filter(doy_typical_allsites, Source %in% focalsites,
+                           Site %in% focalsites,
+                           Site == Source) %>%
+  full_join(doy_typical_allsites_interceptonly) %>%
+  group_by(Site, MAT, Sex, event, provenance_effect) %>%
+  median_hdci(DoY) %>%
+  filter(.width == 0.95) %>%
+  select(-starts_with(".")) %>%
+  pivot_wider(names_from = provenance_effect, values_from = DoY) %>%
+  rename(intercept = `FALSE`, wMAT = `TRUE`)
+saveRDS(doy_typical_home, "objects/doy_typical_home.rds")
 
+library(ggalt)
+#presentation
+ggplot(doy_typical_home, aes(x = intercept, xend = wMAT, y=Sex, shape = Sex)) +
+  geom_dumbbell(
+    colour = "#a3c4dc",
+    colour_xend = "#0e668b",
+    size = 3
+  ) +
+  facet_grid(MAT ~ event) +
+  xlab("Day of Year") +
+  ggtitle("Change in flowering day of year expectation with MAT effect", subtitle = "typical year, trees grown at home") +
+  theme(legend.position = "top")
+# provenance effect pushes southern provenances to flower later and northern to flower earlier, shortening the overall flowering period from south to north - and increasing overlap between north and south
+
+doy_typical_allsites_interceptonly_intermediate <- doy_typical_allsites_interceptonly %>%
+  filter(Site == "PGTIS") %>%
+  select(Sex, event, DoY) %>%
+  rename(intercept = DoY) %>%
+  group_by(Sex, event) %>%
+  median_hdci(intercept) %>%
+  filter(.width == 0.95) %>%
+  select(-starts_with("."))
+
+# now do all sources grown at a single site
+doy_typical_all_at_PGTIS <- doy_typical_allsites %>%
+  filter(Site == "PGTIS") %>%
+  group_by(Site, MAT, Sex, event) %>%
+  median_hdci(DoY) %>%
+  filter(.width == 0.95) %>%
+  select(-starts_with(".")) %>%
+  merge(doy_typical_allsites_interceptonly_intermediate)
+saveRDS(doy_typical_all_at_PGTIS, "objects/doy_typical_all_at_PGTIS.rds")
+
+ggplot(doy_typical_all_at_PGTIS, aes(x = intercept, xend = DoY, y=MAT, shape = Sex)) +
+  geom_dumbbell(
+    colour = "#a3c4dc",
+    colour_xend = "#0e668b",
+    size = 4
+  ) +
+  facet_grid(Sex ~ event) +
+  xlab("Day of Year") +
+  ggtitle("Change in flowering day of year expectation with MAT effect", subtitle = "typical year, trees grown at PGTIS") +
+  geom_vline(data = doy_typical_all_at_PGTIS, aes(xintercept = intercept)) +
+  theme(legend.position = "top")
+# When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap
+
+# normal periods
 doy_normal <- map_dfr(split(normal_forc, f = list(normal_forc$index), drop = TRUE),
                       find_day_of_forcing, .id = ".id",
                       bdf = fepred, aforce = "sum_forcing", bforce = ".epred") %>%

@@ -1,0 +1,97 @@
+---
+title: "Typical year MAT effect and overlap"
+author: "C. Susannah Tysor"
+date: "10 March 2023"
+output: html_document
+---
+
+```{r setup}
+
+knitr::opts_chunk$set(echo = FALSE)
+
+library(ggplot2)
+library(ggalt)
+library(viridis)
+library(dplyr)
+```
+
+## MAT effect
+
+The MAT of a tree's provenance has a countergradient effect on flowering day of year. Trees from colder environments flower earlier than otherwise expected, while those from warmer environments flower later. 
+
+### in a common garden/seed orchard
+
+When trees from different provenances are grown at the same site (in this case PGTIS), we expect all populations to flower at the same time. But the provenance effect causes flowering periods to be more different.
+
+```{r commongarden, echo = FALSE}
+doy_typical_all_at_PGTIS <- readRDS("objects/doy_typical_all_at_PGTIS.rds")
+
+ggplot(doy_typical_all_at_PGTIS, aes(x = intercept, xend = DoY, y=MAT, shape = Sex)) +
+  geom_dumbbell(
+    colour = "#a3c4dc",
+    colour_xend = "#0e668b",
+    size = 4
+  ) +
+  facet_grid(Sex ~ event) +
+  xlab("Day of Year") +
+  ylab("Provenance MAT") +
+  ggtitle("Change in flowering day of year expectation with MAT effect", subtitle = "typical year, trees grown at PGTIS") +
+  geom_vline(data = doy_typical_all_at_PGTIS, aes(xintercept = intercept)) +
+  theme(legend.position = "top")
+```
+
+```{r commongardentable}
+doy_typical_all_at_PGTIS %>%
+  summarise(MAT_length = diff(range(DoY)), noMAT_length = diff(range(intercept)))
+```
+The overall length of the flowering period at a site planted with trees from multiple provenances is longer than it would be if provenance did not have an effect or if flowering varied positively with provenance MAT.
+
+### On the landscape
+While in a common garden (or seed orchard) the countergradient effect of provenance on flowering time pushes flowering periods apart, when trees are grown at their home sites have flowering periods to be drawn closer together than otherwise expected
+
+```{r home, echo = FALSE}
+doy_typical_home <- readRDS("objects/doy_typical_home.rds") 
+
+ggplot(doy_typical_home, aes(x = intercept, xend = wMAT, y=Sex, shape = Sex)) +
+  geom_dumbbell(
+    colour = "#a3c4dc",
+    colour_xend = "#0e668b",
+    size = 3
+  ) +
+  facet_grid(MAT ~ event) +
+  xlab("Day of Year") +
+  ylab("Provenance MAT") +
+  ggtitle("Change in flowering day of year expectation with MAT effect", subtitle = "typical year, trees grown at home") +
+  theme(legend.position = "top")
+```
+
+```{r hometable}
+doy_typical_home %>%
+  summarise(MAT_length = diff(range(wMAT)), noMAT_length = diff(range(intercept)))
+```
+Countergradient variation reduces the length of the flowering period across the landscape.
+
+## Overlap
+
+```{r overlap, echo=FALSE}
+typical_overlap <- readRDS("objects/typical_overlap.rds")
+matlabels <- filter(typical_overlap, SiteM == SiteF)
+
+ggplot(typical_overlap, aes(x = SiteM, y=SiteF, fill = overlap)) +
+  geom_tile() +
+  scale_fill_viridis() +
+  #annotate("text", x = matlabels$SiteM, y = matlabels$SiteF, label = matlabels$MATF)
+  ggtitle("Days of overlap in a typical year", subtitle = "provenance MAT label on diagonal") +
+  xlab("Male flowering") +
+  ylab("Female flowering") 
+
+```
+Overlap depends on both site and provenance climates. This overlap heatmap shows expected overlap when provenances are grown at home. Given very high levels of individual variation, I actually expect a bit more overlap, but this is the "mean" flowering period at each site.
+
+```{r, echo = FALSE}
+typical_overlap %>%
+  select(Site = SiteM, MAT = MATM) %>%
+  distinct() %>%
+  arrange(MAT)
+```
+
