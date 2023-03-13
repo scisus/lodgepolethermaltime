@@ -1,0 +1,200 @@
+---
+title: "Flowering phenology in lodgepole pine"
+author: "C. Susannah Tysor"
+date: "3/11/2023"
+output: 
+  beamer_presentation: 
+    colortheme: seagull
+    fonttheme: professionalfonts
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(dplyr)
+library(ggplot2)
+```
+## Lodgepole pine flowering biology
+
+In spring
+
+- Male strobili shed pollen
+- Female strobili capture pollen
+
+Wind pollinated
+
+## Phenology matters
+
+- Gene flow
+  - assortative mating
+  - (local) adaptation
+  - clinal variation
+- Seed orchard management
+- Tree breeding
+- Assisted migration
+
+<!-- Talk about jean paul's work on how there can be clinal variation just from phenology - fucking up your local adapation estimates -->
+
+## What controls the timing of flowering phenology in lodgepole pine?
+
+::::::::::::: {.columns}
+::: {.column}
+<!-- We can't see most development phases and have to infer from events. Review Rob Guy. -->
+- Chilling accumulation
+- Warmth accumulation
+- Genetics
+
+::: 
+::: {.column}
+- Assume met 
+<!-- Safe with interior, not coastal -->
+- assume "forcing" temperatures > 5 $\circ$C
+<!-- Standard, and experimental work in both gymnosperms and angiosperms in Finland suggests a decent approximation -->
+- Is there clinal variation?
+:::
+:::::::::::::::
+
+
+## Data
+- 748 clones of 259 genotypes
+- grown in 7 seed orchards across BC
+- flowering state recorded every few days over a one day to several week period
+- 15 total years of data collection
+
+Provenance
+
+- seeds and scions from 143 natural stands
+- grafted onto rootstock to create a clone bank
+- clone bank scions selected based on superior growth, form
+
+## Map
+
+![](datamap.png)
+
+```{r rangemap, echo=FALSE}
+#knitr::include_graphics('labmeeting_march2023/sd.png')
+```
+
+## Data
+```{r data}
+phenf <- readRDS("objects/phenf.rds")
+ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
+  stat_ecdf() +
+  labs(title = "Cumulative distribution of accumulated forcing at observation", caption = "raw data") +
+  scale_colour_viridis_d() +
+  theme_dark(base_size = 18) +
+  ylab("") +
+  xlab("GDD")
+```
+
+
+## Likelihood model
+
+Likelihood of forcing observations would have a normal distribution
+
+$$
+f_i \sim \mathrm{Normal}(\phi_i, \sigma)
+$$
+But all of my data is censored.
+
+```{r censoring}
+censdf <- readRDS("objects/censdf.rds") %>%
+  rename(Event = Event_Label) 
+censdf$Event <- c("begin", "begin", 'end', 'end')
+knitr::kable(censdf)
+```
+
+## Likelihood model - for censored data
+
+So we assume an underlying normal distribution that we're observing badly.
+
+- Left censored start data (hazard function) 
+<!-- more likely to observe flowering after flowering has started -->
+$$
+\mathrm{Pr}[f_i < U] = \int_\infty^U \mathrm{Normal}(y \mid \phi_i, \sigma) dy
+$$
+- Right censored end data (survival function)
+<!-- more likely to observe pollen shed is finished after it has finished -->
+$$
+\mathrm{Pr}[f_i > L] = \int_L^\infty \mathrm{Normal}(y \mid \phi_i, \sigma) dy
+$$
+- Interval censored data
+$$
+\mathrm{Pr}[L > f_i > U] = \int_L^U \mathrm{Normal}(y | \phi_i, \sigma) dy
+$$
+
+## Modeling the mean
+
+$$
+\phi_i = \beta MAT + \alpha + \delta_{Site, i} + \delta_{Year, i} + \delta_{Clone, i} + \delta_{Ramet, i}
+$$
+
+- $\beta$: Provenance climate effect using MAT as covariate
+- $\alpha$: Population mean
+- $\delta$: Offsets from the population mean based on site, year, clone, and ramet
+
+## Priors
+
+Limit parameter estimates to forcing accumulations possible at our sites during late spring, when lodgepole pine are known to flower in British Columbia and approximately known length of the flowering period from prior work
+
+Forcing accumulation is always positive and the overall distribution across reasonable ranges is strongly right skewed, so we used a gamma distribution with shape ($\alpha$) and rate ($\beta$) parameters derived from the mean and standard deviation of the May-June historical forcing accumulation.
+
+site and year have relatively few levels with which to estimate $\sigma_{factor}$, half normal priors with their relatively thin tails were used to help constrain offset parameter standard deviations
+
+## Fitting
+- Stan via `brms` package
+
+```{r, echo = TRUE, eval=FALSE}
+initpars <- lapply(1:6, function(id) list(sigma = 30, Intercept = 300))
+
+# model formula
+bform <- brmsformula(sum_forcing | cens(censored, upper) ~ MAT + (1|Site) + (1|Clone) + (1|Year) + (1|Tree))
+
+# model prior
+bprior <- c(prior("gamma(3.65, 0.01)", class = "Intercept"),
+            prior("normal(0,15)", class = "sigma"),
+            prior("normal(0,9)", class = "sd"),
+            prior("normal(0,5)", class = "b"))
+
+# female/receptivity begin
+fbfit <- brm(bform, data = fbdat,
+             save_model = "female_begin.stan",
+             file = "female_begin",
+             prior = bprior,
+             init = initpars,
+             iter = 4000,
+             cores = 6,
+             chains = 6,
+             sample_prior = TRUE,
+             save_pars = save_pars(all = TRUE),
+             file_refit = "always")
+```
+
+## Fit
+Modelling events I didn't observe - so how can I check how my model is doing?
+<!-- Are the mean begin, end, and length retrodictions within the expected ranges? The exact flowering period is never observed because of censoring. -->
+<!-- # Using the first and last observed flowering forcing/doy we construct the max begin and minimum end forcing/doy and minimum flowering period length in forcing and days for the data. -->
+<!-- # Using the last observed before flowering forcing/doy and the first observed after flowering forcing/doy, we construct a minimum begin day, maximum end day, and maximum flowering period length for the data. We expect model estimates to be between the min and max ranges for the observations. -->
+
+```{r fit}
+fretrocomp <- readRDS("../lodgepolethermaltime/objects/fretrocomp.rds") %>%
+  select(-contains("Length"))
+knitr::kable(fretrocomp, format = "simple", digits = 2)
+```
+
+## Results
+
+
+
+## Slide with R Output
+
+```{r cars, echo = TRUE}
+summary(cars)
+```
+
+## Slide with Plot
+
+```{r pressure}
+plot(pressure)
+```
+

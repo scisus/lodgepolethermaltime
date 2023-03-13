@@ -38,18 +38,18 @@ knitr::kable(censdf, caption="Proportion of observations for each event interval
 # parameters ####
 ## means ####
 # plot of population means using means from modelparameters.R - better as a table?
-means <- readRDS("objects/means.rds")
-meanplot <- ggplot(means, aes(y = fct_rev(event), x = .value, colour = Sex)) +
-  stat_eye(position = "dodge") +
+intercepts <- readRDS("objects/intercepts.rds")
+interceptplot <- ggplot(intercepts, aes(y = fct_rev(event), x = .value, colour = Sex)) +
+  stat_halfeye(position = "dodge") +
   scale_colour_viridis_d() +
-  labs(title = "Population mean", caption = "2000 draws from the posterior") +
+  labs(title = "mean", caption = "2000 draws from the posterior") +
   ylab("") +
   xlab("GDD") +
  # theme_dark(base_size = 18) +
-  theme(legend.position = "top") +
+  theme(legend.position = "bottom") +
   scale_x_continuous(breaks = scales::pretty_breaks(n=10))
 
-smallmeans <- filter(means, .draw %in% sample(unique(means$.draw), size = 200))
+#smallmeans <- filter(means, .draw %in% sample(unique(means$.draw), size = 200))
 #ggsave("plots/means.pdf", width = 6, height = 6)
 
 ## sd ####
@@ -57,7 +57,7 @@ smallmeans <- filter(means, .draw %in% sample(unique(means$.draw), size = 200))
 variation <- readRDS("objects/variation.rds")
 varplot <- ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .variable, linetype = Sex)) +
   stat_pointinterval(position = "dodge") +
-  scale_colour_viridis_d() +
+  scale_colour_viridis_d(option = "B") +
   labs(title = "Standard deviation of pop mean & offsets", caption = "2000 draws from the posterior") +
   ylab("") +
   xlab("GDD") +
