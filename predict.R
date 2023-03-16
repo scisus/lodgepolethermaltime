@@ -14,9 +14,12 @@ modells <- readRDS("objects/modells.rds")
 alldatls <- readRDS("objects/datlist.rds")
 sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv") %>% filter(id == "site")
 
-n <- 1000 # when downsampling required
+n <- 2000 # when downsampling required
 
-
+siteMAT <- sitedat %>%
+  filter(id == "site") %>%
+  select(Site, MAT, Elevation) %>%
+  mutate(MAT = round(MAT, 1)) #DUPLICATED IN DOY TRANS
 # predict the global grand means: average predicted outcome ignoring group-specific deviations in intercept or slope
 
 # grand mean ####
@@ -36,31 +39,35 @@ alldat <- bind_rows(alldatls)
 ggplot(fepred, aes(x = MAT, y = sum_forcing)) +
   stat_lineribbon(aes(y = .epred), .width = c(.99, .95, .8, .5)) +
   scale_fill_brewer() +
-  facet_grid(Sex ~ event) +
-  geom_point(data = alldat, shape = 16, alpha = .3)
+  facet_grid(Sex ~ event)
 
 ## expectation for trees sourced from all sites ####
 fepred_allsites <- purrr::map(modells, function(x) {
-  add_epred_draws(newdata = select(sitedat, Site, MAT), object = x, re_formula = NA)}) %>%
+  add_epred_draws(newdata = select(siteMAT, Site, MAT), object = x, re_formula = NA)}) %>%
   bind_rows(.id = "model") %>%
-  select(-.chain, -.iteration)
+  select(-.chain, -.iteration) %>%
+  left_join(labdf)
 saveRDS(fepred_allsites, file = "objects/fepred_allsites.rds")
 
 intercepts_summary <- readRDS("objects/intercepts.rds") %>%
   group_by(model, Sex, event) %>%
   mean_hdci(.value) %>%
-  merge(select(sitedat, MAT, Site)) %>%
+  merge(siteMAT) %>%
   arrange(model, MAT) %>%
   ungroup()
 
+intercepts <- readRDS("objects/intercepts.rds")
+
 ggplot(fepred_allsites, aes(x = MAT, y = .epred)) +
   stat_lineribbon(aes(y = .epred), .width = c(.99, .95, .8, .5)) +
-  geom_lineribbon(data = intercepts_summary, aes(x = MAT, y = .value, ymin = .lower, ymax =.upper, fill = "no MAT"), alpha = 0.5) +
+  #stat_slabinterval(data = intercepts, aes(x=8, y = .value, color = "intercept"), orientation = "vertical") +
+  #geom_lineribbon(data = intercepts_summary, aes(x = MAT, y = .value, ymin = .lower, ymax =.upper, fill = "no MAT"), alpha = 0.5) +
   scale_fill_brewer() +
-  facet_wrap("model") +
+  theme_classic() +
+  facet_grid(Sex ~ event) +
   ggtitle("Forcing requirements for trees sourced from focal sites", subtitle = "expectation (mean) predictions") +
   ylab("Forcing (Growing Degree Days)")
-#geom_boxplot(data = fepred_allsites, shape = 16, alpha = .3, aes(group = MAT))
+  #geom_boxplot(data = fepred_allsites, shape = 16, alpha = .3, aes(group = MAT))
 
 
 
@@ -72,10 +79,10 @@ fpred <- purrr::map2(alldatls, modells, function(x,y) {
 saveRDS(fpred, file = "objects/fpred.rds")
 
 ggplot(fpred, aes(x = MAT, y = sum_forcing)) +
-  stat_lineribbon(aes(y = .prediction), .width = c(.99, .95, .8, .5)) +
+  stat_lineribbon(aes(y = .prediction), .width = c(.99, .5)) +
   scale_fill_brewer() +
-  facet_grid(Sex ~ event) +
-  geom_point(data = alldat, shape = 16, alpha = .3)
+  facet_grid(Sex ~ event)
+  #geom_jitter(data = alldat, shape = 16, alpha = .3)
 
 ggplot(fpred, aes(x = MAT, y = sum_forcing)) +
   stat_lineribbon(aes(y = .prediction, linetype = event), .width = c(.89, .5), color = "#08519C", alpha = 0.9) +
@@ -132,7 +139,7 @@ saveRDS(fepred_ceold, file = "objects/fepred_ceold.rds")
 ggplot(fepred_ceold, aes(x = MAT, y = sum_forcing)) +
   stat_lineribbon(aes(y = .epred, linetype = event), .width = c(.89, .5), color = "#08519C", alpha = 0.9) +
   scale_fill_brewer() +
-  facet_grid(. ~ Sex) +
+  facet_grid(event ~ Sex) +
   theme_dark()
 
 ## posterior prediction ####
@@ -146,5 +153,6 @@ ggplot(fpred_ceold, aes(x = MAT, y = sum_forcing)) +
   scale_fill_brewer() +
   facet_grid(event ~ Sex) +
   theme_dark() +
-  geom_point(data = alldat, alpha = .3)
+  geom_point(data = alldat, alpha = .3) +
+  theme(legend.position = "top")
 

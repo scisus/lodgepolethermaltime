@@ -70,6 +70,15 @@ doy_typical <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site)
   left_join(select(typical_year_forc, Date, DoY) %>% distinct())
 saveRDS(doy_typical, "objects/doy_typical.rds")
 
+# doy_typical_fpred <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site), drop = TRUE),
+#                              find_day_of_forcing, .id = ".id",
+#                              bdf = fpred, aforce = "sum_forcing", bforce = ".prediction") %>%
+#   rename(Site = .id, DoY = newdoycol) %>%
+#   ungroup() %>%
+#   select(-.row, -.chain, -.iteration, -.draw) %>%
+#   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site))) %>%
+#   left_join(select(typical_year_forc, Date, DoY) %>% distinct())
+
 
 # very tight. What about with some noise?
 
@@ -103,7 +112,7 @@ doy_typical_allsites_interceptonly <- map_dfr(split(typical_year_forc, f = list(
   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site))) %>%
   left_join(select(typical_year_forc, Date, DoY) %>% distinct()) %>%
   mutate(provenance_effect = FALSE) %>%
-  left_join(siteMAT) %>%
+  left_join(siteMAT ) %>%
   filter(Site %in% focalsites)
 saveRDS(doy_typical_allsites_interceptonly, "objects/doy_typical_allsites_interceptonly.rds")
 
@@ -192,16 +201,21 @@ doy_normal <- map_dfr(split(normal_forc, f = list(normal_forc$index), drop = TRU
 
 
 
+
 # year to year variation ####
-# 9000 draws per year 1945-2011 per site
+# 2000 draws per year 1945-2011 per site
+
+fepred_allsites_downsampled <- fepred_allsites %>%
+  group_by(model, Site, MAT, .row) %>%
+  sample_n(size = 2000)
 
 doy_annual <- map_dfr(split(dailyforc, f = list(dailyforc$index), drop = TRUE),
                       find_day_of_forcing, .id = "index",
-                      bdf = fepred, aforce = "sum_forcing", bforce = ".epred") %>%
+                      bdf = fepred_allsites_downsampled, aforce = "sum_forcing", bforce = ".epred") %>%
   rename(DoY = newdoycol) %>%
   mutate(index = as.numeric(index)) %>%
   ungroup() %>%
-  select(-.row, -.chain, -.iteration, -.draw) %>%
+  select(-.row, -.draw) %>%
   left_join(select(dailyforc, index, Site, Year) %>% distinct()) %>%
   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site)))
 
@@ -209,11 +223,14 @@ doy_annual <- map_dfr(split(dailyforc, f = list(dailyforc$index), drop = TRUE),
 
 doy_annual_plotting <- doy_annual %>%
   filter(Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")) %>%
+  left_join(labdf) %>% #labdf in modelparams
   group_by(Site, Year, Sex, event) %>%
   median_hdci(DoY) #slow
+saveRDS(doy_annual_plotting, 'objects/doy_annual_plotting.rds')
 
 dplot2 <- doy_annual_plotting %>%
   pivot_wider(values_from = c(DoY, .lower, .upper), names_from = event)
+saveRDS(dplot2, "objects/dplot2.rds")
 
 ggplot(dplot2, aes(x = Year, ymin = .lower_begin, ymax = .upper_begin, fill = Sex)) +
   geom_ribbon(alpha = 0.5) +
@@ -222,6 +239,9 @@ ggplot(dplot2, aes(x = Year, ymin = .lower_begin, ymax = .upper_begin, fill = Se
   facet_grid(Sex ~ Site) +
   labs(title = "Predicted flowering periods", subtitle = "posterior expectation, ribbons = uncertainty, lines = medians") +
   ylab("Day of Year") +
+  scale_color_viridis_d(option = "B") +
+  scale_fill_viridis_d(option = "B") +
+  theme_dark(base_size = 18) +
   theme(legend.position = "bottom")
 ggsave("../flowering-cline/figures/yearly_phenology.png", width = 14, height = 7, units = "in")
 
