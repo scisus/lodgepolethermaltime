@@ -1,0 +1,66 @@
+---
+title: "Update March 24 - Climate normals"
+author: "C. Susannah Tysor"
+date: "24/3/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(dplyr)
+library(ggplot2)
+library(viridis)
+library(tidybayes)
+library(lubridate)
+```
+
+```{r data}
+doy_normal <- readRDS('objects/doy_normal.rds')
+normal_overlap <- readRDS("objects/normal_overlap.rds")
+
+```
+
+## Flowering period predictions through 2100 
+
+As climate changes, flowering occurs earlier in the year.
+
+I chose two Shared Socioeconomic Pathways 
+ - SSP 2: ~3$^\{circ}$C - intermediate emissions scenario
+ - SSP 5: ~5$^\{circ}$C - very high emissions scenario 
+
+See "Warming by Scenario" figure on [this website](https://www.carbonbrief.org/cmip6-the-next-generation-of-climate-models-explained/) or figure SPM.1 in the latest [IPCC report](https://report.ipcc.ch/ar6syr/pdf/IPCC_AR6_SYR_SPM.pdf) for more. I'm actually not sure if the SSPs in the new report match the ones in the old report
+
+```{r predictions}
+doy_normal_plotting <- doy_normal %>%
+  filter(period %in% c("1951-1980", "1981-2010", "2011-2040", "2041-2070", "2071-2100"),
+         Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border"),
+         scenario %in% c("historical", "ssp245", "ssp585")) %>%
+  mutate(Date = ymd("2023-12-31") + DoY)
+
+ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = scenario, y = DoY, colour = Site, shape = Sex)) +
+  stat_pointinterval(position = "dodge") +
+  stat_pointinterval(data = filter(doy_normal_plotting, event == "end"), position = "dodge") +
+  #scale_y_date(date_breaks = "1 month", date_labels =  "%b") +
+  facet_wrap("period", scales = "free_x", nrow = 1) +
+  theme_bw() +
+  theme(legend.position = "bottom")  +
+  labs(title = "Flowering period expectation", subtitle = "1951-2100 for 2 Shared Socioeconomic Pathways") +
+  xlab("Shared Socioeconomic Pathway") +
+  ylab("Day of Year")
+```
+
+Under an intermediate emissions scenario, flowering occurs about 20 days earlier. Under a very high emissions scenario, flowering occurs about one month earlier.
+
+## Overlap predictions
+
+
+```{r overlap}
+ggplot(normal_overlap, aes(x = SiteM, y=SiteF, fill = overlap)) +
+  geom_tile() +
+  scale_fill_viridis() +
+  ggtitle("Days of overlap in a typical year") +
+  geom_text(data = filter(normal_overlap, SiteM == SiteF), aes(x = SiteM, y = SiteF, label = MATM)) +
+  facet_grid(period ~ scenario)
+```
+I haven't looked closely at this graph yet to interpret it - fresh off the presses!

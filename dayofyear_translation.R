@@ -22,9 +22,6 @@ normal_forc <- read.csv("data/normalforc_1901-2100.csv") %>% # averaged over 30 
   group_by(Site, period, scenario) %>%  # index
   mutate(index = cur_group_id()) %>% ungroup()
 
-datetodoy <- data.frame(Scale = seq(ymd('2022-01-01'), ymd('2022-12-31'), by = "1 day")) %>%
-  mutate(DoY = yday(Scale))
-
 fepred <- readRDS("objects/fepred.rds") ## expectation for observed trees (sources)
 fepred_allsites <- readRDS("objects/fepred_allsites.rds") ## expectation for trees sourced from all sites
 factororder <- readRDS("objects/factororder.rds")
@@ -57,7 +54,7 @@ siteMAT <- sitedat %>%
   select(Site, MAT, Elevation) %>%
   mutate(MAT = round(MAT, 1))
 
-# avg predicted DoY for flowering at seed orchard sites ####
+# avg predicted DoY for flowering at seed orchard sites (my observations/retrodictions) ####
 # in a typical year at all my sites (mean temp 1945-2012 to create sum_forcing), calculate average predicted DoY for flowering (excluding site effects)
 # 9000 draws per site
 doy_typical <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site), drop = TRUE),
@@ -188,18 +185,17 @@ ggplot(doy_typical_all_at_PGTIS, aes(x = intercept, xend = DoY, y=MAT, shape = S
   theme(legend.position = "top")
 # When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap
 
-# normal periods
+# normal periods ########
 doy_normal <- map_dfr(split(normal_forc, f = list(normal_forc$index), drop = TRUE),
                       find_day_of_forcing, .id = ".id",
-                      bdf = fepred, aforce = "sum_forcing", bforce = ".epred") %>%
+                      bdf = fepred_allsites %>% filter(Site %in% focalsites), aforce = "sum_forcing", bforce = ".epred") %>%
   rename(index = .id, DoY = newdoycol) %>%
   mutate(index = as.numeric(index)) %>%
   ungroup() %>%
-  select(-.row, -.chain, -.iteration, -.draw) %>%
+  select(-.row, -.draw) %>%
   left_join(select(normal_forc, index, Site, period, scenario) %>% distinct()) %>%
   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site)))
-
-
+saveRDS(doy_normal, 'objects/doy_normal.rds')
 
 
 # year to year variation ####
@@ -269,7 +265,8 @@ doy_normal_plotting <- doy_normal %>%
          period %in% c("1951-1980", "1981-2010", "2011-2040", "2041-2070", "2071-2100"),
          Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border"),
          scenario %in% c("historical", "ssp245", "ssp585")) %>%
-  left_join(datetodoy)
+  mutate(Date = ymd("2023-12-31") + DoY)
+
 ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = scenario, y = DoY, colour = Site, shape = Sex)) +
   stat_pointinterval(position = "dodge") +
   stat_pointinterval(data = filter(doy_normal_plotting, event == "end"), position = "dodge") +
