@@ -1,7 +1,7 @@
 ---
 title: "Update March 24 - Climate normals"
 author: "C. Susannah Tysor"
-date: "24/3/2023"
+date: "30/3/2023"
 output: html_document
 ---
 
@@ -25,9 +25,10 @@ normal_overlap <- readRDS("objects/normal_overlap.rds")
 
 As climate changes, flowering occurs earlier in the year.
 
-I chose two Shared Socioeconomic Pathways 
- - SSP 2: ~3$^\{circ}$C - intermediate emissions scenario
- - SSP 5: ~5$^\{circ}$C - very high emissions scenario 
+I chose two Shared Socioeconomic Pathways
+
+ - SSP 2: ~3$^{\circ}$C - intermediate emissions scenario
+ - SSP 5: ~5$^{\circ}$C - very high emissions scenario 
 
 See "Warming by Scenario" figure on [this website](https://www.carbonbrief.org/cmip6-the-next-generation-of-climate-models-explained/) or figure SPM.1 in the latest [IPCC report](https://report.ipcc.ch/ar6syr/pdf/IPCC_AR6_SYR_SPM.pdf) for more. I'm actually not sure if the SSPs in the new report match the ones in the old report
 
