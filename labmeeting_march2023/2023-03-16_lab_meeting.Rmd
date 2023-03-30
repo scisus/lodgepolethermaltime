@@ -42,7 +42,7 @@ In spring
 
 Wind pollinated
 
-## Phenology matters
+## Flowering phenology matters
 
 - Gene flow
   - assortative mating
@@ -92,27 +92,27 @@ Provenance
 
 
 
-## Data
-```{r data}
-phenf <- readRDS("objects/phenf.rds")
-ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
-  stat_ecdf() +
-  labs(title = "Cumulative distribution of accumulated forcing at observation", caption = "raw data") +
-  scale_colour_viridis_d() +
-  theme_dark(base_size = 18) +
-  ylab("") +
-  xlab("GDD")
-```
+<!-- ## Data -->
+<!-- ```{r data} -->
+<!-- phenf <- readRDS("objects/phenf.rds") -->
+<!-- ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) + -->
+<!--   stat_ecdf() + -->
+<!--   labs(title = "Cumulative distribution of accumulated forcing at observation", caption = "raw data") + -->
+<!--   scale_colour_viridis_d() + -->
+<!--   theme_dark(base_size = 18) + -->
+<!--   ylab("") + -->
+<!--   xlab("GDD") -->
+<!-- ``` -->
 
 ## How much forcing?
 
+- Thermal time - transferable
+- Test for provenance climate effect - MAT
 - 4 models
   - Begin (male) pollen shed
   - End (male) pollen shed
   - Begin (female) receptivity
   - End (female) receptivity
-- Thermal time - transferable
-- Test for provenance climate effect - MAT
 - Account for variance due to site, year, genotype, and clone
 - Account for unbalanced and censored data
 
