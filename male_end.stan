@@ -66,7 +66,7 @@ transformed parameters {
   r_2_1 = (sd_2[1] * (z_2[1]));
   r_3_1 = (sd_3[1] * (z_3[1]));
   r_4_1 = (sd_4[1] * (z_4[1]));
-  lprior += normal_lpdf(b | 0,5);
+  lprior += normal_lpdf(b | 0,25);
   lprior += gamma_lpdf(Intercept | 3.65, 0.01);
   lprior += normal_lpdf(sigma | 0,15)
     - 1 * normal_lccdf(0 | 0,15);
@@ -115,7 +115,7 @@ generated quantities {
   // actual population-level intercept
   real b_Intercept = Intercept - dot_product(means_X, b);
   // additionally sample draws from priors
-  real prior_b = normal_rng(0,5);
+  real prior_b = normal_rng(0,25);
   real prior_Intercept = gamma_rng(3.65,0.01);
   real prior_sigma = normal_rng(0,15);
   real prior_sd_1 = normal_rng(0,9);

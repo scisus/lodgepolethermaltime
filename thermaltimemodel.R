@@ -65,7 +65,7 @@ bform <- brmsformula(sum_forcing | cens(censored, upper) ~ MAT + (1|Site) + (1|C
 bprior <- c(prior("gamma(3.65, 0.01)", class = "Intercept"),
             prior("normal(0,15)", class = "sigma"),
             prior("normal(0,9)", class = "sd"),
-            prior("normal(0,5)", class = "b"))
+            prior("normal(0,25)", class = "b"))
 
 # mcmc/computation settings
 niter <- 4000
