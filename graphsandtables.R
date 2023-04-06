@@ -1,17 +1,19 @@
 # visualizations
+library(flowers)
 library(dplyr)
 library(ggplot2)
 library(forcats)
 library(ggbeeswarm)
 library(tidybayes)
 library(patchwork)
-library(sjPlot) #html tables
+#library(sjPlot) #html tables
 #library(RColorBrewer)
 library(ggokabeito)   # Neat accessible color palette
 library(ggthemes)    # Nice themes
 library(html2latex) # convert sjplot tables to tex and pdf
 
 theme_set(theme_dark())
+factororder <- readRDS("objects/factororder.rds")
 
 # cumulative_distribution ####
 # raw data plot using phenf from modelmethods.R
@@ -24,6 +26,67 @@ ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
   ylab("") +
   xlab("GDD")
 ggsave("plots/cumulative_distribution.png", width = 6, height = 5)
+
+# sampling events ####
+surveydf <- phenf %>%
+  select(Year, Site, Orchard, DoY) %>%
+  distinct() %>%
+  group_by(Year, Site, Orchard) %>%
+  mutate(Site = forcats::fct_relevel(Site, factororder$site)) %>%
+  mutate(sampleindex = cur_group_id()) %>%
+  ungroup()
+
+yrspersite <- surveydf %>%
+  select(Site, Year) %>%
+  distinct() %>%
+  group_by(Site) %>%
+  summarise(nyears = n()) %>%
+  mutate(Site = forcats::fct_relevel(Site, factororder$site)) %>%
+  arrange(as.factor(Site))
+
+facet_labeller_site <- function(variable, value) {
+  c(
+    "PGTIS",
+    rep("", yrspersite$nyears[1] - 1),
+    "KettleRiver",
+    rep("", yrspersite$nyears[2] - 1),
+    "Sorrento",
+    "Tolko",
+    rep("", yrspersite$nyears[4] - 1),
+    "PRT",
+    rep("", yrspersite$nyears[5] - 1),
+    "Vernon",
+    rep("", yrspersite$nyears[6] - 1),
+    "Kalamalka",
+    rep("", yrspersite$nyears[7] - 1)
+  )
+}
+
+# https://stackoverflow.com/questions/54178285/how-to-remove-only-some-facet-labels
+
+ggplot(surveydf, aes(x=DoY, y=as.factor(sampleindex), colour = Site, group = as.factor(Orchard))) +
+  geom_point(pch=3) +
+  geom_line(alpha = 0.5) +
+  #facet_grid(rows=vars(Site,Year), scales="free_y",
+          #   labeller = labeller(Site = as_labeller(facet_labeller_site))) +
+  facet_grid(rows=vars(Site, Year), scales = "free_y") +
+  #scale_color_viridis_d(option="B") +
+  scale_color_okabe_ito() +
+  scale_shape_manual(values=c(1:7)) +
+  theme_bw(base_size = 15) +
+  theme(strip.text.y = element_text(angle = 0),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.y = element_blank(),
+        panel.border=element_blank(),
+        panel.grid.minor.y=element_blank(),
+        panel.grid.major.y = element_blank(),
+        legend.position = "none",
+        strip.background = element_blank()) +
+  xlab("Day of Year") +
+  # annotate("text", x = 121, y = 1, label = "May") +
+  # geom_vline(xintercept = c(121,152), alpha = 0.5) +
+  ggtitle("Observation Dates", subtitle = "for each orchard at each site")
 
 # censoring table ####
 censdf <- readRDS("objects/censdf.rds")
@@ -254,7 +317,7 @@ ggplot(gmean,
   theme(legend.position = "right")
 ggsave("plots/forcing_fullandexpectation.png", width = 6, height = 5)
 
-factororder <- readRDS("objects/factororder.rds")
+
 
 fepred_cenew <- readRDS("objects/fepred_cenew.rds")
 fepred_ceold <- readRDS("objects/fepred_ceold.rds")
