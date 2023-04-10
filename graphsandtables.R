@@ -28,11 +28,12 @@ ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
 ggsave("plots/cumulative_distribution.png", width = 6, height = 5)
 
 # sampling events ####
+phenf <- readRDS("objects/phenf.rds")
 surveydf <- phenf %>%
   select(Year, Site, Orchard, DoY) %>%
   distinct() %>%
-  group_by(Year, Site, Orchard) %>%
   mutate(Site = forcats::fct_relevel(Site, factororder$site)) %>%
+  group_by(Site, Year, Orchard) %>%
   mutate(sampleindex = cur_group_id()) %>%
   ungroup()
 
@@ -67,9 +68,9 @@ facet_labeller_site <- function(variable, value) {
 ggplot(surveydf, aes(x=DoY, y=as.factor(sampleindex), colour = Site, group = as.factor(Orchard))) +
   geom_point(pch=3) +
   geom_line(alpha = 0.5) +
-  #facet_grid(rows=vars(Site,Year), scales="free_y",
-          #   labeller = labeller(Site = as_labeller(facet_labeller_site))) +
-  facet_grid(rows=vars(Site, Year), scales = "free_y") +
+  facet_grid(rows=vars(Site,Year), scales="free_y",
+             labeller = labeller(Site = as_labeller(facet_labeller_site))) +
+  #facet_grid(rows=vars(Site, Year), scales = "free_y") +
   #scale_color_viridis_d(option="B") +
   scale_color_okabe_ito() +
   scale_shape_manual(values=c(1:7)) +
@@ -87,6 +88,7 @@ ggplot(surveydf, aes(x=DoY, y=as.factor(sampleindex), colour = Site, group = as.
   # annotate("text", x = 121, y = 1, label = "May") +
   # geom_vline(xintercept = c(121,152), alpha = 0.5) +
   ggtitle("Observation Dates", subtitle = "for each orchard at each site")
+ggsave("plots/sampling.png", width = 6, height = 8)
 
 # censoring table ####
 censdf <- readRDS("objects/censdf.rds")
