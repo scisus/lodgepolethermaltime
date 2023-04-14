@@ -88,7 +88,7 @@ ggplot(surveydf, aes(x=DoY, y=as.factor(sampleindex), colour = Site, group = as.
   # annotate("text", x = 121, y = 1, label = "May") +
   # geom_vline(xintercept = c(121,152), alpha = 0.5) +
   ggtitle("Observation Dates", subtitle = "for each orchard at each site")
-ggsave("plots/sampling.png", width = 6, height = 8)
+ggsave("../flowering-cline/figures/sampling.png", width = 6, height = 8)
 
 # censoring table ####
 censdf <- readRDS("objects/censdf.rds")
