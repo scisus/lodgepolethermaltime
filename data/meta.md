@@ -12,5 +12,11 @@ Summarizes info on lodgepole SPUs from the BC orchard summary. Units for elevati
 `normalforc_1901-2100.csv`
 forcing and mean temperatures for all seed orchard and comparison sites over 30 year normal periods
 
+`parents.csv`
+Information on Parent Trees extracted from SPAR in May 2014.
+
+Got information on parent trees from SPAR with Susan Zedel's help. 
+The file with the geographic information is the ParentTreeExtractReport_ParentTrees. When I connect orchard trees to parent trees, I want to use the Parent Tree Number.
+
 `typical_year_forc.csv`
 forcing and mean temperatures for all seed orchard and comparison sites averaged over 1945-2011
