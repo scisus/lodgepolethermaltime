@@ -9,44 +9,71 @@ library(viridis)
 library(dplyr)
 library(flowers)
 library(ggspatial)
-# devtools::install_github("yutannihilation/ggsflabel")
-# library(ggsflabel) # folded into geom_sf_label() and geom_sf_text() https://github.com/yutannihilation/ggsflabel
+library(terra)
+library(elevatr)
 
 # NAD83 / Canada Atlas Lambert 3978
 # WGS 84 -- WGS84 - World Geodetic System 1984, used in GPS 4326
 
-#world <- ne_countries(scale = "medium", returnclass = "sf")
-#class(world)
+# data ########
+# country outlines
+basedat <- ne_states(country = c("canada", "united states of america"), returnclass = "sf") %>%
+    st_transform(basedat, crs = 3978)
 
-base <- ne_states(country = c("canada", "united states of america"), returnclass = "sf") %>%
-    st_transform(base, crs = 3979)
+# terrain
 
-clones <- select(flowers::lodgepole_phenology_event, Clone) %>% distinct()
+## Create a SpatialPointsDataFrame with the extent coordinates
+extent_points <- st_as_sf(data.frame(x = c(-145, -65), y = c(45,70)),
+                          coords = c("x", "y"),
+                          crs = 4326)
+extent_points_zoom <- st_as_sf(data.frame(x = c(-119.5, -119), y = c(50.1,50.4)),
+                               coords = c("x", "y"),
+                               crs = 4326)
 
-parentdat <- read.csv('data/parents.csv') %>%
-    filter(Parent.Tree.Number %in% clones$Clone) %>%
-    select(Clone = Parent.Tree.Number, Latitude, Longitude)
+## Download & format the DEM
+# dem_proj <- get_elev_raster(extent_points, z = 3, clip = "bbox", verbose = FALSE) %>%
+#     rast() %>%
+#     project(st_as_text(st_crs(basedat)))
 
-orchloc <- read.csv('../lodgepole_climate/locations/site_coord_elev.csv', stringsAsFactors = FALSE, header = TRUE)
+elevations_dat <- get_elev_raster(extent_points, z = 5, clip = "bbox", verbose = FALSE)
+elevations_dat@data@names <- "elevation"
 
+
+# Create a SpatRaster from the elevations_dat
+elevations <- rast(elevations_dat) %>%
+  terra::project(st_as_text(st_crs(basedat)))
+elevations_df <- as.data.frame(elevations, xy = TRUE)
+elevations_df$elevation[elevations_df$elevation<0] <- NA
+
+
+# elevations <- elevations_df %>%
+#   rast() %>%
+#   project(st_as_text(st_crs(basedat)))
+
+# dem_proj_highrez <- get_elev_raster(extent_points_zoom, z = 11, clip = "bbox", verbose = FALSE) %>%
+#     rast() %>%
+#     project(st_as_text(st_crs(basedat)))
+
+# lodgepole pine distribution shapefile
 pcontorta <- st_read("data/latifoliaDistribution/shapefiles/latifolia_distribution_prj.shp") %>%
     st_make_valid()
-   # st_set_crs(4326) %>%
-    #mutate(Distribution = case_when(CODE == 0 ~ FALSE,
-                        #    CODE == 1 ~ TRUE))
+
+# genotype locations
+clones <- select(flowers::lodgepole_phenology_event, Clone) %>% distinct()
+
+parents <- read.csv('data/parents.csv') %>%
+    filter(Parent.Tree.Number %in% clones$Clone) %>% # only include genotypes I have in my phenologydataset
+    select(Clone = Parent.Tree.Number, Latitude, Longitude) %>%
+    st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326, agr = "constant")
+
+# orchard locations
+sites <- read.csv('../lodgepole_climate/locations/site_coord_elev.csv', stringsAsFactors = FALSE, header = TRUE) %>%
+    st_as_sf(coords = c("lon", "lat"), crs = 4326, agr = "constant")
+
+# bboxes ##########
 
 ## bounding box for distribution
 bboxdist <- st_bbox(pcontorta)
-
-
-
-# parent (genotype source) coords
-parents <- st_as_sf(parentdat, coords = c("Longitude", "Latitude"), crs = 4326, agr = "constant")
-
-bb_ll = bb %>%
-    st_as_sfc() %>%
-    st_transform(crs = 4326) %>%
-    st_bbox()
 
 # parent bounding box
 bboxparents <- st_bbox(parents) %>%
@@ -54,16 +81,11 @@ bboxparents <- st_bbox(parents) %>%
     st_transform(crs = 3978) %>%
     st_bbox()
 
-# site coords
-sites <- st_as_sf(orchloc, coords = c("lon", "lat"), crs = 4326, agr = "constant")
-
-# https://docs.ropensci.org/rnaturalearth/ populated_places
-citydat <- ne_download(scale = "large", type = 'populated_places', category = 'cultural', returnclass = "sf")
-# cities <- citydat %>% filter(NAME_EN== "Vancouver", ADM0NAME == "Canada") %>%
-#        st_transform(crs = 4326)
-cities <- citydat %>% filter(ADM0NAME == "Canada", ADM1NAME == "British Columbia") %>%
-    st_transform(crs = 4326)
-
+# sites bounding boxes
+bboxsites <- st_bbox(sites) %>%
+    st_as_sfc() %>%
+    st_transform(crs = 3978) %>%
+    st_bbox()
 
 bboxsitezoom <- sites %>%
     filter(Site %in% c("Kalamalka", "Vernon", "PRT", "Tolko")) %>%
@@ -72,26 +94,31 @@ bboxsitezoom <- sites %>%
     st_transform(crs = 3978) %>%
     st_bbox()
 
-# base map with latifolia distribution
+
 basemap <- ggplot(data = base) +
-    geom_sf() +
-    geom_sf(data = pcontorta, alpha = 0.5, fill = "darkolivegreen3") +
+    geom_raster(data = elevations_df, aes(x = x, y = y, fill = elevation)) +
+    scale_fill_gradientn(colours = grey.colors(10), na.value = "#FFFFFF") +
+    geom_sf(data = pcontorta, alpha = 0.3, fill = "darkolivegreen3") +
+    geom_sf(fill = NA) +
     annotation_north_arrow(location = "bl", which_north = "true",
-                           pad_x = unit(0.25, "in"), pad_y = unit(0.25, "in"),
+                           pad_x = unit(0.05, "in"), pad_y = unit(0.1, "in"),
                            style = north_arrow_fancy_orienteering) +
-    coord_sf(xlim = c(bboxdist$xmin - 1e6, bboxdist$xmax + 1e6),
-             ylim = c(bboxdist$ymin - 1e5, bboxdist$ymax + 1e5)) +
-    ggtitle("latifolia distribution")
+    coord_sf(xlim = c(bboxparents$xmin - 2e5, bboxparents$xmax + 5e5),
+             ylim = c(bboxsites$ymin - 1e5, bboxsites$ymax + 3e5)) +
+    theme(legend.position = "none") +
+    ylab("") + xlab("")
+
+print(basemap)
 
 # plot the parent tree locations, zoomed in
 
 pointmap <- basemap +
-    geom_sf(data = sites, aes(shape = orchard), color = "darkgoldenrod4", size = 3) +
+    geom_sf(data = sites, aes(color = orchard), size = 2) +
     geom_sf(data = parents, shape = 3, alpha = 0.8) +
     coord_sf(xlim = c(bboxparents$xmin, bboxparents$xmax),
              ylim = c(bboxparents$ymin, bboxparents$ymax + 5e4))
 
-
+print(pointmap)
 # zoom in on sites around kalamalka
 
 # add mountains
@@ -100,10 +127,10 @@ pointmap <- basemap +
 # https://www.r-bloggers.com/2018/08/how-to-quickly-enrich-a-map-with-natural-and-anthropic-details/
 
 
-# zoom in on vernon area plot the site locations
+
 
 pointmap +
-    geom_sf(data = cities) +
+  #  geom_raster(data = hillshade_highrez, aes(x = x, y = y, fill = hillshade_highrez), alpha = 0.5) +
     coord_sf(xlim = c(bboxsitezoom$xmin, bboxsitezoom$xmax),
              ylim = c(bboxsitezoom$ymin, bboxsitezoom$ymax))
 
