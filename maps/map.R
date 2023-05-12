@@ -11,6 +11,7 @@ library(flowers)
 library(ggspatial)
 library(terra)
 library(elevatr)
+library(ggrepel)
 
 # NAD83 / Canada Atlas Lambert 3978
 # WGS 84 -- WGS84 - World Geodetic System 1984, used in GPS 4326
@@ -31,28 +32,23 @@ extent_points_zoom <- st_as_sf(data.frame(x = c(-119.5, -119), y = c(50.1,50.4))
                                crs = 4326)
 
 ## Download & format the DEM
-# dem_proj <- get_elev_raster(extent_points, z = 3, clip = "bbox", verbose = FALSE) %>%
-#     rast() %>%
-#     project(st_as_text(st_crs(basedat)))
 
-elevations_dat <- get_elev_raster(extent_points, z = 5, clip = "bbox", verbose = FALSE)
-elevations_dat@data@names <- "elevation"
+get_elevations <- function(extent, zoom, projection = st_as_text(st_crs(basedat))){
+  elevations_dat <- get_elev_raster(extent, z = zoom, clip = "bbox", verbose = FALSE)
+  elevations_dat@data@names <- "elevation"
 
 
-# Create a SpatRaster from the elevations_dat
-elevations <- rast(elevations_dat) %>%
-  terra::project(st_as_text(st_crs(basedat)))
-elevations_df <- as.data.frame(elevations, xy = TRUE)
-elevations_df$elevation[elevations_df$elevation<0] <- NA
+  # Create a SpatRaster from the elevations_dat
+  elevations <- rast(elevations_dat) %>%
+    terra::project(projection)
+  elevations_df <- as.data.frame(elevations, xy = TRUE)
+  elevations_df$elevation[elevations_df$elevation<0] <- NA # ignore oceans
 
+  return(elevations_df)
 
-# elevations <- elevations_df %>%
-#   rast() %>%
-#   project(st_as_text(st_crs(basedat)))
+}
 
-# dem_proj_highrez <- get_elev_raster(extent_points_zoom, z = 11, clip = "bbox", verbose = FALSE) %>%
-#     rast() %>%
-#     project(st_as_text(st_crs(basedat)))
+elevations <- get_elevations(extent = extent_points, zoom = 4)
 
 # lodgepole pine distribution shapefile
 pcontorta <- st_read("data/latifoliaDistribution/shapefiles/latifolia_distribution_prj.shp") %>%
@@ -67,8 +63,19 @@ parents <- read.csv('data/parents.csv') %>%
     st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326, agr = "constant")
 
 # orchard locations
-sites <- read.csv('../lodgepole_climate/locations/site_coord_elev.csv', stringsAsFactors = FALSE, header = TRUE) %>%
-    st_as_sf(coords = c("lon", "lat"), crs = 4326, agr = "constant")
+sitedat <- read.csv('../lodgepole_climate/locations/site_coord_elev.csv', stringsAsFactors = FALSE, header = TRUE)
+
+# 4 sites are very close together. create different dfs for mapping labels at different map scales
+sitezoomout <- sitedat %>%
+  filter(!Site %in% c("Vernon","Tolko","PRT", "Kalamalka")) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326, agr = "constant")
+
+sitezoomin <- sitedat %>%
+  filter(Site %in% c("Vernon","Tolko","PRT", "Kalamalka")) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326, agr = "constant")
+
+sites <- sitedat %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326, agr = "constant")
 
 # bboxes ##########
 
@@ -94,93 +101,58 @@ bboxsitezoom <- sites %>%
     st_transform(crs = 3978) %>%
     st_bbox()
 
+# elevation data for zoom in map ###########
+
+elevations_zoom <- get_elevations(sitezoomin, zoom = 8)
+
+
+# maps ###########
 
 basemap <- ggplot(data = base) +
-    geom_raster(data = elevations_df, aes(x = x, y = y, fill = elevation)) +
-    scale_fill_gradientn(colours = grey.colors(10), na.value = "#FFFFFF") +
-    geom_sf(data = pcontorta, alpha = 0.3, fill = "darkolivegreen3") +
+    geom_raster(data = elevations, aes(x = x, y = y, fill = elevation)) +
+    scale_fill_gradientn(colours = grey.colors(20), na.value = "#FFFFFF") +
+    geom_sf(data = pcontorta, alpha = 0.1, fill = "darkolivegreen3") +
     geom_sf(fill = NA) +
     annotation_north_arrow(location = "bl", which_north = "true",
-                           pad_x = unit(0.05, "in"), pad_y = unit(0.1, "in"),
+                           pad_x = unit(0.05, "in"), pad_y = unit(4, "in"),
                            style = north_arrow_fancy_orienteering) +
-    coord_sf(xlim = c(bboxparents$xmin - 2e5, bboxparents$xmax + 5e5),
+    coord_sf(xlim = c(bboxparents$xmin - 4e5, bboxparents$xmax + 5e5),
              ylim = c(bboxsites$ymin - 1e5, bboxsites$ymax + 3e5)) +
     theme(legend.position = "none") +
     ylab("") + xlab("")
 
 print(basemap)
 
+basemap <- ggplot(data = base) +
+  geom_raster(data = elevations, aes(x = x, y = y, fill = elevation)) +
+  scale_fill_gradientn(colours = grey.colors(20), na.value = NA) +
+  geom_sf(data = pcontorta, alpha = 0.1, fill = "darkolivegreen3") +
+  geom_sf(fill = NA) +
+  annotation_north_arrow(location = "bl", which_north = "true", # location set to "tl"
+                         pad_x = unit(0.05, "in"), pad_y = unit(0.05, "in"),
+                         style = north_arrow_fancy_orienteering) +
+  annotation_scale(location = "br", width_hint = 0.22) + # added scale bar
+  coord_sf(xlim = c(bboxparents$xmin - 4e5, bboxparents$xmax + 1e5),
+           ylim = c(bboxsites$ymin - 1e5, bboxsites$ymax + 3e5)) +
+  theme(legend.position = "none") +
+  ylab("") + xlab("")
+
+print(basemap)
+
 # plot the parent tree locations, zoomed in
 
 pointmap <- basemap +
-    geom_sf(data = sites, aes(color = orchard), size = 2) +
-    geom_sf(data = parents, shape = 3, alpha = 0.8) +
-    coord_sf(xlim = c(bboxparents$xmin, bboxparents$xmax),
-             ylim = c(bboxparents$ymin, bboxparents$ymax + 5e4))
+  geom_sf(data = sites, aes(color = orchard), size = 2) +
+  scale_colour_brewer(type = "qual", palette = 3) +
+  geom_sf(data = parents, shape = 3, alpha = 0.8) +
+  coord_sf(xlim = c(bboxparents$xmin - 3e5, bboxparents$xmax + 2e5),
+           ylim = c(bboxsites$ymin - 1e5, bboxsites$ymax + 3e5)) +
+  geom_label_repel(data = sitezoomout, aes(label = Site, geometry = geometry),
+                   stat = "sf_coordinates", nudge_x = 5e5) +
+  geom_label_repel(data = sitezoomin, aes(label = Site, geometry = geometry),
+                   stat = "sf_coordinates", nudge_x = -5e5, nudge_y = 5e4)
 
 print(pointmap)
-# zoom in on sites around kalamalka
 
-# add mountains
-# library(raster)
-# dem.raster <- getData("SRTM", lat = 46.0146, lon = 9.344197, download = TRUE)
-# https://www.r-bloggers.com/2018/08/how-to-quickly-enrich-a-map-with-natural-and-anthropic-details/
-
-
-
-
-pointmap +
-  #  geom_raster(data = hillshade_highrez, aes(x = x, y = y, fill = hillshade_highrez), alpha = 0.5) +
-    coord_sf(xlim = c(bboxsitezoom$xmin, bboxsitezoom$xmax),
-             ylim = c(bboxsitezoom$ymin, bboxsitezoom$ymax))
-
-
-# basemap +
-#     geom_sf(data = st_as_sfc(bboxsites), alpha = 0, colour = "firebrick4") +
-#     ggtitle("Genotype sources and seed orchard sites", subtitle = "Extent of lodgepole pine range in light green") +
-#     geom_sf(data = cities, pch = 16) +
-#     geom_sf_text_repel(data = cities, aes(label = name_en), size = 2) +
-#     #annotation_scale(location = "bl", width_hint = 0.5)
-#     #annotation_north_arrow(location = "bl", which_north = "true",
-#                           # pad_x = unit(0.25, "in"), pad_y = unit(0.25, "in"),
-#                            #style = north_arrow_fancy_orienteering)
-#     coord_sf(xlim = c(bboxparents$xmin - 1, bboxparents$xmax + 1),
-#          ylim = c(bboxparents$ymin - 1, bboxparents$ymax + 1))
-#
-# # zoom in on clustered sites
-# basemap +
-#     coord_sf(xlim = c(bboxsites$xmin-0.25, bboxsites$xmax+0.25),
-#              ylim = c(bboxsites$ymin-0.05, bboxsites$ymax+0.05)) +
-#     ggtitle("Genotype sources and seed orchard sites", subtitle = "Extent of lodgepole pine range in light green") +
-#     annotation_scale(location = "bl", width_hint = 0.5)
-#     #annotation_north_arrow(location = "bl", which_north = "true",
-#                            # pad_x = unit(0.25, "in"), pad_y = unit(0.25, "in"),
-#                            # style = north_arrow_fancy_orienteering)
-#
-# # INTERSECTIONS
-# # identify the SPU each parent tree was sourced from
-# # if I use map and parent with crs as is (map = espg:3005, parent espg:4326), then
-# # Error: Problem with `mutate()` column `intersection`.
-# # ℹ `intersection = as.integer(st_intersects(geometry, map))`.
-# # x st_crs(x) == st_crs(y) is not TRUE
-#
-# # map2 <- st_transform(map, crs = 4326) %>%
-# #     st_make_valid()
-# #
-# #
-# # pnts <- parents %>% mutate(
-# #     intersection = as.integer(st_intersects(geometry, map2))
-# #     , area = if_else(is.na(intersection), '', map2$SPU[intersection])
-# # )
-#
-# # 37 clones are not assigned to an SPU for some reason. I can try to find the closest feature instead for these
-#
-# #pnts2 <- pnts %>% filter(is.na(intersection))
-#
-# # This is too slow and crashes my computer
-# # closest <- list()
-# # for(i in seq_len(nrow(parents))){
-# #     closest[[i]] <- map2[which.min(
-# #         st_distance(map2, parents[i,])),]
-# # }
-
+# Save the plot
+ggsave(filename = "maps/siteandparentmap.png", plot = pointmap, width = 10, height = 10, dpi = 300, units = "in")
