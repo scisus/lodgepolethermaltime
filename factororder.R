@@ -39,3 +39,5 @@ yearfactororder <- yearMAT$Year
 
 factororder <- list(site = sitefactororder, year = yearfactororder)
 saveRDS(factororder, "objects/factororder.rds")
+saveRDS(factororder, "../flowering-cline/objects/factororder.rds")
+
