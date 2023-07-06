@@ -101,11 +101,6 @@ bboxsitezoom <- sites %>%
     st_transform(crs = 3978) %>%
     st_bbox()
 
-# elevation data for zoom in map ###########
-
-elevations_zoom <- get_elevations(sitezoomin, zoom = 8)
-
-
 # maps ###########
 
 basemap <- ggplot(data = base) +
@@ -155,4 +150,4 @@ pointmap <- basemap +
 print(pointmap)
 
 # Save the plot
-ggsave(filename = "maps/siteandparentmap.png", plot = pointmap, width = 10, height = 10, dpi = 300, units = "in")
+ggsave(filename = "../flowering-cline/figures/siteandparentmap.png", plot = pointmap, width = 7, height = 7, dpi = 300, units = "in")
