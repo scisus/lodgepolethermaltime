@@ -11,9 +11,42 @@ library(patchwork)
 library(ggokabeito)   # Neat accessible color palette
 library(ggthemes)    # Nice themes
 library(html2latex) # convert sjplot tables to tex and pdf
+library(tidyr)
 
 theme_set(theme_dark())
 factororder <- readRDS("objects/factororder.rds")
+
+# forcing and climate
+typical_year_forc <- read.csv("data/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
+  mutate(Date = as.Date(Date_scale)) %>%
+  select(-Date_scale) %>%
+  mutate(Site = factor(Site, levels = factororder$site)) %>%
+  mutate(Site_type = case_when(Site %in% c("Border", "Trench") ~ "comparison",
+                               !Site %in% c("Border", "Trench") ~ "orchard")) %>%
+  mutate(Site_type = fct_rev(Site_type)) %>%
+  filter(DoY < 180)
+
+meantempplot <- ggplot(typical_year_forc, aes(x = Date, y = mean_temp, color = Site, linetype = Site_type)) +
+  geom_line() +
+  scale_x_date(date_breaks = "1 month", date_labels =  "%b") +
+  ggtitle("Mean daily temperature in a typical year") +
+  scale_colour_viridis_d() +
+  theme_bw() +
+  ylab("Temperature (\u00B0C)") + xlab("") +
+  theme(legend.position = "none")
+
+forcplot <- ggplot(typical_year_forc, aes(x = Date, y = sum_forcing, color = Site, linetype = Site_type)) +
+  geom_line() +
+  scale_x_date(date_breaks = "1 month", date_labels =  "%b") +
+  ggtitle("Forcing accumulation in a typical year") +
+  scale_color_viridis_d() +
+  theme_bw() +
+  ylab("Growing Degree Days (GDD)") + xlab("") +
+  guides(linetype = "none", color = guide_legend(ncol = 3)) +
+  theme(legend.position = "bottom")
+
+siteclimplot <- meantempplot / forcplot
+ggsave("plots/siteclimplot.png", width = 4, height = 8)
 
 # cumulative_distribution ####
 # raw data plot using phenf from modelmethods.R
