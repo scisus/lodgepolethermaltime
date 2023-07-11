@@ -45,8 +45,9 @@ forcplot <- ggplot(typical_year_forc, aes(x = Date, y = sum_forcing, color = Sit
   guides(linetype = "none", color = guide_legend(ncol = 3)) +
   theme(legend.position = "bottom")
 
-siteclimplot <- meantempplot / forcplot
-ggsave("plots/siteclimplot.png", width = 4, height = 8)
+siteclimplot <- meantempplot / forcplot +
+  plot_annotation(tag_levels = 'A')
+ggsave("../flowering-cline/figures/siteclimplot.png", width = 4, height = 8)
 
 # cumulative_distribution ####
 # raw data plot using phenf from modelmethods.R
