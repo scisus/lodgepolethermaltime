@@ -11,7 +11,7 @@ source('phenology_functions.R')
 factororder <- readRDS("objects/factororder.rds")
 
 # globals ####
-nsamp <- 2000 # how many samples from the posterior (full posterior is big and slow)
+nsamp <- 6000 # how many samples from the posterior (full posterior is big and slow)
 seed <- 738
 
 # models #####
@@ -30,7 +30,9 @@ phenf <- readRDS("objects/phenf.rds")
 tidybayes::get_variables(modells$fb)
 
 
-labdf <- data.frame(Sex = c("FEMALE", "FEMALE", "MALE", "MALE"), event = c('begin', 'end', 'begin', 'end'), model = c('fb', 'fe', 'mb', 'me'))
+labdf <- data.frame(Sex = c("FEMALE", "FEMALE", "MALE", "MALE"),
+                    event = c('begin', 'end', 'begin', 'end'),
+                    model = c('fb', 'fe', 'mb', 'me'))
 
 # slope ####
 slopes <- purrr::map(modells, gather_slope_draws) %>%
@@ -40,7 +42,7 @@ saveRDS(slopes, file = "objects/slopes.rds")
 
 slopesummary <- slopes %>%
   group_by(Sex, event) %>%
-  median_hdci(.value)
+  mean_hdci(.value)
 
 # intercept ####
 intercepts <- purrr::map(modells, gather_intercept_draws) %>%
@@ -50,7 +52,7 @@ saveRDS(intercepts, file = "objects/intercepts.rds") # this is equivalent to the
 
 interceptssummary <- intercepts %>%
   group_by(Sex, event) %>%
-  median_hdci(.value)
+  mean_hdci(.value)
 
 # variation ####
 
@@ -62,6 +64,10 @@ variation <- purrr::map(modells, gather_var_draws) %>%
   mutate(.variable = factor(.variable)) %>%
   mutate(.variable = forcats::fct_relevel(.variable, "sigma", "Year", "Site",  "Clone", "Tree"))
 saveRDS(variation, file = "objects/variation.rds")
+
+varsummary <- variation %>%
+  group_by(.variable, event, Sex) %>%
+  mean_hdci(.value)
 
 # offsets ####
 
