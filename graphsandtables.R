@@ -141,15 +141,16 @@ intercepts <- readRDS("objects/intercepts.rds")
 interceptplot <- ggplot(intercepts, aes(y = fct_rev(event), x = .value, colour = Sex)) +
   stat_halfeye(position = "dodge") +
   scale_colour_viridis_d() +
-  labs(title = "mean", caption = "2000 draws from the posterior") +
+  #labs(title = expression(paste("Mean forcing requirement at 0 \u00B0C (", mu, ")")), caption = "6000 draws from the posterior") +
   ylab("") +
   xlab("GDD") +
  # theme_dark(base_size = 18) +
   theme(legend.position = "bottom") +
-  scale_x_continuous(breaks = scales::pretty_breaks(n=10))
-
+  scale_x_continuous(breaks = scales::pretty_breaks(n=10)) +
+  scale_y_discrete(expand = expansion(add = c(0, .75)))
+interceptplot
 #smallmeans <- filter(means, .draw %in% sample(unique(means$.draw), size = 200))
-#ggsave("plots/means.pdf", width = 6, height = 6)
+ggsave("../flowering-cline/figures/means.png", width = 6, height = 6)
 
 ## sd ####
 # plot sd parameters using variation from modelparameters.R
@@ -157,7 +158,7 @@ variation <- readRDS("objects/variation.rds")
 varplot <- ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .variable, linetype = Sex)) +
   stat_pointinterval(position = "dodge") +
   scale_colour_viridis_d(option = "B") +
-  labs(title = "Standard deviation of pop mean & offsets", caption = "2000 draws from the posterior") +
+  labs(title = "Standard deviation of pop mean & offsets", caption = "6000 draws from the posterior") +
   ylab("") +
   xlab("GDD") +
   facet_grid(event ~ .) +
@@ -175,7 +176,7 @@ offsetplot <- offsets_summary %>%
   ggplot(aes(y=.value, x = model, colour = Sex, shape = event)) +
   geom_quasirandom(alpha = 0.5) +
   facet_wrap("factor") +
-  labs(title = "Offset medians", caption = "2000 draws from posterior") +
+  labs(title = "Offset medians", caption = "6000 draws from posterior") +
   geom_hline(yintercept = 0, linetype =3, colour = "darkgray") +
  # theme_dark(base_size = 18) +
   ylab("GDD") +
