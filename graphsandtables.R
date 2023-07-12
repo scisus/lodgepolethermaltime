@@ -150,7 +150,18 @@ interceptplot <- ggplot(intercepts, aes(y = fct_rev(event), x = .value, colour =
   scale_y_discrete(expand = expansion(add = c(0, .75)))
 interceptplot
 #smallmeans <- filter(means, .draw %in% sample(unique(means$.draw), size = 200))
-ggsave("../flowering-cline/figures/means.png", width = 6, height = 6)
+ggsave("../flowering-cline/figures/intercepts.png", width = 6, height = 6)
+
+## slopes ####
+ggplot(fepred_allprovs, aes(x = MAT, y = .epred)) +
+  stat_lineribbon(aes(y = .epred, linetype = event), .width = c(.95, .5), show.legend = FALSE) +
+  scale_fill_brewer() +
+  theme_bw() +
+  facet_grid(. ~ Sex) +
+  theme(legend.position = "none") +
+  #ggtitle("Forcing requirements across all provenances", subtitle = "expectation (mean) predictions") +
+  ylab("Accumulated forcing (Growing Degree Days)") +
+  xlab("Mean Annual Temperature (\u00B0C)")
 
 ## sd ####
 # plot sd parameters using variation from modelparameters.R

@@ -35,11 +35,8 @@ fepred %>%
   group_by(Sex, event) %>%
   tidybayes::median_hdci(.epred)
 
-alldat <- bind_rows(alldatls)
-ggplot(fepred, aes(x = MAT, y = sum_forcing)) +
-  stat_lineribbon(aes(y = .epred), .width = c(.99, .95, .8, .5)) +
-  scale_fill_brewer() +
-  facet_grid(Sex ~ event)
+#alldat <- bind_rows(alldatls)
+
 
 ## expectation for trees sourced from all sites ####
 fepred_allsites <- purrr::map(modells, function(x) {
@@ -49,27 +46,14 @@ fepred_allsites <- purrr::map(modells, function(x) {
   left_join(labdf)
 saveRDS(fepred_allsites, file = "objects/fepred_allsites.rds")
 
-intercepts_summary <- readRDS("objects/intercepts.rds") %>%
-  group_by(model, Sex, event) %>%
-  mean_hdci(.value) %>%
-  merge(siteMAT) %>%
-  arrange(model, MAT) %>%
-  ungroup()
 
-intercepts <- readRDS("objects/intercepts.rds")
-
-ggplot(fepred_allsites, aes(x = MAT, y = .epred)) +
-  stat_lineribbon(aes(y = .epred), .width = c(.99, .95, .8, .5)) +
-  #stat_slabinterval(data = intercepts, aes(x=8, y = .value, color = "intercept"), orientation = "vertical") +
-  #geom_lineribbon(data = intercepts_summary, aes(x = MAT, y = .value, ymin = .lower, ymax =.upper, fill = "no MAT"), alpha = 0.5) +
-  scale_fill_brewer() +
-  theme_classic() +
-  facet_grid(Sex ~ event) +
-  ggtitle("Forcing requirements for trees sourced from focal sites", subtitle = "expectation (mean) predictions") +
-  ylab("Forcing (Growing Degree Days)")
-  #geom_boxplot(data = fepred_allsites, shape = 16, alpha = .3, aes(group = MAT))
-
-
+## expectation for all trees (provenances) in dataset ####
+fepred_allprovs <- purrr::map2(alldatls, modells, function(x,y) {
+  add_epred_draws(newdata = select(x, Sex, event, MAT) %>% distinct(), object = y, re_formula = NA)}) %>%
+  bind_rows(.id = "model") %>%
+  select(-.chain, -.iteration) %>%
+  left_join(labdf)
+saveRDS(fepred_allprovs, file = "objects/fepred_allprovs.rds")
 
 ## posterior predictive ####
 ## same as expectation, but including individual level variation
