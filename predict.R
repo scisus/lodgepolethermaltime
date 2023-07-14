@@ -55,6 +55,32 @@ fepred_allprovs <- purrr::map2(alldatls, modells, function(x,y) {
   left_join(labdf)
 saveRDS(fepred_allprovs, file = "objects/fepred_allprovs.rds")
 
+
+# Calculate the maximum and minimum of MAT
+max_MAT <- max(fepred_allprovs$MAT, na.rm = TRUE)
+min_MAT <- min(fepred_allprovs$MAT, na.rm = TRUE)
+
+# Filter rows where MAT is the maximum or minimum, and add a new column
+minmaxMAT_fepred <- fepred_allprovs %>%
+  # keep only coldest and warmest provenances and label
+  filter(MAT == max_MAT | MAT == min_MAT) %>%
+  mutate(size = case_when(
+    MAT == max_MAT ~ "max",
+    MAT == min_MAT ~ "min"
+  )) %>%
+  # order model samples
+  group_by(model, Sex, event, size) %>%
+  arrange(Sex, event, size, .epred) %>%
+  group_by(model, size) %>%
+  mutate(order = 1:n()) %>%
+  select(-.row, -.draw, -MAT) %>%
+  pivot_wider(names_from = size, values_from = .epred) %>%
+  # get differences
+  mutate(differences = max - min) %>%
+  group_by(Sex, event) %>%
+  mean_hdci(differences)
+minmaxMAT_fepred
+
 ## posterior predictive ####
 ## same as expectation, but including individual level variation
 fpred <- purrr::map2(alldatls, modells, function(x,y) {
