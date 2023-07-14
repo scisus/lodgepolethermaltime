@@ -42,7 +42,14 @@ saveRDS(slopes, file = "objects/slopes.rds")
 
 slopesummary <- slopes %>%
   group_by(Sex, event) %>%
-  mean_hdci(.value)
+  mean_hdci(.value) %>%
+  mutate(
+    Value_CI = paste0(round(.value, 2), " (", round(.lower, 2), "-", round(.upper, 2), ")")
+  ) %>%
+  select(-starts_with(".")) %>%
+  pivot_wider(names_from = Sex, values_from = Value_CI)
+slopesummary
+saveRDS(slopesummary, file = "../flowering-cline/tables/slopesummary.rds")
 
 # intercept ####
 intercepts <- purrr::map(modells, gather_intercept_draws) %>%
