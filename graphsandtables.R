@@ -61,6 +61,32 @@ siteclimplot <- meantempplot / forcplot / sumforcplot+
   plot_annotation(tag_levels = 'A')
 ggsave("../flowering-cline/figures/siteclimplot.png", width = 4, height = 9)
 
+# MAT ####
+sites <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv") %>%
+  filter(id == "site") %>%
+  select(Site, MAT) %>%
+  mutate(Site = forcats::fct_rev(forcats::fct_reorder(Site, MAT)))
+sites$type <- c(rep("Seed Orchard", 7), rep("Comparison", 2))
+
+provs <- readRDS("objects/phenf.rds") %>%
+  select(Tree, MAT, Site) %>%
+  distinct()
+
+bcspus <- read.csv("../phd/data/OrchardInfo/lodgepole_SPU_climsum.csv")
+
+ggplot(data=sites) +
+  geom_point(aes(x = "Sites", y = MAT, colour = Site, shape = type), size = 2.5) +
+  geom_text_repel(aes(x = "Sites", y = MAT, label = Site),size = 2) +
+  geom_quasirandom(data = provs, aes(x = "Provenances", y = MAT, colour = Site), alpha = 0.7, pch = 3, varwidth = TRUE) +
+  scale_color_brewer(type = "seq") +
+  theme_dark() +
+  xlab("") +
+  ylab("Mean Annual Temperature (\u00B0C)") +
+  guides(color = "none", shape = "none")
+
+
+ggsave("../flowering-cline/figures/MAT.png", width = 6, height = 5)
+
 # cumulative_distribution ####
 # raw data plot using phenf from modelmethods.R
 phenf <- readRDS("objects/phenf.rds")
