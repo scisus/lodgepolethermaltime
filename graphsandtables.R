@@ -197,9 +197,19 @@ ggplot(fepred_allprovs, aes(x = MAT, y = .epred)) +
   theme_bw() +
   facet_grid(. ~ Sex) +
   theme(legend.position = "none") +
-  #ggtitle("Forcing requirements across all provenances", subtitle = "expectation (mean) predictions") +
+  #ggtitle("Forcing requirements across all provenances", subtitle = "expectation (mean) predictions, caption = "6000 draws from the posterior") +
   ylab("Accumulated forcing (Growing Degree Days)") +
   xlab("Mean Annual Temperature (\u00B0C)")
+
+slopes <- readRDS(file = "objects/slopes.rds")
+slopesummary <- slopes %>%
+
+ggplot(slopes, aes(x = .value, y = event, fill = Sex)) +
+  stat_slabinterval(alpha = 0.5) +
+  scale_fill_viridis_d(option = "B") +
+  xlab("GDD per MAT") +
+  ylab("") +
+  labs(title = 'MAT effect', caption = '6000 draws from the posterior')
 
 ## sd ####
 # plot sd parameters using variation from modelparameters.R
