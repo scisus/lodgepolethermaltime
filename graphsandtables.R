@@ -12,6 +12,7 @@ library(ggokabeito)   # Neat accessible color palette
 library(ggthemes)    # Nice themes
 library(html2latex) # convert sjplot tables to tex and pdf
 library(tidyr)
+library(ggrepel)
 
 theme_set(theme_dark())
 factororder <- readRDS("objects/factororder.rds")
@@ -29,25 +30,36 @@ typical_year_forc <- read.csv("data/typical_year_forc.csv") %>% # from temp mean
 meantempplot <- ggplot(typical_year_forc, aes(x = Date, y = mean_temp, color = Site, linetype = Site_type)) +
   geom_line() +
   scale_x_date(date_breaks = "1 month", date_labels =  "%b") +
-  ggtitle("Mean daily temperature in a typical year") +
+  ggtitle("Mean daily temperature") +
   scale_colour_viridis_d() +
   theme_bw() +
   ylab("Temperature (\u00B0C)") + xlab("") +
   theme(legend.position = "none")
 
-forcplot <- ggplot(typical_year_forc, aes(x = Date, y = sum_forcing, color = Site, linetype = Site_type)) +
+sumforcplot <- ggplot(typical_year_forc, aes(x = Date, y = sum_forcing, color = Site, linetype = Site_type)) +
   geom_line() +
   scale_x_date(date_breaks = "1 month", date_labels =  "%b") +
-  ggtitle("Forcing accumulation in a typical year") +
+  ggtitle("Forcing accumulation") +
   scale_color_viridis_d() +
   theme_bw() +
   ylab("Growing Degree Days (GDD)") + xlab("") +
   guides(linetype = "none", color = guide_legend(ncol = 3)) +
   theme(legend.position = "bottom")
 
-siteclimplot <- meantempplot / forcplot +
+forcplot <- ggplot(typical_year_forc, aes(x = Date, y = forcing, color = Site, linetype = Site_type)) +
+  geom_line() +
+  scale_x_date(date_breaks = "1 month", date_labels =  "%b") +
+  ggtitle("Daily forcing") +
+  scale_color_viridis_d() +
+  theme_bw() +
+  ylab("Growing Degree Days (GDD)") + xlab("") +
+  guides(linetype = "none", color = guide_legend(ncol = 3)) +
+  theme(legend.position = "none")
+
+
+siteclimplot <- meantempplot / forcplot / sumforcplot+
   plot_annotation(tag_levels = 'A')
-ggsave("../flowering-cline/figures/siteclimplot.png", width = 4, height = 8)
+ggsave("../flowering-cline/figures/siteclimplot.png", width = 4, height = 9)
 
 # cumulative_distribution ####
 # raw data plot using phenf from modelmethods.R
