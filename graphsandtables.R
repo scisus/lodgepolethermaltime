@@ -17,7 +17,7 @@ library(ggrepel)
 theme_set(theme_dark())
 factororder <- readRDS("objects/factororder.rds")
 
-# forcing and climate
+# forcing and climate ##########
 typical_year_forc <- read.csv("data/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
   mutate(Date = as.Date(Date_scale)) %>%
   select(-Date_scale) %>%
@@ -181,7 +181,7 @@ interceptplot <- ggplot(intercepts, aes(y = fct_rev(event), x = .value, colour =
   scale_colour_viridis_d() +
   #labs(title = expression(paste("Mean forcing requirement at 0 \u00B0C (", mu, ")")), caption = "6000 draws from the posterior") +
   ylab("") +
-  xlab("GDD") +
+  xlab(expression(paste("Mean forcing accumulation required at MAT 0 \u00B0C - ", mu, " (GDD)"))) +
  # theme_dark(base_size = 18) +
   theme(legend.position = "bottom") +
   scale_x_continuous(breaks = scales::pretty_breaks(n=10)) +
