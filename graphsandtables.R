@@ -214,40 +214,45 @@ ggplot(slopes, aes(x = .value, y = event, fill = Sex)) +
 ## sd ####
 # plot sd parameters using variation from modelparameters.R
 variation <- readRDS("objects/variation.rds")
-varplot <- ggplot(variation, aes(y = fct_rev(.variable), x = .value, colour = .variable, linetype = Sex)) +
+varplot <- ggplot(variation, aes(y = forcats::fct_rev(event), x = .value, colour = forcats::fct_rev(Sex), shape = event)) +
   stat_pointinterval(position = "dodge") +
-  scale_colour_viridis_d(option = "B") +
-  labs(title = "Standard deviation of pop mean & offsets", caption = "6000 draws from the posterior") +
-  ylab("") +
-  xlab("GDD") +
-  facet_grid(event ~ .) +
-  guides(color = "none", size = "none") +
+  scale_colour_viridis_d(limits = c("FEMALE", "MALE")) +
+ # labs(title = "Standard deviation of pop mean & offsets", caption = "6000 draws from the posterior") +
+  ylab("Event") +
+  xlab("Standard deviation (GDD)") +
+  facet_grid(.variable ~ ., scales = "free_y") +
+  guides(color = "none", shape = "none") +
   theme_dark() +
   theme(legend.position = "top")
 #ggsave("plots/sd.pdf", width = 6, height = 5)
-ggsave("../flowering-cline/figures/sd.png", width = 6, height = 5)
+#ggsave("../flowering-cline/figures/sd.png", width = 6, height = 5)
 
 ## offset_medians ####
 # plot medians of offset parameters in point clouds (like beeswarm)
-offsets_summary <- readRDS("objects/offsets_summary.rds")
+offsets_summary <- readRDS("objects/offsets_summary.rds") %>%
+  mutate(model = factor(model, levels = c("mb", "fb", "me", "fe")))
 offsetplot <- offsets_summary %>%
   select(model, Sex, event, factor, level, .value, .point) %>% distinct() %>%
   ggplot(aes(y=.value, x = model, colour = Sex, shape = event)) +
   geom_quasirandom(alpha = 0.5) +
   facet_wrap("factor") +
-  labs(title = "Offset medians", caption = "6000 draws from posterior") +
+  #labs(title = "Offset medians", caption = "6000 draws from posterior") +
+  #guides(color = "none", shape = "none") +
   geom_hline(yintercept = 0, linetype =3, colour = "darkgray") +
- # theme_dark(base_size = 18) +
-  ylab("GDD") +
   scale_colour_viridis_d() +
-  theme(legend.position = "top") +
+  theme_dark() +
+  xlab("") +
+  ylab("Offset median (GDD)") +
+  theme(legend.position = "bottom", axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
   geom_hline(yintercept = 0, linetype = 3) +
   coord_flip()
 #ggsave("plots/offsets_medians.pdf", width = 6, height = 5)
 #
 
-meanplot + offsetplot
-ggsave("plots/meanandoffset.png", width = 7, height = 6)
+varplot + offsetplot +
+  plot_layout(widths = c(1,2.5)) +
+  plot_annotation(tag_levels = 'A')
+ggsave("../flowering-cline/figures/varoffsets.png", width = 7, height = 6)
 
 ## site_offsets ####
 # interval plot for site level offsets using siter from modelparameters.R
