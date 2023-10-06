@@ -94,6 +94,11 @@ modells <- readRDS("objects/modells.rds") #1.5GB
 fretro <- purrr::map2(alldatls, modells, function(x,y) {add_predicted_draws(newdata = x, object = y)}) %>%
   bind_rows()
 
+fretro_summary <- fretro %>%
+  group_by(Index, Year, Sex, Site, Orchard, Clone, Tree, event, sum_forcing, censored) %>%
+  median_hdci(.prediction)
+saveRDS(fretro_summary, "objects/fretro_summary.rds")
+
 # begin & end retrodictions + data
 fsim <- fretro %>%
   # summarise by observation

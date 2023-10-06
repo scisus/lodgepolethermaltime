@@ -13,6 +13,7 @@ library(ggthemes)    # Nice themes
 library(html2latex) # convert sjplot tables to tex and pdf
 library(tidyr)
 library(ggrepel)
+library(cols4all)
 
 theme_set(theme_dark())
 factororder <- readRDS("objects/factororder.rds")
@@ -162,15 +163,24 @@ ggplot(surveydf, aes(x=DoY, y=as.factor(sampleindex), colour = Site, group = as.
   ggtitle("Observation Dates", subtitle = "for each orchard at each site")
 ggsave("../flowering-cline/figures/sampling.png", width = 6, height = 8)
 
-# censoring table ####
+# censoring ####
+
+## table
 censdf <- readRDS("objects/censdf.rds")
 knitr::kable(censdf, caption="Proportion of observations for each event interval censored or left or right end censored")
 
-# censoring graph
-# censdf <- readRDS("objects/censdf.rds")
-# ggplot(censdf, aes(x = Sex, y = prop_cens, fill = censored)) +
-#   geom_bar(stat = "identity") +
-#   facet_wrap("Event_Label")
+# Observed vs retrodicted ##############
+fretro_summary <- readRDS("objects/fretro_summary.rds")
+censorpal <- c4a("icefire", 3)
+ggplot(fretro_summary, aes(x = sum_forcing, y = .prediction, color = censored)) +
+  geom_point(alpha = .5, shape = 3) +
+  facet_grid(Sex ~ event) +
+  geom_abline(color = "grey20") +
+  xlab("Observed accumulated forcing (GDD)") +
+  ylab("Median retrodicted accumulated forcing (GDD)") +
+  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
+  scale_colour_manual(values = c(censorpal[2], censorpal[3], censorpal[1]))
+ggsave("../flowering-cline/figures/obsvsretro.png", width = 6, height = 5)
 
 # parameters ####
 ## means ####
