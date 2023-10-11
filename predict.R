@@ -20,6 +20,28 @@ siteMAT <- sitedat %>%
   filter(id == "site") %>%
   select(Site, MAT, Elevation) %>%
   mutate(MAT = round(MAT, 1)) #DUPLICATED IN DOY TRANS
+
+# orchards ############
+# Make orchard specific predictions using full posterior
+
+# tomorrow use some sort of expansion/fill dataframe thing to make this dataset
+neworchdat <- data.frame(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
+                                   to = range(alldatls$fbdat$MAT)[2]),
+                         Year = "newyear",
+                         Tree = "newtree",
+                         Clone = "newclone",
+                         Site = unique(alldatls$fbdat$Site))
+
+fpred_orch <- purrr::map_dfr(modells,
+                         .f = function(x,y) {add_predicted_draws(newdata = neworchdat, object = x,
+                                                                     re_formula = NULL, allow_new_levels = TRUE,
+                                                                     sample_new_levels = "gaussian", ndraws = n)},
+                         .id = "model")
+
+library(ggplot2)
+ggplot(fpred_orch, aes(x = .prediction, colour = Year)) +
+  geom_density() +
+  facet_wrap("model")
 # predict the global grand means: average predicted outcome ignoring group-specific deviations in intercept or slope
 
 # grand mean ####
