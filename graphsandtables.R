@@ -17,6 +17,7 @@ library(cols4all)
 
 theme_set(theme_dark())
 factororder <- readRDS("objects/factororder.rds")
+factororder_site_so <- factororder$site[-c(1,2)]
 
 # forcing and climate ##########
 typical_year_forc <- read.csv("data/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
@@ -434,7 +435,7 @@ fepred_cenew <- readRDS("objects/fepred_cenew.rds")
 fepred_ceold <- readRDS("objects/fepred_ceold.rds")
 fepred_ce <- full_join(fepred_cenew, fepred_ceold)
 
-factororder_site_so <- factororder$site[-c(1,2)]
+
 fepred_ceold <- mutate(fepred_ceold, Site = forcats::fct_relevel(Site, factororder_site_so))
 # fepred_ce %>%
 #   sample_frac(0.25) %>%
