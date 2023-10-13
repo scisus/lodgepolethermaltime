@@ -14,7 +14,7 @@ modells <- readRDS("objects/modells.rds")
 alldatls <- readRDS("objects/datlist.rds")
 sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv") %>% filter(id == "site")
 
-n <- 6000 # when downsampling required
+n <- 3000 # when downsampling required
 
 siteMAT <- sitedat %>%
   filter(id == "site") %>%
@@ -25,23 +25,53 @@ siteMAT <- sitedat %>%
 # Make orchard specific predictions using full posterior
 
 # tomorrow use some sort of expansion/fill dataframe thing to make this dataset
-neworchdat <- data.frame(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
+neworchdat <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
                                    to = range(alldatls$fbdat$MAT)[2]),
                          Year = "newyear",
                          Tree = "newtree",
                          Clone = "newclone",
-                         Site = unique(alldatls$fbdat$Site))
+                         Site = unique(alldatls$fbdat$Site),
+                         event = c("begin", "end"),
+                         Sex = c("FEMALE", "MALE")) %>%
+  split(list(.$event, .$Sex))
 
-fpred_orch <- purrr::map_dfr(modells,
-                         .f = function(x,y) {add_predicted_draws(newdata = neworchdat, object = x,
+# try expand_grid?
+
+fpred_orch <- purrr::map2(neworchdat, modells,
+                         .f = function(x,y) {add_predicted_draws(newdata = x, object = y,
                                                                      re_formula = NULL, allow_new_levels = TRUE,
-                                                                     sample_new_levels = "gaussian", ndraws = n)},
-                         .id = "model")
+                                                                     sample_new_levels = "gaussian", ndraws = n)}) %>%
+  bind_rows() %>%
+  group_by(MAT, Year, Tree, Clone, Site, event, Sex) %>%
+  median_hdci(.prediction) %>%
+  mutate(Site = forcats::fct_relevel(Site, factororder_site_so))
 
 library(ggplot2)
-ggplot(fpred_orch, aes(x = .prediction, colour = Year)) +
-  geom_density() +
-  facet_wrap("model")
+ggplot(fpred_orch, aes(x = MAT, y = .prediction, colour = Site)) +
+  geom_ribbon(aes(ymin = .lower, ymax = .upper, group=Site), color = "grey", alpha = 0.1, size = 0) +
+  geom_line() +
+  cols4all::scale_colour_discrete_c4a_div("kovesi.div_bu_bk_br") +
+  facet_grid(event ~ Sex) +
+  guides(color = guide_legend(override.aes = list(size = 1.5)))
+# 95% HDCI, median posterior prediction for each site for the full range of provenances using an average year, clone, and tree (using estimated gaussian prior to generate random effects)
+
+widefpredorch <- fpred_orch %>%
+  tidyr::pivot_wider(
+  id_cols = c(MAT, Year, Tree, Clone, Site, Sex),
+  names_from = event,
+  values_from = c(.prediction, .lower, .upper),
+  names_sep = "."
+)
+
+ggplot(widefpredorch) +
+  geom_ribbon(aes(x = MAT, ymin = .lower.begin, ymax = .upper.begin), fill = "grey", alpha = 0.7) +
+  geom_ribbon(aes(x = MAT, ymin = .lower.end, ymax = .upper.end), fill = "grey", alpha = 0.7) +
+  geom_ribbon(aes(x = MAT, ymin = .prediction.begin, ymax = .prediction.end), alpha = 0.8) +
+  facet_grid(Sex ~ Site) +
+  theme_bw() +
+  geom_ribbon(aes(x = MAT, ymin = .lower.begin, ymax = .upper.begin, colour = "begin"), fill = "transparent", size = .25, linetype = 3) +
+  geom_ribbon(aes(x = MAT, ymin = .lower.end, ymax = .upper.end, colour = "end"), fill = "transparent", size = 0.25, linetype = 3)
+
 # predict the global grand means: average predicted outcome ignoring group-specific deviations in intercept or slope
 
 # grand mean ####
