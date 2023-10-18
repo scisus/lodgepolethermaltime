@@ -31,22 +31,6 @@ sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1
 # alternate source for this data would be typical_ts.csv in lodgepole_climate project
 
 
-# plot typical year temperature timeseries for each site ~ spring
-ggplot(filter(typical_year_forc, DoY < 180 & DoY > 100), aes(x = Date, y = sum_forcing, color = Site)) +
-  geom_line() +
-  scale_x_date(date_breaks = "1 month", date_labels =  "%b")
-
-ggplot(filter(typical_year_forc, Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")), aes(x = Date, y = sum_forcing, color = Site)) +
-  geom_line() +
-  scale_x_date(date_breaks = "1 month", date_labels =  "%b") +
-  ggtitle("Forcing accumulation in a typical year")
-ggsave("plots/forcing_accumulation_typical.png")
-
-ggplot(filter(typical_year_forc, Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")), aes(x = Date, y = mean_temp, color = Site)) +
-  geom_line() +
-  scale_x_date(date_breaks = "1 month", date_labels =  "%b") +
-  ggtitle("Mean daily temp in a typical year")
-ggsave("plots/mean_temp_typical.png")
 
 
 siteMAT <- sitedat %>%
