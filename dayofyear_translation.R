@@ -16,6 +16,7 @@ focalsites <- c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")
 dailyforc <- read.csv("data/dailyforc_1945_2012.csv") %>% # daily "real" forcing
   group_by(Site, Year) %>%
   mutate(index = cur_group_id()) %>% ungroup()
+dailyforc_oo <- dailyforc %>% filter(!Site %in% c("Border", "Trench")) #orchard only
 typical_year_forc <- read.csv("data/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
   mutate(Date = as.Date(Date_scale)) %>% select(-Date_scale)
 normal_forc <- read.csv("data/normalforc_1901-2100.csv") %>% # averaged over 30 year periods
@@ -24,13 +25,12 @@ normal_forc <- read.csv("data/normalforc_1901-2100.csv") %>% # averaged over 30 
 
 fepred <- readRDS("objects/fepred.rds") ## expectation for observed trees (sources)
 fepred_allsites <- readRDS("objects/fepred_allsites.rds") ## expectation for trees sourced from all sites
+fpred_orch <- readRDS("objects/fpred_orch.rds") #posterior prediction for each site for the full range of provenances using an average year, clone, and tree (using estimated gaussian prior to generate random effects). 3000 draws
 factororder <- readRDS("objects/factororder.rds")
 sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv")
 
 # for each site, generate a timeseries of mean temperatures and associated accumulated forcing that reflects the general pattern of temperatures throughout the year. Do this by averaging temperatures on each day between 1945 and 2011 at each site.
 # alternate source for this data would be typical_ts.csv in lodgepole_climate project
-
-
 
 
 siteMAT <- sitedat %>%
@@ -50,34 +50,6 @@ doy_typical <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site)
   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site))) %>%
   left_join(select(typical_year_forc, Date, DoY) %>% distinct())
 saveRDS(doy_typical, "objects/doy_typical.rds")
-
-# doy_typical_fpred <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site), drop = TRUE),
-#                              find_day_of_forcing, .id = ".id",
-#                              bdf = fpred, aforce = "sum_forcing", bforce = ".prediction") %>%
-#   rename(Site = .id, DoY = newdoycol) %>%
-#   ungroup() %>%
-#   select(-.row, -.chain, -.iteration, -.draw) %>%
-#   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site))) %>%
-#   left_join(select(typical_year_forc, Date, DoY) %>% distinct())
-
-
-# very tight. What about with some noise?
-
-# doy_typical_uncertainty <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site), drop = TRUE),
-#                        find_day_of_forcing, .id = ".id",
-#                        bdf = fpred, aforce = "sum_forcing", bforce = ".prediction") %>%
-#   rename(Site = .id, DoY = newdoycol) %>%
-#   ungroup() %>%
-#   select(-.row, -.chain, -.iteration, -.draw) %>%
-#   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site))) %>%
-#   left_join(select(typical_year_forc, Date, DoY) %>% distinct()) %>%
-#   right_join(siteMAT) %>%
-#   group_by(Site, Sex, event, MAT, siteMAT) %>%
-#   sample_n(2000)
-#
-# ggplot(filter(doy_typical_uncertainty, Sex == "FEMALE", event == "begin"), aes(x = MAT, y = DoY)) +
-#   geom_point(shape = 16) +
-#   facet_wrap("Site")
 
 # typical year where trees grown only at their source ###########
 # now consider doy expectations in a typical year for trees from each of the sites of interest grown at those sites of interest
@@ -183,6 +155,27 @@ saveRDS(doy_normal, 'objects/doy_normal.rds')
 
 
 # year to year variation ####
+
+## posterior prediction, 3000 draws, avg year, clone, tree. 1945-2011 ####
+
+# this takes a lot of memory to run ~50gb at least. and it's not quick.
+doy_annual_pp <- map_dfr(split(dailyforc_oo, f = list(dailyforc_oo$index), drop = TRUE),
+                         find_day_of_forcing, .id = "index",
+                         bdf = fpred_orch %>% ungroup() %>% select(-Year), aforce = "sum_forcing", bforce = ".prediction") %>%
+  rename(DoY = newdoycol) %>%
+  mutate(index = as.numeric(index)) %>%
+  ungroup() %>%
+  select(-.row, -.draw, -.chain, -.iteration, -Tree, -Clone) %>%
+  left_join(select(dailyforc_oo, index, Site, Year) %>% distinct())
+
+doy_annual_pp_sum <- doy_annual_pp %>%
+  group_by(MAT, Site, event, Sex, Year) %>%
+  median_hdci(DoY) %>%
+  ungroup() %>%
+  mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder_site_so)))
+saveRDS(doy_annual_pp_sum, "objects/doy_annual_pp_sum.rds")
+
+## posterior expectation, retrodictions ####
 # 2000 draws per year 1945-2011 per site
 
 fepred_allsites_downsampled <- fepred_allsites %>%
