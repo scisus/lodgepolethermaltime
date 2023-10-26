@@ -26,7 +26,7 @@ siteMAT <- sitedat %>%
 
 
 neworchdat <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
-                                   to = range(alldatls$fbdat$MAT)[2]),
+                                    to = range(alldatls$fbdat$MAT)[2], length.out = 7),
                          Year = "newyear",
                          Tree = "newtree",
                          Clone = "newclone",
@@ -35,7 +35,7 @@ neworchdat <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
                          Sex = c("FEMALE", "MALE")) %>%
   split(list(.$event, .$Sex))
 
-#posterior prediction for each site for the full range of provenances using an average year, clone, and tree (using estimated gaussian prior to generate random effects). 2000 draws
+# posterior prediction for each site for the full range of provenances using an average year, clone, and tree (using estimated gaussian prior to generate random effects). 2000 draws #######
 
 fpred_orch <- purrr::map2(neworchdat, modells,
                           .f = function(x,y) {add_predicted_draws(newdata = x,
@@ -52,6 +52,7 @@ fpred_orch_summary <- fpred_orch %>%
   group_by(MAT, Year, Tree, Clone, Site, event, Sex) %>%
   median_hdci(.prediction) %>%
   mutate(Site = forcats::fct_relevel(Site, factororder_site_so))
+saveRDS(fpred_orch_summary, "objects/fpred_orch_summary.rds")
 
 widefpredorchsum <- fpred_orch_summary %>%
   tidyr::pivot_wider(
@@ -60,6 +61,7 @@ widefpredorchsum <- fpred_orch_summary %>%
   values_from = c(.prediction, .lower, .upper),
   names_sep = "."
 )
+
 
 ggplot(fpred_orch_summary) +
   # colored ribbons for start and end
