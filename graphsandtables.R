@@ -313,7 +313,7 @@ widefpredorchsum <- fpred_orch_summary %>%
     names_sep = "."
   )
 
-ggplot(fpred_orch_summary) +
+gdd_orch <- ggplot(fpred_orch_summary) +
   # colored ribbons for start and end
   geom_ribbon(aes(x = MAT, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
   # solid ribbon for median flowering period
@@ -324,7 +324,15 @@ ggplot(fpred_orch_summary) +
   scale_fill_discrete_c4a_div(palette = "icefire") +
   scale_colour_discrete_c4a_div(palette = "icefire") +
   theme_bw() +
-  theme(legend.position = "bottom")
+  ylab("GDD") +
+  xlab("Source MAT") +
+  theme(
+    axis.text.y = element_text(size = 7),
+    strip.text.y = element_text(size = 8),
+    legend.position = "bottom"
+  ) +
+  labs(fill = "95% HDPI", colour = "95% HDPI")
+
 
 ### DoY #####
 
@@ -345,7 +353,7 @@ phenf_orchplot <- readRDS("objects/phenf.rds") %>%
   mutate(Site = forcats::fct_relevel(Site, factororder_site_so), Year = as.numeric(Year))
 
 # 2000 draws, 1945-2011 model preds. grey ribbon shows median start to median end, blue and pink ribbons show uncertainty for start and end. Used coldest and warmest source MAT for contrast. Vertical black lines show range of flowering observations in data.
-ggplot() +
+doy_orch <- ggplot() +
   geom_line(data = phenf_orchplot, aes(x = Year, y = DoY, group = Year)) +
   geom_ribbon(data = doy_annual_pp_sum, aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
   scale_fill_discrete_c4a_div(palette = "icefire") +
@@ -354,12 +362,28 @@ ggplot() +
   geom_ribbon(data = widedoypporchsum, aes(x = Year, ymin = DoY.begin, ymax = DoY.end), alpha = 0.5) +
   theme_bw() +
   xlab("Year") +
-  ylab("") +
+  ylab("Date") +
   facet_grid(Site ~ MAT_label + Sex) +
-  theme(legend.position = "bottom") +
   scale_y_continuous(
-    breaks = seq(1, 365, by = 15),  # Breaks every 15 days
-    labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "15 days"), "%b %d"))
+    breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
+    labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
+  theme(
+    axis.text.y = element_text(size = 7),
+    strip.text.y = element_text(size = 8),
+    legend.position = "bottom"
+  )
+
+gdd_orch + doy_orch +
+  plot_layout(widths = c(1,2)) +
+  plot_annotation(tag_levels = 'A')
+ggsave("../flowering-cline/figures/orchpred.png", width = 9, height = 6.5)
+
+
+### For Both Outputs
+
+
+
+
 
 # predictions ####
 
