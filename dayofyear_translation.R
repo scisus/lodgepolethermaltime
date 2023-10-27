@@ -159,7 +159,7 @@ saveRDS(doy_normal, 'objects/doy_normal.rds')
 
 # year to year variation ####
 
-## posterior prediction, 3000 draws, avg year, clone, tree. 1945-2011 ####
+## posterior prediction, 2000 draws, avg year, clone, tree. 1945-2011. See comments on fpred_orch generation in predict.R####
 
 # this takes a lot of memory to run ~50gb at least. and it's not quick.
 doy_annual_pp <- map_dfr(split(dailyforc_oo, f = list(dailyforc_oo$index), drop = TRUE),
@@ -179,40 +179,6 @@ doy_annual_pp_sum <- doy_annual_pp %>%
   ungroup() %>%
   mutate(Site = forcats::fct_relevel(Site, factororder_site_so))
 doy_annual_pp_sum$MAT_label <- paste("MAT:", doy_annual_pp_sum$MAT)
-saveRDS(doy_annual_pp_sum, "objects/doy_annual_pp_sum.rds")
-
-widedoypporchsum <- doy_annual_pp_sum %>%
-  tidyr::pivot_wider(
-    id_cols = c(MAT, Year, Site, Sex),
-    names_from = event,
-    values_from = c(DoY, .lower, .upper),
-    names_sep = "."
-  )
-widedoypporchsum$MAT_label <- paste("MAT:", widedoypporchsum$MAT)
-
-phenf_orchplot <- readRDS("objects/phenf.rds") %>%
-  filter(Event_Obs %in% c(2,3)) %>%
-  select(-MAT) %>%
-  mutate(Site = forcats::fct_relevel(Site, factororder_site_so), Year = as.numeric(Year))
-
-ggplot() +
-  geom_line(data = phenf_orchplot, aes(x = Year, y = DoY, group = Year)) +
-  geom_ribbon(data = doy_annual_pp_sum, aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
-  scale_fill_discrete_c4a_div(palette = "icefire") +
-  scale_colour_discrete_c4a_div(palette = "icefire") +
-  labs(fill = "95% HDPI", colour = "95% HDPI") +
-  geom_ribbon(data = widedoypporchsum, aes(x = Year, ymin = DoY.begin, ymax = DoY.end), alpha = 0.5) +
-  theme_bw() +
-  xlab("Year") +
-  ylab("") +
-  facet_grid(Site ~ MAT_label + Sex) +
-  theme(legend.position = "bottom") +
-  scale_y_continuous(
-    breaks = seq(1, 365, by = 15),  # Breaks every 15 days
-    labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "15 days"), "%b %d"))
-
-# 2000 draws, 1945-2011 model preds. grey ribbon shows median start to median end, blue and pink ribbons show uncertainty for start and end. Used coldest and warmest source MAT for contrast. Vertical black lines show range of flowering observations in data.
-
 
 ## posterior expectation, retrodictions ####
 # 2000 draws per year 1945-2011 per site

@@ -298,50 +298,68 @@ ggplot(yearr, aes(y=level, x = .value, colour = Sex)) +
 ggsave("plots/year_offsets.pdf", width = 6, height = 5)
 
 # retrodictions ####
-# plot simulations of GDD flowering event with alldat and allsim from `modelparameters.R`
-# alldat <- readRDS("objects/alldat.rds")
-# allsim <- readRDS("objects/allsim.rds") #2.4GB
-# ggplot(alldat, aes(x = sum_forcing, y = "observations" , colour = Sex)) +
-#   stat_dotsinterval( .width = c(0.5, 0.89), point_interval = median_qi) +
-#   stat_slab(data = allsim,
-#             aes(x = .prediction, y = prediction_type, group=.draw),
-#             .width = c(0.5, 0.89), point_interval = median_hdci,
-#             slab_color = "gray65", alpha = 1/10, fill = NA) +
-#   stat_pointinterval(data = allsim, aes(x = .prediction, y = prediction_type),
-#                      .width = c(0.5, 0.89), point_interval = median_hdci ) +
-#   stat_slab(data = smallmeans, aes(x = .value, y = "population mean"),
-#             .width = c(0.5, 0.89), point_interval = median_hdci,
-#             slab_color = "gray65", fill = NA) +
-#   stat_pointinterval(data = smallmeans, aes(x = .value, y = "population mean"),
-#                      .width = c(0.5, 0.89), point_interval = median_hdci ) +
-#  # theme_bw(base_size = 18) +
-#   theme_bw() +
-#   facet_grid(event ~ Sex) +
-#   labs(title = "Modeled and observed flowering events", caption = "200 samples from the posterior except 30 for fully crossed predictions") +
-#   xlab("GDD") +
-#   ylab("") +
-#   scale_colour_viridis_d() +
-#   theme(legend.position = "none")
 
-## day of year ####
-# specific_doy_preds <- readRDS("objects/specific_doy_preds.rds")
-# specific_median <- specific_doy_preds %>%
-#   group_by(prediction_type, .draw) %>%
-#   median_hdci(.prediction)
-# ggplot(filter(specific_doy_preds, prediction_type == "retrodiction - uncensored"), aes(x = .prediction, y = newdoycol, colour = Site, group = Year)) +
-#   geom_point(pch = 1) +
-#   facet_grid(event ~ Sex)
-#
-# ## day_of_year_lines ####
-# # time series line plot with begin and end faceted by site with general_doy_preds_med_siteyearsex from `retrodictandpredict.R`
-# general_doy_preds_med_siteyearsex <- readRDS("objects/general_doy_preds_med_siteyearsex.rds")
-# ggplot(general_doy_preds_med_siteyearsex, aes(x=Year, y = newdoycol, linetype = Sex, colour = event)) +
-#   #geom_point() +
-#   geom_line() +
-#   scale_colour_viridis_d() +
-#   facet_wrap("Site") +
-#   theme(legend.position = "top")
-# ggsave("plots/day_of_year_lines.pdf", width = 6, height = 5)
+## orchard specific retrodictions ####
+### GDD ##########
+# using 95% HDCI, median posterior prediction for each site for the full range of provenances (MATs) using an average year, clone, and tree (i.e. using estimated gaussian prior to generate those random effects), but using site specific effects estimated from the model (delta offset). Posterior predictions contain full range of uncertainty because I want the orchard managers to know what to actually expect
+
+fpred_orch_summary <- readRDS("objects/fpred_orch_summary.rds")
+
+widefpredorchsum <- fpred_orch_summary %>%
+  tidyr::pivot_wider(
+    id_cols = c(MAT, Year, Tree, Clone, Site, Sex),
+    names_from = event,
+    values_from = c(.prediction, .lower, .upper),
+    names_sep = "."
+  )
+
+ggplot(fpred_orch_summary) +
+  # colored ribbons for start and end
+  geom_ribbon(aes(x = MAT, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  # solid ribbon for median flowering period
+  geom_ribbon(data = widefpredorchsum, aes(x = MAT, ymin = .prediction.begin, ymax = .prediction.end), alpha = 0.7) +
+  # outlines of start and end
+  #geom_ribbon(data=fpred_orch_summary, aes(x = MAT, ymin = .lower, ymax = .upper, colour = event), fill = "transparent", size = .5, linetype = 3) +
+  facet_grid(Site ~ Sex) +
+  scale_fill_discrete_c4a_div(palette = "icefire") +
+  scale_colour_discrete_c4a_div(palette = "icefire") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+### DoY #####
+
+doy_annual_pp_sum <- readRDS("objects/doy_annual_pp_sum.rds")
+
+widedoypporchsum <- doy_annual_pp_sum %>%
+  tidyr::pivot_wider(
+    id_cols = c(MAT, Year, Site, Sex),
+    names_from = event,
+    values_from = c(DoY, .lower, .upper),
+    names_sep = "."
+  )
+widedoypporchsum$MAT_label <- paste("MAT:", widedoypporchsum$MAT)
+
+phenf_orchplot <- readRDS("objects/phenf.rds") %>%
+  filter(Event_Obs %in% c(2,3)) %>%
+  select(-MAT) %>%
+  mutate(Site = forcats::fct_relevel(Site, factororder_site_so), Year = as.numeric(Year))
+
+# 2000 draws, 1945-2011 model preds. grey ribbon shows median start to median end, blue and pink ribbons show uncertainty for start and end. Used coldest and warmest source MAT for contrast. Vertical black lines show range of flowering observations in data.
+ggplot() +
+  geom_line(data = phenf_orchplot, aes(x = Year, y = DoY, group = Year)) +
+  geom_ribbon(data = doy_annual_pp_sum, aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  scale_fill_discrete_c4a_div(palette = "icefire") +
+  scale_colour_discrete_c4a_div(palette = "icefire") +
+  labs(fill = "95% HDPI", colour = "95% HDPI") +
+  geom_ribbon(data = widedoypporchsum, aes(x = Year, ymin = DoY.begin, ymax = DoY.end), alpha = 0.5) +
+  theme_bw() +
+  xlab("Year") +
+  ylab("") +
+  facet_grid(Site ~ MAT_label + Sex) +
+  theme(legend.position = "bottom") +
+  scale_y_continuous(
+    breaks = seq(1, 365, by = 15),  # Breaks every 15 days
+    labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "15 days"), "%b %d"))
 
 # predictions ####
 

@@ -35,7 +35,8 @@ neworchdat <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
                          Sex = c("FEMALE", "MALE")) %>%
   split(list(.$event, .$Sex))
 
-# posterior prediction for each site for the full range of provenances using an average year, clone, and tree (using estimated gaussian prior to generate random effects). 2000 draws #######
+# posterior prediction #########
+# for each site for the full range of provenances using an average year, clone, and tree (using estimated gaussian prior to generate random effects). 2000 draws, 95% HDPI #######
 
 fpred_orch <- purrr::map2(neworchdat, modells,
                           .f = function(x,y) {add_predicted_draws(newdata = x,
@@ -47,35 +48,12 @@ fpred_orch <- purrr::map2(neworchdat, modells,
   bind_rows()
 saveRDS(fpred_orch, file = "objects/fpred_orch.rds")
 
-# 95% HDCI, median posterior prediction for each site for the full range of provenances using an average year, clone, and tree (using estimated gaussian prior to generate random effects)
 fpred_orch_summary <- fpred_orch %>%
   group_by(MAT, Year, Tree, Clone, Site, event, Sex) %>%
   median_hdci(.prediction) %>%
   mutate(Site = forcats::fct_relevel(Site, factororder_site_so))
 saveRDS(fpred_orch_summary, "objects/fpred_orch_summary.rds")
 
-widefpredorchsum <- fpred_orch_summary %>%
-  tidyr::pivot_wider(
-  id_cols = c(MAT, Year, Tree, Clone, Site, Sex),
-  names_from = event,
-  values_from = c(.prediction, .lower, .upper),
-  names_sep = "."
-)
-
-
-ggplot(fpred_orch_summary) +
-  # colored ribbons for start and end
-  geom_ribbon(aes(x = MAT, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
-  # solid ribbon for median flowering period
-  geom_ribbon(data = widefpredorchsum, aes(x = MAT, ymin = .prediction.begin, ymax = .prediction.end), alpha = 0.7) +
-  # outlines of start and end
-  #geom_ribbon(data=fpred_orch_summary, aes(x = MAT, ymin = .lower, ymax = .upper, colour = event), fill = "transparent", size = .5, linetype = 3) +
-  facet_grid(Site ~ Sex) +
-  scale_fill_discrete_c4a_div(palette = "icefire") +
-  scale_colour_discrete_c4a_div(palette = "icefire") +
-  theme_bw() +
-  theme(legend.position = "bottom")
-# GREY SHOWS MEDIAN START TO MEDIAN END. 3000 draws
 
 
 # predict the global grand means: average predicted outcome ignoring group-specific deviations in intercept or slope
