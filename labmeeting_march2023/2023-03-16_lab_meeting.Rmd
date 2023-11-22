@@ -31,7 +31,7 @@ library(ggbeeswarm)
 library(ggalt)
 library(viridis)
 
-factororder <- readRDS("objects/factororder.rds")
+factororder <- readRDS("../objects/factororder.rds")
 ```
 ## Lodgepole pine flowering biology
 

@@ -14,7 +14,7 @@ modells <- readRDS("objects/modells.rds")
 alldatls <- readRDS("objects/datlist.rds")
 sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv") %>% filter(id == "site")
 
-n <- 2000 # when downsampling required
+n <- 3000 # when downsampling required
 
 siteMAT <- sitedat %>%
   filter(id == "site") %>%
@@ -24,13 +24,13 @@ siteMAT <- sitedat %>%
 # orchards ############
 # Make orchard specific predictions using full posterior
 
-
+shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Kalamalka") # let kalamalka be stand in for tolko, prt, and vernon
 neworchdat <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
-                                    to = range(alldatls$fbdat$MAT)[2], length.out = 7),
+                                    to = range(alldatls$fbdat$MAT)[2], length.out = 2),
                          Year = "newyear",
                          Tree = "newtree",
                          Clone = "newclone",
-                         Site = unique(alldatls$fbdat$Site),
+                         Site = shortsites,
                          event = c("begin", "end"),
                          Sex = c("FEMALE", "MALE")) %>%
   split(list(.$event, .$Sex))
@@ -51,7 +51,7 @@ saveRDS(fpred_orch, file = "objects/fpred_orch.rds")
 fpred_orch_summary <- fpred_orch %>%
   group_by(MAT, Year, Tree, Clone, Site, event, Sex) %>%
   median_hdci(.prediction) %>%
-  mutate(Site = forcats::fct_relevel(Site, factororder_site_so))
+  mutate(Site = forcats::fct_relevel(Site, shortsites))
 saveRDS(fpred_orch_summary, "objects/fpred_orch_summary.rds")
 
 

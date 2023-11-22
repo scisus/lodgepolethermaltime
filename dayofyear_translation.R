@@ -10,13 +10,13 @@ library(tidyr)
 
 source('phenology_functions.R')
 focalsites <- c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")
-
+shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Kalamalka")
 # daily forcing data
 
 dailyforc <- read.csv("data/dailyforc_1945_2012.csv") %>% # daily "real" forcing
   group_by(Site, Year) %>%
   mutate(index = cur_group_id()) %>% ungroup()
-dailyforc_oo <- dailyforc %>% filter(!Site %in% c("Border", "Trench")) #orchard only
+dailyforc_ss <- dailyforc %>% filter(Site %in% shortsites) #orchard only, excluding vernon, tolko, prt and letting kal stand in for them
 typical_year_forc <- read.csv("data/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
   mutate(Date = as.Date(Date_scale)) %>% select(-Date_scale)
 normal_forc <- read.csv("data/normalforc_1901-2100.csv") %>% # averaged over 30 year periods
@@ -28,7 +28,6 @@ fepred_allsites <- readRDS("objects/fepred_allsites.rds") ## expectation for tre
 fpred_orch <- readRDS("objects/fpred_orch.rds") %>% #posterior prediction for each site for the full range of provenances using an average year, clone, and tree (using estimated gaussian prior to generate random effects). 3000 draws
   ungroup() %>%
   select(-.row, -.draw, -.chain, -.iteration)
-fpred_orch_matsub <- filter(fpred_orch, MAT %in% c(min(fpred_orch$MAT), max(fpred_orch$MAT)))
 factororder <- readRDS("objects/factororder.rds")
 sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv")
 
@@ -160,25 +159,22 @@ saveRDS(doy_normal, 'objects/doy_normal.rds')
 # year to year variation ####
 
 ## posterior prediction, 2000 draws, avg year, clone, tree. 1945-2011. See comments on fpred_orch generation in predict.R####
-
-# this takes a lot of memory to run ~50gb at least. and it's not quick.
-doy_annual_pp <- map_dfr(split(dailyforc_oo, f = list(dailyforc_oo$index), drop = TRUE),
+doy_annual_pp <- map_dfr(split(dailyforc_ss, f = list(dailyforc_ss$index), drop = TRUE),
                          find_day_of_forcing, .id = "index",
-                         bdf = fpred_orch_matsub %>% ungroup() %>% select(-Year), aforce = "sum_forcing", bforce = ".prediction") %>%
+                         bdf = fpred_orch %>% ungroup() %>% select(-Year), aforce = "sum_forcing", bforce = ".prediction") %>%
   rename(DoY = newdoycol) %>%
   mutate(index = as.numeric(index)) %>%
   ungroup() %>%
   select(-Tree, -Clone) %>%
-  left_join(select(dailyforc_oo, index, Site, Year) %>% distinct())
+  left_join(select(dailyforc_ss, index, Site, Year) %>% distinct())
 
-factororder <- readRDS("objects/factororder.rds")
-factororder_site_so <- factororder$site[-c(1,2)]
 doy_annual_pp_sum <- doy_annual_pp %>%
   group_by(MAT, Site, event, Sex, Year) %>%
   median_hdci(DoY) %>%
   ungroup() %>%
-  mutate(Site = forcats::fct_relevel(Site, factororder_site_so))
+  mutate(Site = forcats::fct_relevel(Site, shortsites))
 doy_annual_pp_sum$MAT_label <- paste("MAT:", doy_annual_pp_sum$MAT)
+saveRDS(doy_annual_pp_sum, "objects/doy_annual_pp_sum.rds")
 
 ## posterior expectation, retrodictions ####
 # 2000 draws per year 1945-2011 per site

@@ -18,6 +18,7 @@ library(cols4all)
 theme_set(theme_dark())
 factororder <- readRDS("objects/factororder.rds")
 factororder_site_so <- factororder$site[-c(1,2)]
+shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Kalamalka")
 
 # forcing and climate ##########
 typical_year_forc <- read.csv("data/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
@@ -305,19 +306,20 @@ ggsave("plots/year_offsets.pdf", width = 6, height = 5)
 
 fpred_orch_summary <- readRDS("objects/fpred_orch_summary.rds")
 
-widefpredorchsum <- fpred_orch_summary %>%
-  tidyr::pivot_wider(
-    id_cols = c(MAT, Year, Tree, Clone, Site, Sex),
-    names_from = event,
-    values_from = c(.prediction, .lower, .upper),
-    names_sep = "."
-  )
+# widefpredorchsum <- fpred_orch_summary %>%
+#   tidyr::pivot_wider(
+#     id_cols = c(MAT, Year, Tree, Clone, Site, Sex),
+#     names_from = event,
+#     values_from = c(.prediction, .lower, .upper),
+#     names_sep = "."
+#   )
 
-gdd_orch <- ggplot(fpred_orch_summary) +
+ggplot(fpred_orch_summary) +
   # colored ribbons for start and end
   geom_ribbon(aes(x = MAT, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  geom_line(aes(x = MAT, y = .prediction, colour = event)) +
   # solid ribbon for median flowering period
-  geom_ribbon(data = widefpredorchsum, aes(x = MAT, ymin = .prediction.begin, ymax = .prediction.end), alpha = 0.7) +
+  #geom_ribbon(data = widefpredorchsum, aes(x = MAT, ymin = .prediction.begin, ymax = .prediction.end), alpha = 0.7) +
   # outlines of start and end
   #geom_ribbon(data=fpred_orch_summary, aes(x = MAT, ymin = .lower, ymax = .upper, colour = event), fill = "transparent", size = .5, linetype = 3) +
   facet_grid(Site ~ Sex) +
@@ -330,40 +332,43 @@ gdd_orch <- ggplot(fpred_orch_summary) +
     axis.text.y = element_text(size = 7),
     strip.text.y = element_text(size = 8),
     legend.position = "bottom"
-  ) +
-  labs(fill = "95% HDPI", colour = "95% HDPI")
+  )
+  #labs(fill = "95% HDPI", colour = "95% HDPI")
+ggsave("../flowering-cline/figures/orchpred_gdd.png", width = 3, height = 4)
 
 
 ### DoY #####
 
 doy_annual_pp_sum <- readRDS("objects/doy_annual_pp_sum.rds")
+doy_annual_pp_sum$MAT_label <- paste("MAT:", doy_annual_pp_sum$MAT)
 
-widedoypporchsum <- doy_annual_pp_sum %>%
-  tidyr::pivot_wider(
-    id_cols = c(MAT, Year, Site, Sex),
-    names_from = event,
-    values_from = c(DoY, .lower, .upper),
-    names_sep = "."
-  )
-widedoypporchsum$MAT_label <- paste("MAT:", widedoypporchsum$MAT)
+# widedoypporchsum <- doy_annual_pp_sum %>%
+#   tidyr::pivot_wider(
+#     id_cols = c(MAT, Year, Site, Sex),
+#     names_from = event,
+#     values_from = c(DoY, .lower, .upper),
+#     names_sep = "."
+#   )
+# widedoypporchsum$MAT_label <- paste("MAT:", widedoypporchsum$MAT)
 
 phenf_orchplot <- readRDS("objects/phenf.rds") %>%
-  filter(Event_Obs %in% c(2,3)) %>%
+  filter(Event_Obs %in% c(2,3), Site %in% shortsites) %>%
   select(-MAT) %>%
-  mutate(Site = forcats::fct_relevel(Site, factororder_site_so), Year = as.numeric(Year))
+  mutate(Site = forcats::fct_relevel(Site, shortsites), Year = as.numeric(Year))
 
 # 2000 draws, 1945-2011 model preds. grey ribbon shows median start to median end, blue and pink ribbons show uncertainty for start and end. Used coldest and warmest source MAT for contrast. Vertical black lines show range of flowering observations in data.
-doy_orch <- ggplot() +
-  geom_line(data = phenf_orchplot, aes(x = Year, y = DoY, group = Year)) +
+ggplot() +
+  geom_line(data = phenf_orchplot, aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
   geom_ribbon(data = doy_annual_pp_sum, aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  geom_line(data = doy_annual_pp_sum, aes(x = Year, y = DoY, colour = event)) +
   scale_fill_discrete_c4a_div(palette = "icefire") +
   scale_colour_discrete_c4a_div(palette = "icefire") +
-  labs(fill = "95% HDPI", colour = "95% HDPI") +
-  geom_ribbon(data = widedoypporchsum, aes(x = Year, ymin = DoY.begin, ymax = DoY.end), alpha = 0.5) +
+  #labs(fill = "95% HDPI", colour = "95% HDPI") +
+  #geom_ribbon(data = widedoypporchsum, aes(x = Year, ymin = DoY.begin, ymax = DoY.end), alpha = 0.5) +
   theme_bw() +
   xlab("Year") +
   ylab("Date") +
-  facet_grid(Site ~ MAT_label + Sex) +
+  facet_grid(Site ~ Sex + MAT_label) +
   scale_y_continuous(
     breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
     labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
@@ -372,11 +377,12 @@ doy_orch <- ggplot() +
     strip.text.y = element_text(size = 8),
     legend.position = "bottom"
   )
+ggsave("../flowering-cline/figures/orchpred_doy.png", width = 8, height = 6)
 
 gdd_orch + doy_orch +
   plot_layout(widths = c(1,2)) +
   plot_annotation(tag_levels = 'A')
-ggsave("../flowering-cline/figures/orchpred.png", width = 9, height = 6.5)
+ggsave("../flowering-cline/figures/orchpred.png", width = 8, height = 5.5)
 
 
 ### For Both Outputs
