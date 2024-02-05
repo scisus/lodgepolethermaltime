@@ -1,4 +1,5 @@
 # Compare clone effect to source climate
+# not actually very interesting since clone SPU isnt the actual provenance of the clone
 
 
 library(dplyr)

@@ -1,4 +1,4 @@
-# Provenance model: clone offsets from thermal time model as a function of provenance
+# Provenance model: genotype offsets from thermal time model as a function of provenance
 
 library(dplyr)
 library(brms)
@@ -6,30 +6,30 @@ library(report)
 
 # get data
 # response
-clone_offsets <- readRDS("objects/cloner.rds") %>%
-  mutate(Clone = as.character(level))
+genotype_offsets <- readRDS("objects/genotyper.rds") %>%
+  mutate(Genotype = as.character(level))
 
 # predictors
 prov_climate <- read.csv("../lodgepole_climate/data/climateBC/climatebc_parent_locs_Normal_1961_1990Y_v730.csv") %>%
-  rename(Clone = id1, SPZ = id2)  %>%
-  select(Clone, SPZ, MAT) %>%
-  mutate(Clone = as.character(Clone))
+  rename(Genotype = id1, SPZ = id2)  %>%
+  select(Genotype, SPZ, MAT) %>%
+  mutate(Genotype = as.character(Genotype))
 
 
 # munge data
-dat <- clone_offsets %>%
-  # summarize clone info
-  group_by(model, Sex, event, Clone) %>%
+dat <- genotype_offsets %>%
+  # summarize genotype info
+  group_by(model, Sex, event, Genotype) %>%
   summarise(meanoffset = mean(.value), sdoffset = sd(.value)) %>%
   # combine with parent info
   left_join(prov_climate)
-saveRDS(dat, "objects/clonedat.rds")
+saveRDS(dat, "objects/genotypedat.rds")
 
-fbclone <- filter(dat, Sex == "FEMALE", event == "begin")
-feclone <- filter(dat, Sex == "FEMALE", event == "end")
+fbgenotype <- filter(dat, Sex == "FEMALE", event == "begin")
+fegenotype <- filter(dat, Sex == "FEMALE", event == "end")
 
-mbclone <- filter(dat, Sex == "MALE", event == "begin")
-meclone <- filter(dat, Sex == "MALE", event == "end")
+mbgenotype <- filter(dat, Sex == "MALE", event == "begin")
+megenotype <- filter(dat, Sex == "MALE", event == "end")
 
 bformse <- brmsformula(meanoffset | se(sdoffset, sigma = TRUE) ~ MAT)
 
@@ -41,9 +41,9 @@ ncores = 6
 nchains = 6
 niter = 3000
 
-fbfitclone <- brm(bformse, data = fbclone,
-            save_model = "female_begin_clone.stan",
-            file = "female_begin_clone",
+fbfitgenotype <- brm(bformse, data = fbgenotype,
+            save_model = "female_begin_genotype.stan",
+            file = "female_begin_genotype",
             prior = bprior,
             iter = niter,
             cores = ncores,
@@ -52,9 +52,9 @@ fbfitclone <- brm(bformse, data = fbclone,
             save_pars = save_pars(all = TRUE),
             file_refit = "on_change")
 
-mbfitclone <- brm(bformse, data = mbclone,
-                    save_model = "male_begin_clone.stan",
-                    file = "male_begin_clone",
+mbfitgenotype <- brm(bformse, data = mbgenotype,
+                    save_model = "male_begin_genotype.stan",
+                    file = "male_begin_genotype",
                     prior = bprior,
                     #inits = initpars,
                     iter = niter,
@@ -64,9 +64,9 @@ mbfitclone <- brm(bformse, data = mbclone,
                     save_pars = save_pars(all = TRUE),
                     file_refit = "on_change")
 
-fefitclone <- brm(bformse, data = feclone,
-                    save_model = "female_end_clone.stan",
-                    file = "female_end_clone",
+fefitgenotype <- brm(bformse, data = fegenotype,
+                    save_model = "female_end_genotype.stan",
+                    file = "female_end_genotype",
                     prior = bprior,
                     #inits = initpars,
                     iter = niter,
@@ -76,9 +76,9 @@ fefitclone <- brm(bformse, data = feclone,
                     save_pars = save_pars(all = TRUE),
                     file_refit = "on_change")
 
-mefitclone <- brm(bformse, data = meclone,
-                    save_model = "male_end_clone.stan",
-                    file = "male_end_clone",
+mefitgenotype <- brm(bformse, data = megenotype,
+                    save_model = "male_end_genotype.stan",
+                    file = "male_end_genotype",
                     prior = bprior,
                     #inits = initpars,
                     iter = niter,
