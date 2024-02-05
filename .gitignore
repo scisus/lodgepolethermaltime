@@ -34,6 +34,8 @@ vignettes/*.pdf
 *.utf8.md
 *.knit.md
 
+# images
+*.png
 
 #other stuff
 .sync/*
