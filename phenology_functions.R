@@ -50,7 +50,7 @@ prepare_data <- function(phendat, clim, spu) {
   phenf <- phen %>%
     dplyr::left_join(clim) %>%
     dplyr::left_join(spu) %>%
-    dplyr::mutate(Year = as.character(Year), Clone = as.character(Clone)) %>%
+    dplyr::mutate(Year = as.character(Year), Genotype = as.character(Genotype)) %>%
     dplyr::rename(Provenance = SPU_Name) %>%
     distinct() %>%
 
@@ -82,10 +82,10 @@ filter_sex_event <- function(sex, event, dat = phenf) {
   return(dat_prepped)
 }
 
-# # fit an intercepts-only model to phenology data in brms. model accounts for both interval and end censoring and includes the effects of Site, Provenance, Clone, and Year.
+# # fit an intercepts-only model to phenology data in brms. model accounts for both interval and end censoring and includes the effects of Site, Provenance, Genotype, and Year.
 # fit_model <- function(dat, init_sigma = lapply(1:4, function(id) list(sigma = 30 ))) {
 #
-#   fit <- brm(sum_forcing | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = dat,
+#   fit <- brm(sum_forcing | cens(censored, upper) ~ 0 + Intercept + (1|Site) + (1|Provenance) + (1|Genotype) + (1|Year), data = dat,
 #              prior = c(prior("normal(0,20)", class = "b"),
 #                        prior("normal(0,10)", class = "sigma"),
 #                        prior("normal(0,5)", class = "sd")),
@@ -139,7 +139,7 @@ gather_offset_draws <- function(mod) {
   return(draws)
 }
 
-# simulate new data from the model for n_lct new levels of each factor of the model. n_lct is a numeric vector of length 3 c(number of new sites/provenances/years, number of clones per provenance, number of trees per clone) Draws for factor effects are from N(0, sigma_cluster). Using nsamples draws from the posterior.
+# simulate new data from the model for n_lct new levels of each factor of the model. n_lct is a numeric vector of length 3 c(number of new sites/provenances/years, number of genotypes per provenance, number of trees per genotype) Draws for factor effects are from N(0, sigma_cluster). Using nsamples draws from the posterior.
 
 simulate_from_model <- function(data, model, n_lct = c(5,10,2), nsamples = nsamp, seed = seed, cores = 6) {
 
@@ -165,9 +165,9 @@ simulate_from_model <- function(data, model, n_lct = c(5,10,2), nsamples = nsamp
 
   # simulate data for fully crossed version of real dataset. This is 82,000+ observations and my computer can't handle that unless I use *very* few posterior samples
 
-  crossdat <- data %>% tidyr::complete(Sex, event, Year, Site, tidyr::nesting(Clone, Tree)) %>%
+  crossdat <- data %>% tidyr::complete(Sex, event, Year, Site, tidyr::nesting(Genotype, Tree)) %>%
     #tidyr::complete(Year, nesting(Site, Tree)) %>%
-    select(Year, Site, Tree, Clone) %>%
+    select(Year, Site, Tree, Genotype) %>%
     distinct()
 
   ypred_fullcross <- tidybayes::add_predicted_draws(newdata = crossdat, object = model, ndraws = 30, seed = seed, cores = cores, value = ".prediction") %>%
@@ -176,29 +176,29 @@ simulate_from_model <- function(data, model, n_lct = c(5,10,2), nsamples = nsamp
   # simulate data from new levels (out-of-sample predictions). The newdata simulation code took an embarrassingly long time to figure out
   # nlevels <- n_lct[1] # how many sites, provenances, and years
   # lv <- as.character(1:nlevels)
-  # nc <- n_lct[2] # clones per prov
-  # nt <- n_lct[3] # trees per clone
+  # nc <- n_lct[2] # genotypes per prov
+  # nt <- n_lct[3] # trees per genotype
   #
   # Year <- data.frame(Year = lv)
   # newdata <- data.frame(Site = rep(lv, nc*nt),
   #                       Provenance = rep(lv, nc*nt),
-  #                       Clone = as.character(rep(1:(nlevels*nc), nt))) %>%
-  #   tidyr::complete(Site, tidyr::nesting(Provenance, Clone)) %>%
-  #   arrange(Site, Provenance, Clone) %>%
+  #                       Genotype = as.character(rep(1:(nlevels*nc), nt))) %>%
+  #   tidyr::complete(Site, tidyr::nesting(Provenance, Genotype)) %>%
+  #   arrange(Site, Provenance, Genotype) %>%
   #   mutate(Tree = as.character(1:n())) %>%
   #   merge(Year) %>%
   #   complete(Site, Provenance, Year)
 
-  # number of c(Sites&Years, Clones, Trees per clone)
+  # number of c(Sites&Years, Genotypes, Trees per genotype)
   nlevels <- n_lct[1] # how many sites and years
   lv <- as.character(1:nlevels)
-  nc <- n_lct[2] # how many clones
-  nt <- n_lct[3] # trees per clone
+  nc <- n_lct[2] # how many genotypes
+  nt <- n_lct[3] # trees per genotype
 
   newdata <- data.frame(Site = rep(lv, nc*nt),
                         Year = rep(lv, nc*nt),
-                        Clone = as.character(rep(1:(nlevels*nc), nt))) %>%
-    tidyr::complete(Site, Year, Clone) %>%
+                        Genotype = as.character(rep(1:(nlevels*nc), nt))) %>%
+    tidyr::complete(Site, Year, Genotype) %>%
     mutate(Tree = as.character(1:n()))
 
   ypred_newlevels <- tidybayes::add_predicted_draws(newdata = newdata, object = model, allow_new_levels = TRUE, sample_new_levels = "gaussian", ndraws = nsamples, seed = seed, cores = cores, value = ".prediction") %>%

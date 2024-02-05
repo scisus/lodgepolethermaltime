@@ -95,7 +95,7 @@ fretro <- purrr::map2(alldatls, modells, function(x,y) {add_predicted_draws(newd
   bind_rows()
 
 fretro_summary <- fretro %>%
-  group_by(Index, Year, Sex, Site, Orchard, Clone, Tree, event, sum_forcing, censored) %>%
+  group_by(Index, Year, Sex, Site, Orchard, Genotype, Tree, event, sum_forcing, censored) %>%
   median_hdci(.prediction)
 saveRDS(fretro_summary, "objects/fretro_summary.rds")
 

@@ -25,7 +25,7 @@ normal_forc <- read.csv("data/normalforc_1901-2100.csv") %>% # averaged over 30 
 
 fepred <- readRDS("objects/fepred.rds") ## expectation for observed trees (sources)
 fepred_allsites <- readRDS("objects/fepred_allsites.rds") ## expectation for trees sourced from all sites
-fpred_orch <- readRDS("objects/fpred_orch.rds") %>% #posterior prediction for each site for the full range of provenances using an average year, clone, and tree (using estimated gaussian prior to generate random effects). 3000 draws
+fpred_orch <- readRDS("objects/fpred_orch.rds") %>% #posterior prediction for each site for the full range of provenances using an average year, genotype, and tree (using estimated gaussian prior to generate random effects). 3000 draws
   ungroup() %>%
   select(-.row, -.draw, -.chain, -.iteration)
 factororder <- readRDS("objects/factororder.rds")
@@ -158,14 +158,14 @@ saveRDS(doy_normal, 'objects/doy_normal.rds')
 
 # year to year variation ####
 
-## posterior prediction, 2000 draws, avg year, clone, tree. 1945-2011. See comments on fpred_orch generation in predict.R####
+## posterior prediction, 2000 draws, avg year, genotype, tree. 1945-2011. See comments on fpred_orch generation in predict.R####
 doy_annual_pp <- map_dfr(split(dailyforc_ss, f = list(dailyforc_ss$index), drop = TRUE),
                          find_day_of_forcing, .id = "index",
                          bdf = fpred_orch %>% ungroup() %>% select(-Year), aforce = "sum_forcing", bforce = ".prediction") %>%
   rename(DoY = newdoycol) %>%
   mutate(index = as.numeric(index)) %>%
   ungroup() %>%
-  select(-Tree, -Clone) %>%
+  select(-Tree, -Genotype) %>%
   left_join(select(dailyforc_ss, index, Site, Year) %>% distinct())
 
 doy_annual_pp_sum <- doy_annual_pp %>%

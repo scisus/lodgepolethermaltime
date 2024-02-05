@@ -75,7 +75,7 @@ Wind pollinated
 
 
 ## Data
-- 748 clones of 259 genotypes
+- 748 trees from 259 genotypes
 - grown in 7 seed orchards across BC
 - flowering state recorded every few days over a one day to several week period
 - 15 total years of data collection
@@ -83,8 +83,8 @@ Wind pollinated
 Provenance
 
 - seeds and scions from 143 natural stands
-- grafted onto rootstock to create a clone bank
-- clone bank scions selected based on superior growth, form
+- grafted onto rootstock to create a genotype ("genotype") bank
+- genotype bank scions selected based on superior growth, form
 
 ## Map
 
@@ -113,7 +113,7 @@ Provenance
   - End (male) pollen shed
   - Begin (female) receptivity
   - End (female) receptivity
-- Account for variance due to site, year, genotype, and clone
+- Account for variance due to site, year, genotype, and genotype
 - Account for unbalanced and censored data
 
 ## Likelihood model
@@ -154,12 +154,12 @@ $$
 ## Modeling the mean
 
 $$
-\phi_i = \alpha + \beta MAT + \delta_{Site, i} + \delta_{Year, i} + \delta_{Clone, i} + \delta_{Ramet, i}
+\phi_i = \alpha + \beta MAT + \delta_{Site, i} + \delta_{Year, i} + \delta_{Genotype, i} + \delta_{Ramet, i}
 $$
 
 - $\alpha$: Overall mean forcing requirement
 - $\beta$: Provenance climate effect using MAT as covariate
-- $\delta$: Offsets from the overall mean based on site, year, clone, and ramet
+- $\delta$: Offsets from the overall mean based on site, year, genotype, and ramet
 
 ## Priors
 
@@ -197,7 +197,7 @@ ggplot(typical_year_forc, aes(x = Date, y = sum_forcing, color = Site)) +
 ```{r, echo = TRUE, eval=FALSE, size = "footnotesize"}
 # model formula
 bform <- brmsformula(sum_forcing | cens(censored, upper) ~ 
-                       MAT + (1|Site) + (1|Clone) + (1|Year) + (1|Tree))
+                       MAT + (1|Site) + (1|Genotype) + (1|Year) + (1|Tree))
 
 # model prior
 bprior <- c(prior("gamma(3.65, 0.01)", class = "Intercept"),

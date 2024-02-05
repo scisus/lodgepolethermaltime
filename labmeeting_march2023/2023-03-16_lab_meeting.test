@@ -31,11 +31,11 @@ $$
 Modeling the mean
 ========================================================
 $$
-\phi_i = \beta MAT + \alpha + \delta_{Site, i} + \delta_{Year, i} + \delta_{Clone, i} + \delta_{Ramet, i}
+\phi_i = \beta MAT + \alpha + \delta_{Site, i} + \delta_{Year, i} + \delta_{Genotype, i} + \delta_{Ramet, i}
 $$
 
 \begin{align}
-\bar\delta_{Clone, i} &\sim \mathrm{Normal}(\gamma_i,\sigma) \\
+\bar\delta_{Genotype, i} &\sim \mathrm{Normal}(\gamma_i,\sigma) \\
 \gamma_i &= \alpha + \beta * \mathrm{MAT_i} \\
 \sigma &= \sqrt{\epsilon^2\ + \tau_i^2} \\
 \epsilon &\sim \left|\mathrm{Normal}(0,15)\right| \\

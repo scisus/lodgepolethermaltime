@@ -2,17 +2,16 @@
 
 This analysis models the mean forcing accummulation required for lodgepole pine to shed pollen and receive pollen.
 
-- `conceptualanalysis.*` goes thru the first few steps of Betancourt's workflow, outlining the problem and determining what domain specific knowledge can be brought to bear on the priors.
-- `diagnositics.R` calculates model diagnostics like Rhat and ESS
+
+
 - `doy.R`
-- `phenology_functions.R` are helper functions for `thermaltimemodel.R`
-- `ppc.R`  
-- `retrodiction_prediction.R`
+  
+
 - `simulatefrommodel.R`
 - `*simulations*` simulate from model with known pars and then see if you can fit the model and recover pars.
 - `cloneeffectexplore.R` exploratory analysis of phenology & provenance vars - graphs of genotype effects vs. all clim vars
 - `provclimatecorr.R` pearson correlations of provenance effects and provenance climates [obsolete - only 6 provenances and not true provenances]
-- `cloneinvest.R` how many clones are from locations where multiple clones were sourced from?
+- `cloneinvest.R` how many genotypes are from locations where multiple genotypes were sourced from?
 
 Order of analysis is
 
@@ -24,24 +23,22 @@ Climate data is from `../processed/PNWNAmet_adjusted.csv` in the `lodgepole_clim
 
 Modular analysis scripts write out objects needed in other scripts or for graphs and tables in `objects` folder
 - `calc_forcing.R` calculate forcing and sum forcing for daily weather data
+- `model_dev/conceptualanalysis.*` goes thru the first few steps of Betancourt's workflow, outlining the problem and determining what domain specific knowledge can be brought to bear on the priors.
+- `phenology_functions.R` are helper functions for `thermaltimemodel.R`
+- `censoring.R` end vs interval censoring: what proportion of data is censored end vs. interval?
 - `thermaltimemodel.R` thermal time models of flowering events in stan
   - stan code in `[sex]_[event].stan`
   - model output in `[sex]_[event].rds`
-- `obsVSretro.R` compare observations to retrodictions
-- `censoring.R` end vs interval censoring: what proportion of data is censored end vs. interval?
 - `factororder.R` order factors for making good graphs
-- `modelparameters.R` extract parameter values from models
+- `diagnositics.R` calculates model diagnostics like Rhat and ESS
+- `obsVSretro.R` compare observations to retrodictions
+- `modelparameters.R` extract parameter values from thermal time model
 - `predict.R` predict thermal time for events from models 
 - `dayofyear_translation.R` translate predictions into day of year 
 - `floweringlength.R` length of flowering period
 - `overlap.R` calculate historical and future overlap of phenological periods [defunct]
 - `variation.R` variation in flowering period [defunct]
 
-- `provenancemodel.R` model genotype effect as function of genotype provenance climate
-- `provenancemodelanalysis.R` extracts and saves parameters from genotype provenance climate model 
-
-- `clinal_adjustment.R` adjust thermal time model predictions by results of the genotype effect ~ MAT model (provenance model)
-
-- `clineresults.Rmd` provides a short writeup of the cline results
+? genotypeinvest.R and matchgenotypeparent I think are trying to figure out which genotypes are associated with which breeding zone?
 
 `graphsandtables.R` contains code for graphs and tables. relies on objects in `objects` folder created by modular analysis scripts

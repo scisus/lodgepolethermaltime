@@ -302,13 +302,13 @@ ggsave("plots/year_offsets.pdf", width = 6, height = 5)
 
 ## orchard specific retrodictions ####
 ### GDD ##########
-# using 95% HDCI, median posterior prediction for each site for the full range of provenances (MATs) using an average year, clone, and tree (i.e. using estimated gaussian prior to generate those random effects), but using site specific effects estimated from the model (delta offset). Posterior predictions contain full range of uncertainty because I want the orchard managers to know what to actually expect
+# using 95% HDCI, median posterior prediction for each site for the full range of provenances (MATs) using an average year, Genotype, and tree (i.e. using estimated gaussian prior to generate those random effects), but using site specific effects estimated from the model (delta offset). Posterior predictions contain full range of uncertainty because I want the orchard managers to know what to actually expect
 
 fpred_orch_summary <- readRDS("objects/fpred_orch_summary.rds")
 
 # widefpredorchsum <- fpred_orch_summary %>%
 #   tidyr::pivot_wider(
-#     id_cols = c(MAT, Year, Tree, Clone, Site, Sex),
+#     id_cols = c(MAT, Year, Tree, Genotype, Site, Sex),
 #     names_from = event,
 #     values_from = c(.prediction, .lower, .upper),
 #     names_sep = "."
@@ -498,30 +498,30 @@ ggplot(fepred_cenew,
 
 
 ## table ####
-clonemodells <- readRDS("objects/clonemodells.rds") # from clonemodelanalysis.R
+genotypemodells <- readRDS("objects/genotypemodells.rds") # from genotypemodelanalysis.R
 
 ## begin
-sjPlot::tab_model(list(clonemodells$fb, clonemodells$mb), dv.labels = c("Female", "Male"), title = "Begin flowering", file = "../flowering-cline/tables/provclimeffstart.html")
-provclimeffstart_knit <- tab_model(list(clonemodells$fb, clonemodells$mb), dv.labels = c("Female", "Male"), title = "Begin flowering")$knitr
+sjPlot::tab_model(list(genotypemodells$fb, genotypemodells$mb), dv.labels = c("Female", "Male"), title = "Begin flowering", file = "../flowering-cline/tables/provclimeffstart.html")
+provclimeffstart_knit <- tab_model(list(genotypemodells$fb, genotypemodells$mb), dv.labels = c("Female", "Male"), title = "Begin flowering")$knitr
 saveRDS(provclimeffstart_knit, "../flowering-cline/tables/proveclimeffstart_knit.rds")
 
 ## end
-tab_model(list(clonemodells$fe, clonemodells$me), dv.labels = c("Female", "Male"), title = "End flowering", file = "../flowering-cline/tables/provclimeffend.html")
-provclimeffend_knit <- tab_model(list(clonemodells$fe, clonemodells$me), dv.labels = c("Female", "Male"), title = "End flowering", file = "../flowering-cline/tables/provclimeffend.html")$knitr
+tab_model(list(genotypemodells$fe, genotypemodells$me), dv.labels = c("Female", "Male"), title = "End flowering", file = "../flowering-cline/tables/provclimeffend.html")
+provclimeffend_knit <- tab_model(list(genotypemodells$fe, genotypemodells$me), dv.labels = c("Female", "Male"), title = "End flowering", file = "../flowering-cline/tables/provclimeffend.html")$knitr
 saveRDS(provclimeffend_knit, "../flowering-cline/tables/provclimeffend_knit.rds")
 
 
 
-# clone model predictions ####
-clonedat <- readRDS("objects/clonedat.rds")
-clonepred <- readRDS("objects/clonepred.rds")
+# genotype model predictions ####
+genotypedat <- readRDS("objects/genotypedat.rds")
+genotypepred <- readRDS("objects/genotypepred.rds")
 
 # lines & points ####
 theme_set(theme_dark())
-# caption = "points: 1961-81 climate normal MAT, mean of clone offset estimates from thermal time model (2000 posterior samples). lines: posterior distribution of genotype offset from the provenance climate effect model"
-ggplot(clonepred, aes(x = MAT, y = meanoffset)) +
+# caption = "points: 1961-81 climate normal MAT, mean of genotype offset estimates from thermal time model (2000 posterior samples). lines: posterior distribution of genotype offset from the provenance climate effect model"
+ggplot(genotypepred, aes(x = MAT, y = meanoffset)) +
   stat_lineribbon(aes(y = .prediction, colour = Sex)) +
-  geom_point(data = bind_rows(clonedat), aes(x = MAT, y = meanoffset, colour = Sex), pch = 1, alpha = 0.7) +
+  geom_point(data = bind_rows(genotypedat), aes(x = MAT, y = meanoffset, colour = Sex), pch = 1, alpha = 0.7) +
   scale_fill_brewer(palette = "Greys") +
   facet_grid(event ~ Sex) +
   ylab("Genotype offset (GDD)") +

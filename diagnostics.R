@@ -12,9 +12,9 @@ mefit <- readRDS('2021-01-07MALE_end.rds')
 #fbpars <- data.frame(rstan::extract(fbfit))
 
 
-pairs(fbfit, pars = c("mu", "sigma", "sigma_cens", "mu_site", "sigma_site", "mu_year", "sigma_year", "mu_clone", "sigma_clone", "mu_prov", "sigma_prov"))
-pairs(fbfit, pars = c("mu", "sigma", "sigma_site", "sigma_year", "sigma_clone", "sigma_prov"))
-pairs(fbfit, pars = c("mu", "sigma", "mu_site", "mu_year", "mu_clone", "mu_prov"))
+pairs(fbfit, pars = c("mu", "sigma", "sigma_cens", "mu_site", "sigma_site", "mu_year", "sigma_year", "mu_genotype", "sigma_genotype", "mu_prov", "sigma_prov"))
+pairs(fbfit, pars = c("mu", "sigma", "sigma_site", "sigma_year", "sigma_genotype", "sigma_prov"))
+pairs(fbfit, pars = c("mu", "sigma", "mu_site", "mu_year", "mu_genotype", "mu_prov"))
 nuts <- bayesplot::nuts_params(fbfit)
 draws <- as.array(fbfit)
 bayesplot::mcmc_parcoord(draws, pars = vars("mu", "sigma", starts_with("mu_"), starts_with("sigma_"), contains("alpha_site")), np=nuts, transform = function(x) {(x - mean(x)) / sd(x)})

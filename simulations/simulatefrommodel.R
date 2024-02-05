@@ -17,9 +17,9 @@ mu <- rnorm(n = reps, mean = medians$mu$mu, sd = musd)
 site <- rnorm(reps, mean = medians$site$mu, sd = medians$site$sigma)
 prov <- rnorm(reps, medians$prov$mu, medians$prov$sigma)
 year <- rnorm(reps, medians$year$mu, medians$year$sigma)
-clone <- rnorm(reps, medians$clone$mu, medians$clone$sigma)
+genotype <- rnorm(reps, medians$genotype$mu, medians$genotype$sigma)
 
-y = rnorm(1e5, mean = mu+site+prov+year+clone, sd = medians$sigma$sigma)
+y = rnorm(1e5, mean = mu+site+prov+year+genotype, sd = medians$sigma$sigma)
 
 yframe <- data.frame(forcing = y)
 
@@ -44,10 +44,10 @@ effects$sigma <- sigmas$sigma
 effects$site <- rnorm(nrow(mus), mus$site, sigmas$site)
 effects$prov <- rnorm(nrow(mus), mus$prov, sigmas$prov)
 effects$year <- rnorm(nrow(mus), mus$year, sigmas$year)
-effects$clone <- rnorm(nrow(mus), mus$clone, sigmas$clone)
+effects$genotype <- rnorm(nrow(mus), mus$genotype, sigmas$genotype)
 
 predicts <- effects %>%
-  mutate(fullmean = mu + site + prov + year + clone)
+  mutate(fullmean = mu + site + prov + year + genotype)
 
 forcingests1 <- rnorm(nrow(predicts), predicts$fullmean, predicts$sigma)
 forcingests30 <- rnorm(nrow(predicts)*30, predicts$fullmean, predicts$sigma)

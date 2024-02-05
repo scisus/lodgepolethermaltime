@@ -21,7 +21,7 @@ source('phenology_functions.R')
 
 ## phenology
 phendat <- flowers::lodgepole_phenology_event %>%
-  mutate(Tree = paste0(Orchard, Clone, X, Y)) # create a unique Tree identifier since original data doesn't always have one
+  mutate(Tree = paste0(Orchard, Genotype, X, Y)) # create a unique Tree identifier since original data doesn't always have one
 
 ## forcing
 dailyforc <- read.csv("data/dailyforc_1945_2012.csv", header=TRUE, stringsAsFactors = FALSE)
@@ -30,14 +30,14 @@ dailyforc <- read.csv("data/dailyforc_1945_2012.csv", header=TRUE, stringsAsFact
 spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv", header = TRUE, stringsAsFactors = FALSE)
 
 prov_climate <- read.csv("../lodgepole_climate/data/climateBC/climatebc_parent_locs_Normal_1961_1990Y_v730.csv") %>%
-  rename(Clone = id1, SPZ = id2)  %>%
-  select(Clone, SPZ, MAT) %>%
-  mutate(Clone = as.character(Clone))
+  rename(Genotype = id1, SPZ = id2)  %>%
+  select(Genotype, SPZ, MAT) %>%
+  mutate(Genotype = as.character(Genotype))
 
 ## data preparation for phenology model ####
 phenf <- prepare_data(phendat, clim = dailyforc, spu = spudat) %>%
   left_join(prov_climate) %>%
-  filter(!is.na(MAT)) # Only keep clones with an associated source MAT - no breeding
+  filter(!is.na(MAT)) # Only keep genotypes with an associated source MAT - no breeding
 
 saveRDS(phenf, file = "objects/phenf.rds")
 
@@ -59,7 +59,7 @@ saveRDS(list(fbdat = fbdat, fedat = fedat, mbdat = mbdat, medat = medat), file =
 initpars <- lapply(1:6, function(id) list(sigma = 30, Intercept = 300))
 
 # model formula
-bform <- brmsformula(sum_forcing | cens(censored, upper) ~ MAT + (1|Site) + (1|Clone) + (1|Year) + (1|Tree))
+bform <- brmsformula(sum_forcing | cens(censored, upper) ~ MAT + (1|Site) + (1|Genotype) + (1|Year) + (1|Tree))
 
 # model prior
 bprior <- c(prior("gamma(3.65, 0.01)", class = "Intercept"),

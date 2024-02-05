@@ -1,6 +1,7 @@
-# Match clones to parent locations
+# Match genotypes to parent locations
+# compare to cloneinvest.R
 #
-# Clones are assigned same number as their parents
+# Genotypes are assigned same number as their parents
 
 library(dplyr)
 library(tidyr)
@@ -13,13 +14,13 @@ write.csv(parentdat, "../phd/data/OrchardInfo/ParentTrees/parents.csv", row.name
 
 phenf <- readRDS("objects/phenf.rds")
 
-clones <- phenf %>%
-  select(Clone, Provenance) %>% distinct() %>%
-  mutate(Clone = as.numeric(Clone))
+genotypes <- phenf %>%
+  select(Genotype, Provenance) %>% distinct() %>%
+  mutate(Genotype = as.numeric(Genotype))
 
 
-parentdat <- parentdat %>% filter(Parent.Tree.Number %in% clones$Clone) %>%
-  left_join(clones, by = c("Parent.Tree.Number" = "Clone"))
+parentdat <- parentdat %>% filter(Parent.Tree.Number %in% genotypes$Genotype) %>%
+  left_join(genotypes, by = c("Parent.Tree.Number" = "Genotype"))
 
 
 # map stuff
@@ -60,7 +61,7 @@ par_pnts$id <- parentdat$Parent.Tree.Number
 intersect_vec <- terra::intersect(par_pnts, spu)
 
 
-shortnames <- clones %>% select(Provenance) %>% distinct() %>%
+shortnames <- genotypes %>% select(Provenance) %>% distinct() %>%
   mutate(Prov_shortname = case_when(Provenance == "Bulkley Valley Low" ~ "PLI BV LOW",
                                     Provenance == "Nelson Low" ~ "PLI NE LOW",
                                     Provenance == "Prince George Low" ~ "PLI PG LOW",
@@ -72,25 +73,25 @@ parinspu <- terra::relate(spu, par_pnts, "contains") %>%
   data.frame() %>%
   mutate(SPU_polygon = spu$SPU)
 
-par_spus <- data.frame(Clone = intersect_vec$id, SPU_Number = intersect_vec$SPU_ID, Parent_Provenance = intersect_vec$SPU) %>%
-  # add back clones that aren't in any SPU zone
-  full_join(clones) %>%
+par_spus <- data.frame(Genotype = intersect_vec$id, SPU_Number = intersect_vec$SPU_ID, Parent_Provenance = intersect_vec$SPU) %>%
+  # add back genotypes that aren't in any SPU zone
+  full_join(genotypes) %>%
   left_join(shortnames) %>%
   mutate(Parent_in_Orch_Prov = Parent_Provenance == Prov_shortname)
 
-# clones not in spu
-nclone <- length(unique(par_spus$Clone)) # total number of clones
+# genotypes not in spu
+ngenotype <- length(unique(par_spus$Genotype)) # total number of genotypes
 
-clones_with_no_spu <- par_spus %>% filter(is.na(Parent_Provenance)) %>%
-  select(Clone) %>% distinct() %>% nrow()
+genotypes_with_no_spu <- par_spus %>% filter(is.na(Parent_Provenance)) %>%
+  select(Genotype) %>% distinct() %>% nrow()
 
-# percent of clones not from spu
-clones_with_no_spu/nclone  # 15%
+# percent of genotypes not from spu
+genotypes_with_no_spu/ngenotype  # 15%
 
-# how many clones are in multiple orchards
+# how many genotypes are in multiple orchards
 par_spus %>%
-  group_by(Clone) %>%
+  group_by(Genotype) %>%
   summarise(Orchard_membership = length(Provenance)) %>%
   filter(Orchard_membership > 1)
 
-46/nclone
+46/ngenotype

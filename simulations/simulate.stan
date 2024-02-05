@@ -17,13 +17,13 @@ data {
   int<lower=1> k_Site; // number of sites
   int<lower=1> k_Year;
   int<lower=1> k_Provenance;
-  int<lower=1> k_Clone;
+  int<lower=1> k_Genotype;
 
   // individual level for each factor from which each observation is generated
   int<lower=1, upper=k_Site> Site[k]; // which site is associated with each observation
   int<lower=1, upper=k_Year> Year[k];
   int<lower=1, upper=k_Provenance> Provenance[k];
-  int<lower=1, upper=k_Clone> Clone[k];
+  int<lower=1, upper=k_Genotype> Genotype[k];
 
   real<lower=0> mu; //population location. accumulated forcing cannot be negative.
   real<lower=0> sigma; //population scale
@@ -32,17 +32,17 @@ data {
   real sigma_site; // site effect variance
   real sigma_year; // year effect variance
   real sigma_prov; // provenance effect variance
-  real sigma_clone; //clone effect variance
+  real sigma_genotype; //genotype effect variance
 
   real mu_site; // site effect mean
   real mu_year; // year effect mean
   real mu_prov; // provenance effect mean
-  real mu_clone; // clone effect mean
+  real mu_genotype; // genotype effect mean
 
   vector[k_Site] delta_Site;
   vector[k_Year] delta_Year;
   vector[k_Provenance] delta_Provenance;
-  vector[k_Clone] delta_Clone;
+  vector[k_Genotype] delta_Genotype;
 
 }
 
@@ -51,7 +51,7 @@ generated quantities {
   vector[k] sum_forcing;
 
   phi = mu + delta_Site[Site] + delta_Year[Year] +  delta_Provenance[Provenance] +
-    delta_Clone[Clone];
+    delta_Genotype[Genotype];
 
   for (n in 1:k) {
     if (censored[n] == 0) {
@@ -63,7 +63,7 @@ generated quantities {
   }
 
   // sum_forcing ~ normal(mu + alpha_site[Site] + alpha_year[Year] +  alpha_prov[Provenance] +
-                            // (mu_clone + z_alpha_clone[Clone] * sigma_clone),
+                            // (mu_genotype + z_alpha_genotype[Genotype] * sigma_genotype),
                           // sigma);
 
 

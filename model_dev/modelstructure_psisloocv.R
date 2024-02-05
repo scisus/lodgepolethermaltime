@@ -34,7 +34,7 @@ phenf <- prepare_data(phendat, clim = climdat, spu = spudat)
 # limit to female end data
 
 fedat <- filter_sex_event(sex = "FEMALE", event = "end", phenf)
-fedat$TreeID <- paste0(fedat$Orchard, fedat$Clone, fedat$X, fedat$Y)
+fedat$TreeID <- paste0(fedat$Orchard, fedat$Genotype, fedat$X, fedat$Y)
 
 # code censorship for plotting
 status <- mutate(fedat, status_y = case_when(censored == "interval" ~ 1,
@@ -84,7 +84,7 @@ if (freshrun == TRUE) {
 
   # mean + effects + end + interval censoring
 
-  ec <- brm(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year), data = fedat,
+  ec <- brm(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Provenance) + (1|Genotype) + (1|Year), data = fedat,
             prior =  c(prior("normal(400,100)", class = "Intercept"),
                        prior("normal(0,15)", class = "sigma"),
                        prior("normal(0,9)", class = "sd")),
@@ -107,7 +107,7 @@ if (freshrun == TRUE) {
   gc()
 
   # mean + main effects + treeid + end + interval censoring
-  ect <- brm(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Provenance) + (1|Clone) + (1|Year) + (1|TreeID), data = fedat,
+  ect <- brm(sum_forcing | cens(censored, upper) ~ 1 + (1|Site) + (1|Provenance) + (1|Genotype) + (1|Year) + (1|TreeID), data = fedat,
              prior = c(prior("normal(400,100)", class = "Intercept"),
                        prior("normal(0,15)", class = "sigma"),
                        prior("normal(0,9)", class = "sd")),

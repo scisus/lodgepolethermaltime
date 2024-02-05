@@ -56,7 +56,7 @@ loo_ect <- readRDS("model_dev/loo_ect.rds")
   
 ```
 
-I am modeling the amount of forcing required for a phenological event to occur. My data is interval and end censored. Trees are from `Clone`s sourced from `Provenance`s grown at `Site`s and observed in `Year`s. Using the end of receptivity as the event of interest, I compare the performance of 4 model structures with efficient approximate leave-one-out cross validation using Pareto smoothed importance sampling (Vehtari, Gelman, & Gabry 2017, Vehtari, Simpson, Gelman, Yao, & Gabry 2019).
+I am modeling the amount of forcing required for a phenological event to occur. My data is interval and end censored. Trees are from `Genotype`s sourced from `Provenance`s grown at `Site`s and observed in `Year`s. Using the end of receptivity as the event of interest, I compare the performance of 4 model structures with efficient approximate leave-one-out cross validation using Pareto smoothed importance sampling (Vehtari, Gelman, & Gabry 2017, Vehtari, Simpson, Gelman, Yao, & Gabry 2019).
 
 While I have data for both the start and end of flowering for males and females, I am only doing a model structure comparison on the female end data. Leave-one-out optimization of interval censored data in `brms` is easier for end-of-flowering than start-of-flowering because of the way it codes upper and lower bounds.
 
@@ -87,7 +87,7 @@ Female end-of-flowering data
 ```{r female_data}
 
 fedat <- filter_sex_event(sex = "FEMALE", event = "end", phenf)
-fedat$TreeID <- paste0(fedat$Orchard, fedat$Clone, fedat$X, fedat$Y)
+fedat$TreeID <- paste0(fedat$Orchard, fedat$Genotype, fedat$X, fedat$Y)
 
 # code censorship for plotting 
 status <- mutate(fedat, status_y = case_when(censored == "interval" ~ 1,
@@ -280,7 +280,7 @@ plot(ec)
 ec_yrep <- posterior_predict(ec, draws = 500)
 
 ppc_ecdf_overlay_grouped(fedat$sum_forcing, ec_yrep[1:50,], group=fedat$censored) +
-  ggtitle("End + Interval censoring + Site, Year, Clone, Prov", subtitle = "ppc & yrep")
+  ggtitle("End + Interval censoring + Site, Year, Genotype, Prov", subtitle = "ppc & yrep")
 
 ppc_km_overlay(fedat$sum_forcing, ec_yrep[1:50, ], status_y = status$status_y) +
   ggtitle("Mean-only with end and interval censoring", "Compare empirical distribution of right censored data (Kaplan-Meier estimate) \nto simulated data from the posterior predictive")
@@ -297,14 +297,14 @@ plot(ect)
 ect_yrep <- posterior_predict(ect, draws = 500)
 
 ppc_ecdf_overlay_grouped(fedat$sum_forcing, ect_yrep[1:50,], group=fedat$censored) +
-  ggtitle("End + Interval censoring + Site, Year, Clone, Prov, Tree", subtitle = "ppc & yrep")
+  ggtitle("End + Interval censoring + Site, Year, Genotype, Prov, Tree", subtitle = "ppc & yrep")
 
 ppc_km_overlay(fedat$sum_forcing, ect_yrep[1:50, ], status_y = status$status_y) +
   ggtitle("Mean-only with end and interval censoring", "Compare empirical distribution of right censored data (Kaplan-Meier estimate) \nto simulated data from the posterior predictive")
 ```
 
 # Model comparison
-While we might hope the KM estimate looked better, model performance is better for a model that incorporates heterogeneity from Site, Provenance, Year, and Clone along with end and interval censoring. Including tree makes the model "worse", but not meaningfully, and lets us separate tree level from clone level variation.
+While we might hope the KM estimate looked better, model performance is better for a model that incorporates heterogeneity from Site, Provenance, Year, and Genotype along with end and interval censoring. Including tree makes the model "worse", but not meaningfully, and lets us separate tree level from genotype level variation.
 
 ```{r compare}
 loo_compare(loo_mocf, loo_ec, loo_ect)

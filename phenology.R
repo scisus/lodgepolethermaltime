@@ -52,18 +52,18 @@ phenologymodel <- rstan::stan_model("phenology_nofactors.stan", auto_write = FAL
 
 
 # set options for models
-factors <- c("Site", "Provenance", "Year", "Clone")
+factors <- c("Site", "Provenance", "Year", "Genotype")
 factor_threshold_list <- list(Site = 250, Provenance = 150, Year = 181)
 expars <- c("delta_ncp_site", "delta_cp_site",
            "delta_ncp_prov", "delta_cp_prov",
            "delta_ncp_year", "delta_cp_year",
-           "z_delta_clone")
+           "z_delta_genotype")
 init <- rep(list(list(mu = abs(rnorm(1,100,50)),
                      sigma = rexp(1,1),
                      sigma_site = rexp(1,1),
                      sigma_year = rexp(1,1),
                      sigma_prov = rexp(1,1),
-                     sigma_clone = rexp(1,1))), 6)
+                     sigma_genotype = rexp(1,1))), 6)
 
 # options for censored data models
 # warmup = 1500, iter = 4500, control = list(max_treedepth = 12),

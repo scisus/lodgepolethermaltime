@@ -55,11 +55,11 @@ pcontorta <- st_read("data/latifoliaDistribution/shapefiles/latifolia_distributi
     st_make_valid()
 
 # genotype locations
-clones <- select(flowers::lodgepole_phenology_event, Clone) %>% distinct()
+genotypes <- select(flowers::lodgepole_phenology_event, Genotype) %>% distinct()
 
 parents <- read.csv('data/parents.csv') %>%
-    filter(Parent.Tree.Number %in% clones$Clone) %>% # only include genotypes I have in my phenologydataset
-    select(Clone = Parent.Tree.Number, Latitude, Longitude) %>%
+    filter(Parent.Tree.Number %in% genotypes$Genotype) %>% # only include genotypes I have in my phenologydataset
+    select(Genotype = Parent.Tree.Number, Latitude, Longitude) %>%
     st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326, agr = "constant")
 
 # orchard locations

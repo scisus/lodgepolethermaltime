@@ -29,14 +29,14 @@ neworchdat <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
                                     to = range(alldatls$fbdat$MAT)[2], length.out = 2),
                          Year = "newyear",
                          Tree = "newtree",
-                         Clone = "newclone",
+                         Genotype = "newgenotype",
                          Site = shortsites,
                          event = c("begin", "end"),
                          Sex = c("FEMALE", "MALE")) %>%
   split(list(.$event, .$Sex))
 
 # posterior prediction #########
-# for each site for the full range of provenances using an average year, clone, and tree (using estimated gaussian prior to generate random effects). 2000 draws, 95% HDPI #######
+# for each site for the full range of provenances using an average year, genotype, and tree (using estimated gaussian prior to generate random effects). 2000 draws, 95% HDPI #######
 
 fpred_orch <- purrr::map2(neworchdat, modells,
                           .f = function(x,y) {add_predicted_draws(newdata = x,
@@ -49,7 +49,7 @@ fpred_orch <- purrr::map2(neworchdat, modells,
 saveRDS(fpred_orch, file = "objects/fpred_orch.rds")
 
 fpred_orch_summary <- fpred_orch %>%
-  group_by(MAT, Year, Tree, Clone, Site, event, Sex) %>%
+  group_by(MAT, Year, Tree, Genotype, Site, event, Sex) %>%
   median_hdci(.prediction) %>%
   mutate(Site = forcats::fct_relevel(Site, shortsites))
 saveRDS(fpred_orch_summary, "objects/fpred_orch_summary.rds")
@@ -139,7 +139,7 @@ ggplot(fpred, aes(x = MAT, y = sum_forcing)) +
 # conditional effects, new group ####
 # average predicted outcome for a new group based on random draws from the model (sample new levels from the (multivariate) normal distribution implied by the group-level standard deviations and correlations.). (That is, sampling for the new group from the "prior" estimated by the model)
 
-newfactors <- data.frame(Site = "new_Site", Year = "new_Year", Clone = "new_Clone", Tree = "new_Tree")
+newfactors <- data.frame(Site = "new_Site", Year = "new_Year", Genotype = "new_Genotype", Tree = "new_Tree")
 
 ## expectation ####
 fepred_cenew <- purrr::map2(alldatls, modells, function(x,y) {
@@ -177,7 +177,7 @@ ggplot(fpred_cenew, aes(x = MAT, y = sum_forcing)) +
 
 ## expectation ####
 fepred_ceold <- purrr::map2(alldatls, modells, function(x,y) {
-  add_epred_draws(newdata = select(x, Sex, event, MAT, Site, Year, Clone, Tree) %>% distinct(), object = y, re_formula = NULL, ndraws = n)}) %>%
+  add_epred_draws(newdata = select(x, Sex, event, MAT, Site, Year, Genotype, Tree) %>% distinct(), object = y, re_formula = NULL, ndraws = n)}) %>%
   bind_rows() %>%
   ungroup()
 saveRDS(fepred_ceold, file = "objects/fepred_ceold.rds")
@@ -190,7 +190,7 @@ ggplot(fepred_ceold, aes(x = MAT, y = sum_forcing)) +
 
 ## posterior prediction ####
 fpred_ceold <- purrr::map2(alldatls, modells, function(x,y) {
-  add_predicted_draws(newdata = select(x, Sex, event, MAT, Site, Year, Clone, Tree) %>% distinct(), object = y, re_formula = NULL, ndraws = n)}) %>%
+  add_predicted_draws(newdata = select(x, Sex, event, MAT, Site, Year, Genotype, Tree) %>% distinct(), object = y, re_formula = NULL, ndraws = n)}) %>%
   bind_rows()
 saveRDS(fpred_ceold, file = "objects/fpred_ceold.rds")
 

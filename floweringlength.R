@@ -16,7 +16,7 @@ alldat <- readRDS("objects/alldat.rds")
 
 
 
-## calculate the maximum length of the flowering period for each clone using last day observed not flowering and first day observed past flowering instead of flowering period
+## calculate the maximum length of the flowering period for each genotype using last day observed not flowering and first day observed past flowering instead of flowering period
 
 
 
@@ -31,11 +31,11 @@ length_comp <- full_join(select(length_dat_min, -begin, -end), select(length_dat
   mutate(estimate_in_interval = case_when(!is.na(length_min) & !is.na(length_max) ~ length_mean >= length_min & length_mean <= length_max,
                                           is.na(length_max) ~ length_mean > length_min,
                                           is.na(length_min) ~ length_mean < length_max)) %>%
-  mutate(Clone = fct_reorder(Clone, length_mean))
+  mutate(Genotype = fct_reorder(Genotype, length_mean))
 # how many trees have length out of expected interval?
-length(which(length_comp$estimate_in_interval))/nrow(length_comp) # The mean estimate of clone flowering period length is within the expected interval 90.4 % of the time.
+length(which(length_comp$estimate_in_interval))/nrow(length_comp) # The mean estimate of genotype flowering period length is within the expected interval 90.4 % of the time.
 
-ggplot(length_comp, aes(x = Clone, y = length_mean, colour = estimate_in_interval)) +
+ggplot(length_comp, aes(x = Genotype, y = length_mean, colour = estimate_in_interval)) +
   geom_point(alpha = 0.5) +
   scale_colour_viridis_d(option = "cividis") +
   theme_dark() +
