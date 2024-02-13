@@ -11,6 +11,9 @@ library(dplyr)
 library(purrr)
 library(tidybayes)
 library(tidyr)
+library(ggplot2)
+
+source('phenology_functions.R')
 
 # functions ####
 # calculate the proportion of trues in a boolean vector x
@@ -84,10 +87,15 @@ minmaxdat <- function(df, minormax) {
 
 
 
-## forcing data ####
+## data and models ##############
 
 alldatls <- readRDS("objects/datlist.rds")
-modells <- readRDS("objects/modells.rds") #1.5GB
+
+modells <- list(fb = readRDS("stan_output/female_begin.rds"),
+                fe = readRDS("stan_output/female_end.rds"),
+                mb = readRDS("stan_output/male_begin.rds"),
+                me = readRDS("stan_output/male_end.rds"))
+saveRDS(modells, "objects/modells.rds") #1.5GB
 
 ## modeled forcing ####
 # simulate new forcing observations from the model. this is a slow step. I'm using the full model to make retrodictions, not subsampling. Makes an 12.8GB object without downsampling
@@ -116,7 +124,7 @@ fsim <- fretro %>%
   ungroup() %>%
   select(-sum_forcing, -upper, -censored)
 
-# length calculations
+  # length calculations
 flen <- calc_len(fsim)
 
 # fretrocomp is a table that describes how many model forcing estimates are within the observed forcing ranges
@@ -127,7 +135,7 @@ saveRDS(fretrocomp, "objects/fretrocomp.rds")
 
 
 ### historical climate data ###
-dailyforc <- read.csv("data/dailyforc_1945_2012.csv")# site clim with forcing
+dailyforc <- read.csv("data/forcing/dailyforc_1945_2012.csv")# site clim with forcing
 # might need to drop trench and border site
 
 ## doy data ####
@@ -135,7 +143,7 @@ phenf <- readRDS("objects/phenf.rds")
 
 ## convert forcing retrodictions to doy ####
 ## downsample to 200 draws for each obs to keep sizes manageable
-samp <- sample(1:max(fretro$.draw), size = 200)
+samp <- sample(1:max(fretro$.draw), size = 1000)
 dretro <- forcing_to_doy(dailyforc, filter(fretro, .draw %in% samp), aforce = "sum_forcing", bforce = ".prediction", newdoycolname = "retro_doy") %>%
   ungroup() %>%
   select(Index, Sex, event, retro_doy)

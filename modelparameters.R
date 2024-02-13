@@ -4,22 +4,19 @@
 library(dplyr)
 library(purrr)
 library(tidybayes)
+library(tidyr)
 
 
 source('phenology_functions.R')
 
 factororder <- readRDS("objects/factororder.rds")
 
+# models ####
+modells <- readRDS("objects/modells.rds")
+
 # globals ####
 nsamp <- 6000 # how many samples from the posterior (full posterior is big and slow)
 seed <- 738
-
-# models #####
-modells <- list(fb = readRDS("female_begin.rds"),
-                fe = readRDS("female_end.rds"),
-                mb = readRDS("male_begin.rds"),
-                me = readRDS("male_end.rds"))
-saveRDS(modells, "objects/modells.rds")
 
 # data ####
 

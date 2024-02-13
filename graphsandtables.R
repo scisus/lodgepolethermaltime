@@ -21,7 +21,7 @@ factororder_site_so <- factororder$site[-c(1,2)]
 shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Kalamalka")
 
 # forcing and climate ##########
-typical_year_forc <- read.csv("data/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
+typical_year_forc <- read.csv("data/forcing/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
   mutate(Date = as.Date(Date_scale)) %>%
   select(-Date_scale) %>%
   mutate(Site = factor(Site, levels = factororder$site)) %>%
@@ -496,7 +496,54 @@ ggplot(fepred_cenew,
   theme_clean() +
   facet_grid(. ~ event)
 
+## Home vs away #######
+## graphs from lab meeting presentation
+doy_typical_home <- readRDS("objects/doy_typical_home.rds")
 
+library(ggalt)
+#home
+ggplot(doy_typical_home, aes(x = intercept, xend = wMAT, y=Sex, shape = Sex)) +
+  geom_dumbbell(
+    colour = "#a3c4dc",
+    colour_xend = "#0e668b",
+    size = 3
+  ) +
+  facet_grid(MAT ~ event) +
+  xlab("Day of Year") +
+  ggtitle("Change in flowering day of year expectation with MAT effect", subtitle = "typical year, trees grown at home") +
+  theme(legend.position = "top")
+
+doy_typical_all_at_PGTIS <- readRDS("objects/doy_typical_all_at_PGTIS.rds")
+#away
+ggplot(doy_typical_all_at_PGTIS, aes(x = intercept, xend = DoY, y=MAT, shape = Sex)) +
+  geom_dumbbell(
+    colour = "#a3c4dc",
+    colour_xend = "#0e668b",
+    size = 4
+  ) +
+  facet_grid(Sex ~ event) +
+  xlab("Day of Year") +
+  ggtitle("Change in flowering day of year expectation with MAT effect", subtitle = "typical year, trees grown at PGTIS") +
+  geom_vline(data = doy_typical_all_at_PGTIS, aes(xintercept = intercept)) +
+  theme(legend.position = "top")
+# When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap
+
+## year to year variation ####
+doy_annual_plotting <- readRDS('objects/doy_annual_plotting.rds')
+dplot <- readRDS("objects/dplot2.rds")
+
+ggplot(dplot2, aes(x = Year, ymin = .lower_begin, ymax = .upper_begin, fill = Sex)) +
+  geom_ribbon(alpha = 0.5) +
+  geom_ribbon(aes(x = Year, ymin = .lower_end, ymax = .upper_end, fill = Sex), alpha = 0.5) +
+  geom_line(data=doy_annual_plotting, aes(x = Year, y = DoY, color = Sex, linetype = event), inherit.aes = FALSE) +
+  facet_grid(Sex ~ Site) +
+  labs(title = "Predicted flowering periods", subtitle = "posterior expectation, ribbons = uncertainty, lines = medians") +
+  ylab("Day of Year") +
+  scale_color_viridis_d(option = "B") +
+  scale_fill_viridis_d(option = "B") +
+  theme_dark(base_size = 18) +
+  theme(legend.position = "bottom")
+ggsave("../flowering-cline/figures/yearly_phenology.png", width = 14, height = 7, units = "in")
 ## table ####
 genotypemodells <- readRDS("objects/genotypemodells.rds") # from genotypemodelanalysis.R
 

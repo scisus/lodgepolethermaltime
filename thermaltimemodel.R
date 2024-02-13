@@ -24,7 +24,7 @@ phendat <- flowers::lodgepole_phenology_event %>%
   mutate(Tree = paste0(Orchard, Genotype, X, Y)) # create a unique Tree identifier since original data doesn't always have one
 
 ## forcing
-dailyforc <- read.csv("data/dailyforc_1945_2012.csv", header=TRUE, stringsAsFactors = FALSE)
+dailyforc <- read.csv("data/forcing/dailyforc_1945_2012.csv", header=TRUE, stringsAsFactors = FALSE)
 
 # meta
 spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv", header = TRUE, stringsAsFactors = FALSE)
@@ -36,7 +36,7 @@ prov_climate <- read.csv("../lodgepole_climate/data/climateBC/climatebc_parent_l
 
 ## data preparation for phenology model ####
 phenf <- prepare_data(phendat, clim = dailyforc, spu = spudat) %>%
-  left_join(prov_climate) %>%
+  left_join(prov_climate, relationship = "many-to-many") %>%
   filter(!is.na(MAT)) # Only keep genotypes with an associated source MAT - no breeding
 
 saveRDS(phenf, file = "objects/phenf.rds")
@@ -62,20 +62,20 @@ initpars <- lapply(1:6, function(id) list(sigma = 30, Intercept = 300))
 bform <- brmsformula(sum_forcing | cens(censored, upper) ~ MAT + (1|Site) + (1|Genotype) + (1|Year) + (1|Tree))
 
 # model prior
-bprior <- c(prior("gamma(3.65, 0.01)", class = "Intercept"),
+bprior <- c(prior("gamma(3.65, 0.01)", class = "Intercept", lb = 0),
             prior("normal(0,15)", class = "sigma"),
             prior("normal(0,9)", class = "sd"),
             prior("normal(0,25)", class = "b"))
 
 # mcmc/computation settings
-niter <- 4000
+niter <- 4500
 ncores <- 6
 nchains <- 6
 
 # female/receptivity begin
 fbfit <- brm(bform, data = fbdat,
-             save_model = "female_begin.stan",
-             file = "female_begin",
+             save_model = "stan_output/female_begin.stan",
+             file = "stan_output/female_begin.rds",
              prior = bprior,
              init = initpars,
              iter = niter,
@@ -87,8 +87,8 @@ fbfit <- brm(bform, data = fbdat,
 
 # female/receptivity end
 fefit <- brm(bform, data = fedat,
-             save_model = "female_end.stan",
-             file = "female_end",
+             save_model = "stan_output/female_end.stan",
+             file = "stan_output/female_end.rds",
              prior = bprior,
              init = initpars,
              iter = niter,
@@ -100,8 +100,8 @@ fefit <- brm(bform, data = fedat,
 
 # male/pollen shed begin
 mbfit <- brm(bform, data = mbdat,
-             save_model = "male_begin.stan",
-             file = "male_begin",
+             save_model = "stan_output/male_begin.stan",
+             file = "stan_output/male_begin.rds",
              prior = bprior,
              init = initpars,
              iter = niter,
@@ -113,8 +113,8 @@ mbfit <- brm(bform, data = mbdat,
 
 # male/pollen shed end
 mefit <- brm(bform, data = medat,
-             save_model = "male_end.stan",
-             file = "male_end",
+             save_model = "stan_output/male_end.stan",
+             file = "stan_output/male_end.rds",
              prior = bprior,
              init = initpars,
              iter = niter,

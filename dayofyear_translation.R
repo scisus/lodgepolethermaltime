@@ -13,13 +13,13 @@ focalsites <- c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")
 shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Kalamalka")
 # daily forcing data
 
-dailyforc <- read.csv("data/dailyforc_1945_2012.csv") %>% # daily "real" forcing
+dailyforc <- read.csv("data/forcing/dailyforc_1945_2012.csv") %>% # daily "real" forcing
   group_by(Site, Year) %>%
   mutate(index = cur_group_id()) %>% ungroup()
 dailyforc_ss <- dailyforc %>% filter(Site %in% shortsites) #orchard only, excluding vernon, tolko, prt and letting kal stand in for them
-typical_year_forc <- read.csv("data/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
+typical_year_forc <- read.csv("data/forcing/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
   mutate(Date = as.Date(Date_scale)) %>% select(-Date_scale)
-normal_forc <- read.csv("data/normalforc_1901-2100.csv") %>% # averaged over 30 year periods
+normal_forc <- read.csv("data/forcing/normalforc_1901-2100.csv") %>% # averaged over 30 year periods
   group_by(Site, period, scenario) %>%  # index
   mutate(index = cur_group_id()) %>% ungroup()
 
@@ -97,18 +97,6 @@ doy_typical_home <- filter(doy_typical_allsites, Source %in% focalsites,
   rename(intercept = `FALSE`, wMAT = `TRUE`)
 saveRDS(doy_typical_home, "objects/doy_typical_home.rds")
 
-library(ggalt)
-#presentation
-ggplot(doy_typical_home, aes(x = intercept, xend = wMAT, y=Sex, shape = Sex)) +
-  geom_dumbbell(
-    colour = "#a3c4dc",
-    colour_xend = "#0e668b",
-    size = 3
-  ) +
-  facet_grid(MAT ~ event) +
-  xlab("Day of Year") +
-  ggtitle("Change in flowering day of year expectation with MAT effect", subtitle = "typical year, trees grown at home") +
-  theme(legend.position = "top")
 # provenance effect pushes southern provenances to flower later and northern to flower earlier, shortening the overall flowering period from south to north - and increasing overlap between north and south
 
 doy_typical_allsites_interceptonly_intermediate <- doy_typical_allsites_interceptonly %>%
@@ -130,17 +118,6 @@ doy_typical_all_at_PGTIS <- doy_typical_allsites %>%
   merge(doy_typical_allsites_interceptonly_intermediate)
 saveRDS(doy_typical_all_at_PGTIS, "objects/doy_typical_all_at_PGTIS.rds")
 
-ggplot(doy_typical_all_at_PGTIS, aes(x = intercept, xend = DoY, y=MAT, shape = Sex)) +
-  geom_dumbbell(
-    colour = "#a3c4dc",
-    colour_xend = "#0e668b",
-    size = 4
-  ) +
-  facet_grid(Sex ~ event) +
-  xlab("Day of Year") +
-  ggtitle("Change in flowering day of year expectation with MAT effect", subtitle = "typical year, trees grown at PGTIS") +
-  geom_vline(data = doy_typical_all_at_PGTIS, aes(xintercept = intercept)) +
-  theme(legend.position = "top")
 # When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap
 
 # normal periods ########
@@ -207,18 +184,7 @@ dplot2 <- doy_annual_plotting %>%
   pivot_wider(values_from = c(DoY, .lower, .upper), names_from = event)
 saveRDS(dplot2, "objects/dplot2.rds")
 
-ggplot(dplot2, aes(x = Year, ymin = .lower_begin, ymax = .upper_begin, fill = Sex)) +
-  geom_ribbon(alpha = 0.5) +
-  geom_ribbon(aes(x = Year, ymin = .lower_end, ymax = .upper_end, fill = Sex), alpha = 0.5) +
-  geom_line(data=doy_annual_plotting, aes(x = Year, y = DoY, color = Sex, linetype = event), inherit.aes = FALSE) +
-  facet_grid(Sex ~ Site) +
-  labs(title = "Predicted flowering periods", subtitle = "posterior expectation, ribbons = uncertainty, lines = medians") +
-  ylab("Day of Year") +
-  scale_color_viridis_d(option = "B") +
-  scale_fill_viridis_d(option = "B") +
-  theme_dark(base_size = 18) +
-  theme(legend.position = "bottom")
-ggsave("../flowering-cline/figures/yearly_phenology.png", width = 14, height = 7, units = "in")
+
 
 # variation
 summary_doy_annual <- doy_annual %>%

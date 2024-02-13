@@ -176,7 +176,7 @@ $$
 :::
 ::: {.column width="65%"}
 ```{r typicalclimate}
-typical_year_forc <- read.csv("data/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
+typical_year_forc <- read.csv("data/forcing/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
   mutate(Date = as.Date(Date_scale)) %>% select(-Date_scale) %>%
   filter(Site %in% c('Kalamalka', 'KettleRiver', 'PGTIS', 'PRT', 'Sorrento', 'Tolko', 'Vernon')) %>%
   filter(DoY < 180) %>%

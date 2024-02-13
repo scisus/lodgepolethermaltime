@@ -91,7 +91,7 @@ fepred_allprovs <- purrr::map2(alldatls, modells, function(x,y) {
   left_join(labdf)
 saveRDS(fepred_allprovs, file = "objects/fepred_allprovs.rds")
 
-
+## try to understand effect size ####
 # Calculate the maximum and minimum of MAT
 max_MAT <- max(fepred_allprovs$MAT, na.rm = TRUE)
 min_MAT <- min(fepred_allprovs$MAT, na.rm = TRUE)
@@ -124,17 +124,17 @@ fpred <- purrr::map2(alldatls, modells, function(x,y) {
     bind_rows()
 saveRDS(fpred, file = "objects/fpred.rds")
 
-ggplot(fpred, aes(x = MAT, y = sum_forcing)) +
-  stat_lineribbon(aes(y = .prediction), .width = c(.99, .5)) +
-  scale_fill_brewer() +
-  facet_grid(Sex ~ event)
-  #geom_jitter(data = alldat, shape = 16, alpha = .3)
-
-ggplot(fpred, aes(x = MAT, y = sum_forcing)) +
-  stat_lineribbon(aes(y = .prediction, linetype = event), .width = c(.89, .5), color = "#08519C", alpha = 0.9) +
-  scale_fill_brewer() +
-  facet_grid(. ~ Sex) +
-  theme_dark()
+# ggplot(fpred, aes(x = MAT, y = sum_forcing)) +
+#   stat_lineribbon(aes(y = .prediction), .width = c(.99, .5)) +
+#   scale_fill_brewer() +
+#   facet_grid(Sex ~ event)
+#   #geom_jitter(data = alldat, shape = 16, alpha = .3)
+#
+# ggplot(fpred, aes(x = MAT, y = sum_forcing)) +
+#   stat_lineribbon(aes(y = .prediction, linetype = event), .width = c(.89, .5), color = "#08519C", alpha = 0.9) +
+#   scale_fill_brewer() +
+#   facet_grid(. ~ Sex) +
+#   theme_dark()
 
 # conditional effects, new group ####
 # average predicted outcome for a new group based on random draws from the model (sample new levels from the (multivariate) normal distribution implied by the group-level standard deviations and correlations.). (That is, sampling for the new group from the "prior" estimated by the model)
@@ -148,13 +148,13 @@ fepred_cenew <- purrr::map2(alldatls, modells, function(x,y) {
                  re_formula = NULL,
   allow_new_levels = TRUE, sample_new_levels = "gaussian")}) %>%
   bind_rows()
-saveRDS(fepred_cenew, file = "objects/fepred_cenew.rds")
+#saveRDS(fepred_cenew, file = "objects/fepred_cenew.rds")
 
-ggplot(fepred_cenew, aes(x = MAT, y = sum_forcing)) +
-  stat_lineribbon(aes(y = .epred, linetype = event), .width = c(.89, .5), color = "#08519C", alpha = 0.9) +
-  scale_fill_brewer() +
-  facet_grid(. ~ Sex) +
-  theme_dark()
+# ggplot(fepred_cenew, aes(x = MAT, y = sum_forcing)) +
+#   stat_lineribbon(aes(y = .epred, linetype = event), .width = c(.89, .5), color = "#08519C", alpha = 0.9) +
+#   scale_fill_brewer() +
+#   facet_grid(. ~ Sex) +
+#   theme_dark()
 
 ## posterior prediction ####
 fpred_cenew <- purrr::map2(alldatls, modells, function(x,y) {
@@ -163,13 +163,13 @@ fpred_cenew <- purrr::map2(alldatls, modells, function(x,y) {
                   re_formula = NULL,
                   allow_new_levels = TRUE, sample_new_levels = "gaussian")}) %>%
   bind_rows()
-saveRDS(fpred_cenew, file = "objects/fpred_cenew.rds")
+#saveRDS(fpred_cenew, file = "objects/fpred_cenew.rds")
 
-ggplot(fpred_cenew, aes(x = MAT, y = sum_forcing)) +
-  stat_lineribbon(aes(y = .prediction, linetype = event), .width = c(.89, .5), color = "#08519C", alpha = 0.9) +
-  scale_fill_brewer() +
-  facet_grid(. ~ Sex) +
-  theme_dark()
+# ggplot(fpred_cenew, aes(x = MAT, y = sum_forcing)) +
+#   stat_lineribbon(aes(y = .prediction, linetype = event), .width = c(.89, .5), color = "#08519C", alpha = 0.9) +
+#   scale_fill_brewer() +
+#   facet_grid(. ~ Sex) +
+#   theme_dark()
 
 # conditional effects, existing groups ####
 
@@ -180,25 +180,25 @@ fepred_ceold <- purrr::map2(alldatls, modells, function(x,y) {
   add_epred_draws(newdata = select(x, Sex, event, MAT, Site, Year, Genotype, Tree) %>% distinct(), object = y, re_formula = NULL, ndraws = n)}) %>%
   bind_rows() %>%
   ungroup()
-saveRDS(fepred_ceold, file = "objects/fepred_ceold.rds")
+#saveRDS(fepred_ceold, file = "objects/fepred_ceold.rds")
 
-ggplot(fepred_ceold, aes(x = MAT, y = sum_forcing)) +
-  stat_lineribbon(aes(y = .epred, linetype = event), .width = c(.89, .5), color = "#08519C", alpha = 0.9) +
-  scale_fill_brewer() +
-  facet_grid(event ~ Sex) +
-  theme_dark()
+# ggplot(fepred_ceold, aes(x = MAT, y = sum_forcing)) +
+#   stat_lineribbon(aes(y = .epred, linetype = event), .width = c(.89, .5), color = "#08519C", alpha = 0.9) +
+#   scale_fill_brewer() +
+#   facet_grid(event ~ Sex) +
+#   theme_dark()
 
 ## posterior prediction ####
 fpred_ceold <- purrr::map2(alldatls, modells, function(x,y) {
   add_predicted_draws(newdata = select(x, Sex, event, MAT, Site, Year, Genotype, Tree) %>% distinct(), object = y, re_formula = NULL, ndraws = n)}) %>%
   bind_rows()
-saveRDS(fpred_ceold, file = "objects/fpred_ceold.rds")
+#saveRDS(fpred_ceold, file = "objects/fpred_ceold.rds")
 
-ggplot(fpred_ceold, aes(x = MAT, y = sum_forcing)) +
-  stat_lineribbon(aes(y = .prediction, linetype = event), .width = c(.89, .5), color = "#08519C", alpha = 0.9) +
-  scale_fill_brewer() +
-  facet_grid(event ~ Sex) +
-  theme_dark() +
-  geom_point(data = alldat, alpha = .3) +
-  theme(legend.position = "top")
+# ggplot(fpred_ceold, aes(x = MAT, y = sum_forcing)) +
+#   stat_lineribbon(aes(y = .prediction, linetype = event), .width = c(.89, .5), color = "#08519C", alpha = 0.9) +
+#   scale_fill_brewer() +
+#   facet_grid(event ~ Sex) +
+#   theme_dark() +
+#   geom_point(data = alldat, alpha = .3) +
+#   theme(legend.position = "top")
 

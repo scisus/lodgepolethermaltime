@@ -1,16 +1,18 @@
 # meta for lodgepolethermaltime/data
 
-This folder contains climate data needed to model phenology.
+This folder contains climate data needed to model phenology, parent tree data, and distribution data for mapping.
 Phenology data is in the "flowers" R package
 
-`dailyforc_1945-2012.csv` 
+## forcing
+- `dailyforc_1945-2012.csv` 
 contains daily temperatures for all seed orchard and comparison sites.
-
-`LodgepoleSPUs.csv`
+- `LodgepoleSPUs.csv`
 Summarizes info on lodgepole SPUs from the BC orchard summary. Units for elevation are meters. Information from Forest Genetics Council of British Columbia Business Plan & BC orchard summary (Jan 07 11).xlsx compiled by Jack Woods in 2011. See also `phd/data/OrchardInfo`
-
-`normalforc_1901-2100.csv`
+- `normalforc_1901-2100.csv`
 forcing and mean temperatures for all seed orchard and comparison sites over 30 year normal periods
+
+## latifoliaDistribution
+distribution data for mapping
 
 `parents.csv`
 Information on Parent Trees extracted from SPAR in May 2014.

@@ -1,37 +1,17 @@
-# diagnostics for stan models
+# ESS and Rhatdiagnostics for stan models
 #
 library(dplyr)
 library(purrr)
 library(rstan)
 
-fbfit <- readRDS('2021-05-11FEMALE_begin_nofactors.rds')
-fefit <- readRDS('2021-01-07FEMALE_end.rds')
-mbfit <- readRDS('2021-04-29MALE_begin_censored.rds')
-mefit <- readRDS('2021-01-07MALE_end.rds')
+fbfit <- readRDS('stan_output/female_begin.rds')
+fefit <- readRDS('stan_output/female_end.rds')
+mbfit <- readRDS('stan_output/male_begin.rds')
+mefit <- readRDS('stan_output/male_end.rds')
 
-#fbpars <- data.frame(rstan::extract(fbfit))
+# format for Rhat and ESS calculations
 
-
-pairs(fbfit, pars = c("mu", "sigma", "sigma_cens", "mu_site", "sigma_site", "mu_year", "sigma_year", "mu_genotype", "sigma_genotype", "mu_prov", "sigma_prov"))
-pairs(fbfit, pars = c("mu", "sigma", "sigma_site", "sigma_year", "sigma_genotype", "sigma_prov"))
-pairs(fbfit, pars = c("mu", "sigma", "mu_site", "mu_year", "mu_genotype", "mu_prov"))
-nuts <- bayesplot::nuts_params(fbfit)
-draws <- as.array(fbfit)
-bayesplot::mcmc_parcoord(draws, pars = vars("mu", "sigma", starts_with("mu_"), starts_with("sigma_"), contains("alpha_site")), np=nuts, transform = function(x) {(x - mean(x)) / sd(x)})
-bayesplot::mcmc_intervals(draws, pars = vars(starts_with("mu_"), starts_with("sigma_"), contains("delta_site"), "sigma"))
-bayesplot::mcmc_intervals(draws, pars = vars( contains("year")))
-bayesplot::mcmc_areas(draws, pars = vars(contains("sigma_")))
-bayesplot::mcmc_areas(draws, pars = vars(contains("mu_")))
-#female_begin_censored <- fit_model(phendat = censored, sex = "FEMALE", event = "begin")
-
-library(shinystan)
-launch_shinystan(fbfit)
-
-
- # format for Rhat and ESS calculations
-#sims <- list(fbsims = as.array(fbfit), fesims = as.array(fefit), mbsims = as.array(mbfit), mesims = as.array(mefit))
-#
-sims <- list(fbsims = as.array(fb))
+sims <- list(fbsims = as.array(fbfit), fesims = as.array(fefit), mbsims = as.array(mbfit), mesims = as.array(mefit))
 
 # calculate minimum effective sample size (bulk and tail) for a two-dimensional array whose rows are equal to the number of iterations of the Markov Chain(s) and whose columns are equal to the number of Markov Chains (preferably more than one).
 miness <- function(sims) {
@@ -47,7 +27,7 @@ miness <- function(sims) {
 
 minesses <- purrr::map(sims, miness) %>%
   dplyr::bind_rows(.id = "id")
-# Goal is for ESS to be at least 100 for each chain. e.g. if 6 chains, you're in trouble if min ESS < 600.
+  # Goal is for ESS to be at least 100 for each chain. e.g. if 6 chains, you're in trouble if min ESS < 600.
 print(minesses)
 
 maxrhat <- function(sims) {
@@ -56,6 +36,25 @@ maxrhat <- function(sims) {
   return(maxhat)
 }
 
+# Should be less than 1.01
 rhats <- purrr::map(sims, maxrhat)
 print(rhats)
+
+# female begin is the hardest model to fit - code below used to help diagnose problems during modeling
+# fbpars <- data.frame(rstan::extract(fbfit))
+
+
+# pairs(fbfit, variable = c("mu", "sigma", "sigma_cens", "mu_site", "sigma_site", "mu_year", "sigma_year", "mu_genotype", "sigma_genotype", "mu_prov", "sigma_prov"))
+# pairs(fbfit, pars = c("mu", "sigma", "sigma_site", "sigma_year", "sigma_genotype", "sigma_prov"))
+# pairs(fbfit, pars = c("mu", "sigma", "mu_site", "mu_year", "mu_genotype", "mu_prov"))
+# nuts <- bayesplot::nuts_params(fbfit)
+# draws <- as.array(fbfit)
+# bayesplot::mcmc_parcoord(draws, pars = vars("mu", "sigma", starts_with("mu_"), starts_with("sigma_"), contains("alpha_site")), np=nuts, transform = function(x) {(x - mean(x)) / sd(x)})
+# bayesplot::mcmc_intervals(draws, pars = vars(starts_with("mu_"), starts_with("sigma_"), contains("delta_site"), "sigma"))
+# bayesplot::mcmc_intervals(draws, pars = vars( contains("year")))
+# bayesplot::mcmc_areas(draws, pars = vars(contains("sigma_")))
+# bayesplot::mcmc_areas(draws, pars = vars(contains("mu_")))
+#female_begin_censored <- fit_model(phendat = censored, sex = "FEMALE", event = "begin")
+# library(shinystan)
+# launch_shinystan(fbfit)
 

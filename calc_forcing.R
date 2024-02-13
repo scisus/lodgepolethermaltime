@@ -55,9 +55,9 @@ normal_forc <- calc_accumulated_forcing(normals,
 
 # write out files #####
 
-write.csv(dailyforc_1945_2012, "data/dailyforc_1945_2012.csv", row.names = FALSE)
-write.csv(typical_year_forc, "data/typical_year_forc.csv", row.names = FALSE)
-write.csv(normal_forc, "data/normalforc_1901-2100.csv", row.names = FALSE)
+write.csv(dailyforc_1945_2012, "data/forcing/dailyforc_1945_2012.csv", row.names = FALSE)
+write.csv(typical_year_forc, "data/forcing/typical_year_forc.csv", row.names = FALSE)
+write.csv(normal_forc, "data/forcing/normalforc_1901-2100.csv", row.names = FALSE)
 
 
 

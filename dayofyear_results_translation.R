@@ -1,7 +1,7 @@
 # Translate GDD results into typical year days
 
 # translate the difference between coldest and warmest provenance into day of year in a typical year at each site
-typical_year_forc <- read.csv("data/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
+typical_year_forc <- read.csv("data/forcing/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
   mutate(Date = as.Date(Date_scale)) %>% select(-Date_scale)
 
 fpred_allsites <- readRDS("objects/fepred_allsites.rds")

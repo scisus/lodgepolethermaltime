@@ -23,14 +23,14 @@ Climate data is from `../processed/PNWNAmet_adjusted.csv` in the `lodgepole_clim
 
 Modular analysis scripts write out objects needed in other scripts or for graphs and tables in `objects` folder
 - `calc_forcing.R` calculate forcing and sum forcing for daily weather data
-- `model_dev/conceptualanalysis.*` goes thru the first few steps of Betancourt's workflow, outlining the problem and determining what domain specific knowledge can be brought to bear on the priors.
+- `model_dev/conceptualanalysis.*` goes thru the first few steps of Betancourt's workflow, outlining the problem and determining what domain specific knowledge can be brought to bear on the priors
 - `phenology_functions.R` are helper functions for `thermaltimemodel.R`
-- `censoring.R` end vs interval censoring: what proportion of data is censored end vs. interval?
 - `thermaltimemodel.R` thermal time models of flowering events in stan
   - stan code in `[sex]_[event].stan`
   - model output in `[sex]_[event].rds`
-- `factororder.R` order factors for making good graphs
 - `diagnositics.R` calculates model diagnostics like Rhat and ESS
+- `censoring.R` end vs interval censoring: what proportion of data is censored end vs. interval?
+- `factororder.R` order factors for making good graphs
 - `obsVSretro.R` compare observations to retrodictions
 - `modelparameters.R` extract parameter values from thermal time model
 - `predict.R` predict thermal time for events from models 
