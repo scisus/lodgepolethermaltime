@@ -7,13 +7,9 @@ library(tidyr)
 library(ggplot2)
 library(forcats)
 
-
-
 # observations
 
 alldat <- readRDS("objects/alldat.rds")
-
-
 
 
 ## calculate the maximum length of the flowering period for each genotype using last day observed not flowering and first day observed past flowering instead of flowering period

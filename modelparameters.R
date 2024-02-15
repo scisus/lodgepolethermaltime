@@ -30,6 +30,7 @@ tidybayes::get_variables(modells$fb)
 labdf <- data.frame(Sex = c("FEMALE", "FEMALE", "MALE", "MALE"),
                     event = c('begin', 'end', 'begin', 'end'),
                     model = c('fb', 'fe', 'mb', 'me'))
+saveRDS(labdf, "objects/labdf.rds")
 
 # slope ####
 slopes <- purrr::map(modells, gather_slope_draws) %>%

@@ -35,9 +35,9 @@ Modular analysis scripts write out objects needed in other scripts or for graphs
 - `modelparameters.R` extract parameter values from thermal time model
 - `predict.R` predict thermal time for events from models 
 - `dayofyear_translation.R` translate predictions into day of year 
-- `floweringlength.R` length of flowering period
-- `overlap.R` calculate historical and future overlap of phenological periods [defunct]
-- `variation.R` variation in flowering period [defunct]
+- `floweringlength.R` [DEFUNCT] length of flowering period
+- `overlap.R` [DEFUNCT] calculate historical and future overlap of phenological periods [defunct]
+- `variation.R` [DEFUNCT] variation in flowering period 
 
 ? genotypeinvest.R and matchgenotypeparent I think are trying to figure out which genotypes are associated with which breeding zone?
 

@@ -31,6 +31,7 @@ typical_year_forc <- read.csv("data/forcing/typical_year_forc.csv") %>% # from t
   filter(DoY < 180)
 
 meantempplot <- ggplot(typical_year_forc, aes(x = Date, y = mean_temp, color = Site, linetype = Site_type)) +
+  geom_hline(yintercept = 5, colour = "dark grey") +
   geom_line() +
   scale_x_date(date_breaks = "1 month", date_labels =  "%b") +
   ggtitle("Mean daily temperature") +
@@ -38,6 +39,7 @@ meantempplot <- ggplot(typical_year_forc, aes(x = Date, y = mean_temp, color = S
   theme_bw() +
   ylab("Temperature (\u00B0C)") + xlab("") +
   theme(legend.position = "none")
+
 
 sumforcplot <- ggplot(typical_year_forc, aes(x = Date, y = sum_forcing, color = Site, linetype = Site_type)) +
   geom_line() +
@@ -86,7 +88,6 @@ ggplot(data=sites) +
   xlab("") +
   ylab("Mean Annual Temperature (\u00B0C)") +
   guides(color = "none", shape = "none")
-
 
 ggsave("../flowering-cline/figures/MAT.png", width = 6, height = 5)
 
@@ -203,18 +204,18 @@ interceptplot
 ggsave("../flowering-cline/figures/intercepts.png", width = 6, height = 6)
 
 ## slopes ####
-ggplot(fepred_allprovs, aes(x = MAT, y = .epred)) +
-  stat_lineribbon(aes(y = .epred, linetype = event), .width = c(.95, .5), show.legend = FALSE) +
-  scale_fill_brewer() +
-  theme_bw() +
-  facet_grid(. ~ Sex) +
-  theme(legend.position = "none") +
-  #ggtitle("Forcing requirements across all provenances", subtitle = "expectation (mean) predictions, caption = "6000 draws from the posterior") +
-  ylab("Accumulated forcing (Growing Degree Days)") +
-  xlab("Mean Annual Temperature (\u00B0C)")
+# ggplot(fepred_allprovs, aes(x = MAT, y = .epred)) +
+#   stat_lineribbon(aes(y = .epred, linetype = event), .width = c(.95, .5), show.legend = FALSE) +
+#   scale_fill_brewer() +
+#   theme_bw() +
+#   facet_grid(. ~ Sex) +
+#   theme(legend.position = "none") +
+#   #ggtitle("Forcing requirements across all provenances", subtitle = "expectation (mean) predictions, caption = "6000 draws from the posterior") +
+#   ylab("Accumulated forcing (Growing Degree Days)") +
+#   xlab("Mean Annual Temperature (\u00B0C)")
 
 slopes <- readRDS(file = "objects/slopes.rds")
-slopesummary <- slopes %>%
+# slopesummary <- slopes %>%
 
 ggplot(slopes, aes(x = .value, y = event, fill = Sex)) +
   stat_slabinterval(alpha = 0.5) +
@@ -544,6 +545,32 @@ ggplot(dplot2, aes(x = Year, ymin = .lower_begin, ymax = .upper_begin, fill = Se
   theme_dark(base_size = 18) +
   theme(legend.position = "bottom")
 ggsave("../flowering-cline/figures/yearly_phenology.png", width = 14, height = 7, units = "in")
+
+
+summary_doy_annual <- readRDS("objects/summary_doy_annual.rds")
+ggplot(summary_doy_annual, aes(x = Site, y = sd_DoY, color = normal_period)) +
+  geom_point() +
+  facet_grid(Sex ~ event) +
+  labs(title = "Year-to-year variation in flowering phenology at 9 Sites", subtitle = "over two 30-year climate normal periods") +
+  theme(legend.position = "bottom") +
+  theme_bw()
+ggsave("../flowering-cline/figures/year2yearvar.png", width = 10, height = 6, units = "in")
+
+
+## prediction climate change ####
+doy_normal_plotting.rds <- readRDS("objects/doy_normal_plotting.rds")
+ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = scenario, y = DoY, colour = Site, shape = Sex)) +
+  stat_pointinterval(position = "dodge") +
+  stat_pointinterval(data = filter(doy_normal_plotting, event == "end"), position = "dodge") +
+  #scale_y_date(date_breaks = "1 month", date_labels =  "%b") +
+  facet_wrap("period", scales = "free_x", nrow = 1) +
+  theme_bw() +
+  theme(legend.position = "bottom")  +
+  labs(title = "Flowering period expectation", subtitle = "1951-2100 for 4 Shared Socioeconomic Pathways") +
+  xlab("Shared Socioeconomic Pathway") +
+  ylab("Day of Year")
+ggsave("../flowering-cline/figures/normal_predictions.png", width = 13, height = 5, units = "in")
+
 ## table ####
 genotypemodells <- readRDS("objects/genotypemodells.rds") # from genotypemodelanalysis.R
 

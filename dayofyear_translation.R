@@ -173,9 +173,10 @@ doy_annual <- map_dfr(split(dailyforc, f = list(dailyforc$index), drop = TRUE),
 
 # graph year to year variation ####
 
+labdf <- readRDS("objects/labdf.rds")
 doy_annual_plotting <- doy_annual %>%
   filter(Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")) %>%
-  left_join(labdf) %>% #labdf in modelparams
+  left_join(labdf) %>%
   group_by(Site, Year, Sex, event) %>%
   median_hdci(DoY) #slow
 saveRDS(doy_annual_plotting, 'objects/doy_annual_plotting.rds')
@@ -185,7 +186,6 @@ dplot2 <- doy_annual_plotting %>%
 saveRDS(dplot2, "objects/dplot2.rds")
 
 
-
 # variation
 summary_doy_annual <- doy_annual %>%
   mutate(normal_period = case_when(Year >= 1951 & Year <= 1980 ~ "1951-1980",
@@ -193,17 +193,9 @@ summary_doy_annual <- doy_annual %>%
   filter(!is.na(normal_period)) %>%
   group_by(normal_period, Sex, event, Site) %>%
   summarise(median_forcing = median(.epred), median_DoY = median(DoY), sd_forcing = sd(.epred), sd_DoY = sd(DoY))
+saveRDS(summary_doy_annual, "objects/summary_doy_annual.rds")
 
-ggplot(summary_doy_annual, aes(x = Site, y = sd_DoY, color = normal_period)) +
-  geom_point() +
-  facet_grid(Sex ~ event) +
-  labs(title = "Year-to-year variation in flowering phenology at 9 Sites", subtitle = "over two 30-year climate normal periods") +
-  theme(legend.position = "bottom") +
-  theme_bw()
-ggsave("../flowering-cline/figures/year2yearvar.png", width = 10, height = 6, units = "in")
-
-
- # graph normals ####
+ # graph climate change normals ####
 
 doy_normal_plotting <- doy_normal %>%
   filter(#! scenario %in% c( "ssp370"),
@@ -211,19 +203,7 @@ doy_normal_plotting <- doy_normal %>%
          Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border"),
          scenario %in% c("historical", "ssp245", "ssp585")) %>%
   mutate(Date = ymd("2023-12-31") + DoY)
-
-ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = scenario, y = DoY, colour = Site, shape = Sex)) +
-  stat_pointinterval(position = "dodge") +
-  stat_pointinterval(data = filter(doy_normal_plotting, event == "end"), position = "dodge") +
-  #scale_y_date(date_breaks = "1 month", date_labels =  "%b") +
-  facet_wrap("period", scales = "free_x", nrow = 1) +
-  theme_bw() +
-  theme(legend.position = "bottom")  +
-  labs(title = "Flowering period expectation", subtitle = "1951-2100 for 4 Shared Socioeconomic Pathways") +
-  xlab("Shared Socioeconomic Pathway") +
-  ylab("Day of Year")
-ggsave("../flowering-cline/figures/normal_predictions.png", width = 13, height = 5, units = "in")
-
+saveRDS(doy_normal_plotting, "objects/doy_normal_plotting.rds")
 
 
 
