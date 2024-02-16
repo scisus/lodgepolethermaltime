@@ -14,6 +14,7 @@ library(html2latex) # convert sjplot tables to tex and pdf
 library(tidyr)
 library(ggrepel)
 library(cols4all)
+library(ggalt)
 
 theme_set(theme_dark())
 factororder <- readRDS("objects/factororder.rds")
@@ -389,17 +390,14 @@ ggsave("../flowering-cline/figures/orchpred.png", width = 8, height = 5.5)
 ### For Both Outputs
 
 
-
-
-
 # predictions ####
 
 ## grand mean posterior predictions ####
 fepred <- readRDS("objects/fepred.rds")
 fpred <- readRDS("objects/fpred.rds")
-fepred_cenew <- readRDS("objects/fepred_cenew.rds")
-fepred_ceold <- readRDS("objects/fepred_ceold.rds")
-fepred_newsites <- readRDS("objects/fepred_newsites.rds")
+# fepred_cenew <- readRDS("objects/fepred_cenew.rds")
+# fepred_ceold <- readRDS("objects/fepred_ceold.rds")
+#fepred_newsites <- readRDS("objects/fepred_newsites.rds")
 
 # just expectations
 ggplot(fepred,
@@ -480,28 +478,28 @@ ggsave("plots/forcing_fullandexpectation.png", width = 6, height = 5)
 
 
 
-fepred_cenew <- readRDS("objects/fepred_cenew.rds")
-fepred_ceold <- readRDS("objects/fepred_ceold.rds")
-fepred_ce <- full_join(fepred_cenew, fepred_ceold)
-
-
-fepred_ceold <- mutate(fepred_ceold, Site = forcats::fct_relevel(Site, factororder_site_so))
-# fepred_ce %>%
-#   sample_frac(0.25) %>%
-#   mutate(Site = forcats::fct_relevel(Site, c(factororder_site_so, "new_Site")))
-
-ggplot(fepred_cenew,
-       aes(x = .epred, y = Sex, fill = Sex)) +
-  stat_halfeye(alpha = 0.7) +
-  scale_fill_okabe_ito() +
-  theme_clean() +
-  facet_grid(. ~ event)
+# fepred_cenew <- readRDS("objects/fepred_cenew.rds")
+# fepred_ceold <- readRDS("objects/fepred_ceold.rds")
+# fepred_ce <- full_join(fepred_cenew, fepred_ceold)
+#
+#
+# fepred_ceold <- mutate(fepred_ceold, Site = forcats::fct_relevel(Site, factororder_site_so))
+# # fepred_ce %>%
+# #   sample_frac(0.25) %>%
+# #   mutate(Site = forcats::fct_relevel(Site, c(factororder_site_so, "new_Site")))
+#
+# ggplot(fepred_cenew,
+#        aes(x = .epred, y = Sex, fill = Sex)) +
+#   stat_halfeye(alpha = 0.7) +
+#   scale_fill_okabe_ito() +
+#   theme_clean() +
+#   facet_grid(. ~ event)
 
 ## Home vs away #######
 ## graphs from lab meeting presentation
 doy_typical_home <- readRDS("objects/doy_typical_home.rds")
 
-library(ggalt)
+
 #home
 ggplot(doy_typical_home, aes(x = intercept, xend = wMAT, y=Sex, shape = Sex)) +
   geom_dumbbell(
@@ -520,7 +518,7 @@ ggplot(doy_typical_all_at_PGTIS, aes(x = intercept, xend = DoY, y=MAT, shape = S
   geom_dumbbell(
     colour = "#a3c4dc",
     colour_xend = "#0e668b",
-    size = 4
+    size = 3
   ) +
   facet_grid(Sex ~ event) +
   xlab("Day of Year") +
@@ -570,37 +568,4 @@ ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = scenario, y = DoY,
   xlab("Shared Socioeconomic Pathway") +
   ylab("Day of Year")
 ggsave("../flowering-cline/figures/normal_predictions.png", width = 13, height = 5, units = "in")
-
-## table ####
-genotypemodells <- readRDS("objects/genotypemodells.rds") # from genotypemodelanalysis.R
-
-## begin
-sjPlot::tab_model(list(genotypemodells$fb, genotypemodells$mb), dv.labels = c("Female", "Male"), title = "Begin flowering", file = "../flowering-cline/tables/provclimeffstart.html")
-provclimeffstart_knit <- tab_model(list(genotypemodells$fb, genotypemodells$mb), dv.labels = c("Female", "Male"), title = "Begin flowering")$knitr
-saveRDS(provclimeffstart_knit, "../flowering-cline/tables/proveclimeffstart_knit.rds")
-
-## end
-tab_model(list(genotypemodells$fe, genotypemodells$me), dv.labels = c("Female", "Male"), title = "End flowering", file = "../flowering-cline/tables/provclimeffend.html")
-provclimeffend_knit <- tab_model(list(genotypemodells$fe, genotypemodells$me), dv.labels = c("Female", "Male"), title = "End flowering", file = "../flowering-cline/tables/provclimeffend.html")$knitr
-saveRDS(provclimeffend_knit, "../flowering-cline/tables/provclimeffend_knit.rds")
-
-
-
-# genotype model predictions ####
-genotypedat <- readRDS("objects/genotypedat.rds")
-genotypepred <- readRDS("objects/genotypepred.rds")
-
-# lines & points ####
-theme_set(theme_dark())
-# caption = "points: 1961-81 climate normal MAT, mean of genotype offset estimates from thermal time model (2000 posterior samples). lines: posterior distribution of genotype offset from the provenance climate effect model"
-ggplot(genotypepred, aes(x = MAT, y = meanoffset)) +
-  stat_lineribbon(aes(y = .prediction, colour = Sex)) +
-  geom_point(data = bind_rows(genotypedat), aes(x = MAT, y = meanoffset, colour = Sex), pch = 1, alpha = 0.7) +
-  scale_fill_brewer(palette = "Greys") +
-  facet_grid(event ~ Sex) +
-  ylab("Genotype offset (GDD)") +
-  xlab(expression("Provenance Mean Annual Temperature " ( degree*C))) +
-  scale_color_viridis_d() +
-  labs(title = "Predicted and observed genotype effects")
-ggsave("../flowering-cline/figures/genotype_effects_modeled_observed.png", width = 7, height = 6)
 
