@@ -154,12 +154,12 @@ $$
 ## Modeling the mean
 
 $$
-\phi_i = \alpha + \beta MAT + \delta_{Site, i} + \delta_{Year, i} + \delta_{Genotype, i} + \delta_{Ramet, i}
+\phi_i = \alpha + \beta MAT + \delta_{Site, i} + \delta_{Year, i} + \delta_{Genotype, i} + \delta_{Tree, i}
 $$
 
 - $\alpha$: Overall mean forcing requirement
 - $\beta$: Provenance climate effect using MAT as covariate
-- $\delta$: Offsets from the overall mean based on site, year, genotype, and ramet
+- $\delta$: Offsets from the overall mean based on site, year, genotype, and tree
 
 ## Priors
 

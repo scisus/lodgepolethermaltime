@@ -103,25 +103,25 @@ bboxsitezoom <- sites %>%
 
 # maps ###########
 
-basemap <- ggplot(data = base) +
-    geom_raster(data = elevations, aes(x = x, y = y, fill = elevation)) +
-    scale_fill_gradientn(colours = grey.colors(20), na.value = "#FFFFFF") +
-    geom_sf(data = pcontorta, alpha = 0.1, fill = "darkolivegreen3") +
-    geom_sf(fill = NA) +
-    annotation_north_arrow(location = "bl", which_north = "true",
-                           pad_x = unit(0.05, "in"), pad_y = unit(4, "in"),
-                           style = north_arrow_fancy_orienteering) +
-    coord_sf(xlim = c(bboxparents$xmin - 4e5, bboxparents$xmax + 5e5),
-             ylim = c(bboxsites$ymin - 1e5, bboxsites$ymax + 3e5)) +
-    theme(legend.position = "none") +
-    ylab("") + xlab("")
+# basemap <- ggplot(data = basedat) +
+#     geom_raster(data = elevations, aes(x = x, y = y, fill = elevation)) +
+#     scale_fill_gradientn(colours = grey.colors(20, end = 0.8), na.value = "#FFFFFF") +
+#     geom_sf(data = pcontorta, alpha = 0.2, fill = "darkolivegreen3") +
+#     geom_sf(fill = NA) +
+#     annotation_north_arrow(location = "bl", which_north = "true",
+#                            pad_x = unit(0.05, "in"), pad_y = unit(4, "in"),
+#                            style = north_arrow_fancy_orienteering) +
+#     coord_sf(xlim = c(bboxparents$xmin - 4e5, bboxparents$xmax + 5e5),
+#              ylim = c(bboxsites$ymin - 1e5, bboxsites$ymax + 3e5)) +
+#     theme(legend.position = "none") +
+#     ylab("") + xlab("")
+#
+# print(basemap)
 
-print(basemap)
-
-basemap <- ggplot(data = base) +
+basemap <- ggplot(data = basedat) +
   geom_raster(data = elevations, aes(x = x, y = y, fill = elevation)) +
-  scale_fill_gradientn(colours = grey.colors(20), na.value = NA) +
-  geom_sf(data = pcontorta, alpha = 0.1, fill = "darkolivegreen3") +
+  scale_fill_gradientn(colours = grey.colors(20, end = 0.8), na.value = NA) +
+  geom_sf(data = pcontorta, alpha = 0.2, fill = "darkolivegreen3") +
   geom_sf(fill = NA) +
   annotation_north_arrow(location = "bl", which_north = "true", # location set to "tl"
                          pad_x = unit(0.05, "in"), pad_y = unit(0.05, "in"),
