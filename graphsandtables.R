@@ -67,30 +67,53 @@ siteclimplot <- meantempplot / forcplot / sumforcplot+
   plot_annotation(tag_levels = 'A')
 ggsave("../flowering-cline/figures/siteclimplot.png", width = 4, height = 9)
 
-# MAT ####
+# MAT (and replication) #####
 sites <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv") %>%
   filter(id == "site") %>%
   select(Site, MAT) %>%
   mutate(Site = forcats::fct_rev(forcats::fct_reorder(Site, MAT)))
-sites$type <- c(rep("Seed Orchard", 7), rep("Comparison", 2))
+sites$`Site Type` <- c(rep("Seed Orchard", 7), rep("Comparison", 2))
+
+replication_points <- readRDS("objects/replication_points.rds")
 
 provs <- readRDS("objects/phenf.rds") %>%
-  select(Tree, MAT, Site) %>%
-  distinct()
+  select(Tree, MAT, Site, Genotype) %>%
+  distinct() %>%
+  left_join(replication_points) %>%
+  rename('Within Sites' = treestf, 'Across Sites' = sitestf, Replicated = replicated)
 
-bcspus <- read.csv("../phd/data/OrchardInfo/lodgepole_SPU_climsum.csv")
-
-ggplot(data=sites) +
-  geom_point(aes(x = "Sites", y = MAT, colour = Site, shape = type), size = 2.5) +
-  geom_text_repel(aes(x = "Sites", y = MAT, label = Site),size = 2) +
-  geom_quasirandom(data = provs, aes(x = "Provenances", y = MAT, colour = Site), alpha = 0.7, pch = 3, varwidth = TRUE) +
-  scale_color_brewer(type = "seq") +
-  theme_dark() +
+siteplot <-  ggplot(data=sites) +
+  geom_point(aes(x = "Sites", y = MAT, shape = `Site Type`)) +
+  geom_text_repel(aes(x = "Sites", y = MAT, label = Site)) +
   xlab("") +
   ylab("Mean Annual Temperature (\u00B0C)") +
-  guides(color = "none", shape = "none")
+  scale_y_continuous(limits = c(min(sites$MAT), max(sites$MAT))) +
+  theme(legend.position = "bottom") +
+  ggtitle("Site MATs") +
+  guides(shape = guide_legend(nrow = 2))
 
-ggsave("../flowering-cline/figures/MAT.png", width = 6, height = 5)
+
+provplot <- ggplot(data=provs) +
+  geom_quasirandom(data = provs, aes(x = Site, y = MAT, fill = `Within Sites`, shape = Replicated, size = `Across Sites`, colour = yearstf),
+                   varwidth = TRUE, alpha = 0.7) +
+  scale_shape_manual(values = c('TRUE' = 21, 'FALSE' = 3)) +
+  scale_size_manual(values = c('TRUE' = 2, 'FALSE' = 1)) +
+  scale_fill_manual(values = c('TRUE' = 'grey', 'FALSE' = 'white')) +
+  scale_y_continuous(limits = c(min(sites$MAT), max(sites$MAT)), position = "right") +
+  ylab("Mean Annual Temperature (\u00B0C)") +
+  guides(fill = guide_legend(override.aes = list(shape = 21), nrow = 2),
+         size = guide_legend(override.aes = list(shape = 21), nrow = 2),
+         shape = guide_legend(nrow = 2)) +
+  theme(legend.position = "bottom") +
+  ggtitle("Tree genotype provenance MATs")
+
+
+siteplot + provplot + patchwork::plot_layout(widths = c(1,4)) + patchwork::plot_annotation(tag_levels = 'A')
+
+ggsave("../flowering-cline/figures/MAT.png", width = 7, height = 5, scale = 1.7)
+
+ggplot(data = provs, aes(x = SiteMAT, y = MAT, colour = Site)) +
+  geom_quasirandom(pch = 3, varwidth = TRUE)
 
 # cumulative_distribution ####
 # raw data plot using phenf from modelmethods.R
