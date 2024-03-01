@@ -82,35 +82,52 @@ provs <- readRDS("objects/phenf.rds") %>%
   left_join(replication_points) %>%
   rename('Within Sites' = treestf, 'Across Sites' = sitestf, Replicated = replicated)
 
-siteplot <-  ggplot(data=sites) +
+siteplot <- ggplot(data=sites) +
   geom_point(aes(x = "Sites", y = MAT, shape = `Site Type`)) +
-  geom_text_repel(aes(x = "Sites", y = MAT, label = Site)) +
+  geom_text_repel(aes(x = "Sites", y = MAT, label = Site), size = 2.5, point.padding = 0.05, min.segment.length = 0.15) +
   xlab("") +
   ylab("Mean Annual Temperature (\u00B0C)") +
   scale_y_continuous(limits = c(min(sites$MAT), max(sites$MAT))) +
-  theme(legend.position = "bottom") +
+  scale_shape_manual(values = c('Comparison' = 17, 'Seed Orchard' = 16)) +
+  theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5)) +
   ggtitle("Site MATs") +
-  guides(shape = guide_legend(nrow = 2))
+  guides(shape = guide_legend(nrow = 2, title.position = 'top'))
+#size =3, segment.colour = 'black', min.segment.length = 0.2,
 
+
+# Version with no colours
+# provplot <- ggplot(data=provs) +
+#   geom_quasirandom(data = provs, aes(x = Site, y = MAT, fill = `Within Sites`, shape = Replicated, size = `Across Sites`),
+#                    varwidth = TRUE, alpha = 0.7) +
+#   scale_shape_manual(values = c('TRUE' = 21, 'FALSE' = 3)) +
+#   scale_size_manual(values = c('TRUE' = 2, 'FALSE' = 1)) +
+#   scale_fill_manual(values = c('TRUE' = 'grey', 'FALSE' = 'white')) +
+#   scale_y_continuous(limits = c(min(sites$MAT), max(sites$MAT)), position = "right") +
+#   ylab("Mean Annual Temperature (\u00B0C)") +
+#   guides(fill = guide_legend(override.aes = list(shape = 21), nrow = 2, title.position = 'top'),
+#          size = guide_legend(override.aes = list(shape = 21), nrow = 2, title.position = 'top'),
+#          shape = guide_legend(nrow = 2, title.position = 'top')) +
+#   theme(legend.position = "bottom", legend.direction = "horizontal", plot.title = element_text(hjust = 0.5)) +
+#   ggtitle("Provenance MATs")
 
 provplot <- ggplot(data=provs) +
-  geom_quasirandom(data = provs, aes(x = Site, y = MAT, fill = `Within Sites`, shape = Replicated, size = `Across Sites`, colour = yearstf),
+  geom_quasirandom(data = provs, aes(x = Site, y = MAT, fill = `Within Sites`, shape = Replicated, colour = `Across Sites`),
                    varwidth = TRUE, alpha = 0.7) +
   scale_shape_manual(values = c('TRUE' = 21, 'FALSE' = 3)) +
-  scale_size_manual(values = c('TRUE' = 2, 'FALSE' = 1)) +
-  scale_fill_manual(values = c('TRUE' = 'grey', 'FALSE' = 'white')) +
+  scale_colour_manual(values = c('TRUE' = '#DF536B', 'FALSE' = 'black')) +
+  scale_fill_manual(values = c('TRUE' = 'grey28', 'FALSE' = 'white')) +
   scale_y_continuous(limits = c(min(sites$MAT), max(sites$MAT)), position = "right") +
   ylab("Mean Annual Temperature (\u00B0C)") +
-  guides(fill = guide_legend(override.aes = list(shape = 21), nrow = 2),
-         size = guide_legend(override.aes = list(shape = 21), nrow = 2),
-         shape = guide_legend(nrow = 2)) +
-  theme(legend.position = "bottom") +
-  ggtitle("Tree genotype provenance MATs")
+  guides(fill = guide_legend(override.aes = list(shape = 21), nrow = 2, title.position = 'top'),
+         colour = guide_legend(override.aes = list(shape = 21), nrow = 2, title.position = 'top'),
+         shape = guide_legend(nrow = 2, title.position = 'top')) +
+  theme(legend.position = "bottom", legend.direction = "horizontal", plot.title = element_text(hjust = 0.5)) +
+  ggtitle("Provenance MATs")
 
 
 siteplot + provplot + patchwork::plot_layout(widths = c(1,4)) + patchwork::plot_annotation(tag_levels = 'A')
 
-ggsave("../flowering-cline/figures/MAT.png", width = 7, height = 5, scale = 1.7)
+ggsave("../flowering-cline/figures/MAT.png", width = 7, height = 5, scale = 1.1)
 
 ggplot(data = provs, aes(x = SiteMAT, y = MAT, colour = Site)) +
   geom_quasirandom(pch = 3, varwidth = TRUE)
