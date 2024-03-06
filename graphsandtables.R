@@ -80,7 +80,8 @@ provs <- readRDS("objects/phenf.rds") %>%
   select(Tree, MAT, Site, Genotype) %>%
   distinct() %>%
   left_join(replication_points) %>%
-  rename('Within Sites' = treestf, 'Across Sites' = sitestf, 'Across Years' = yearstf, Replicated = replicated)
+  rename('Within Sites' = treestf, 'Across Sites' = sitestf, 'Across Years' = yearstf, Replicated = replicated) %>%
+  mutate(Site = forcats::fct_relevel(Site, factororder$site))
 
 siteplot <- ggplot(data=sites) +
   geom_point(aes(x = "Sites", y = MAT, shape = `Site Type`)) +
