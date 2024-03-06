@@ -43,12 +43,30 @@ mtss <- modeldata %>%
 
 
 # join and identify no replication
+# All genotypes that are replicated across sites are replicated across years.
 replication_points <- mys %>%
   full_join(mss) %>%
   full_join(mtss) %>%
   group_by(Genotype, Site) %>%
-  mutate(replicated = base::any(yearstf, sitestf, treestf))
+  mutate(replicated = base::any(yearstf, sitestf, treestf),
+         `Genotype replication` = case_when(replicated == FALSE ~ 'Not replicated',
+                                 yearstf == TRUE & treestf == FALSE & sitestf == FALSE ~ 'Across years only',
+                                 treestf == TRUE & yearstf == FALSE & sitestf == FALSE ~ 'Within sites only',
+                                 treestf == FALSE & yearstf == TRUE & sitestf == TRUE ~ 'Across years and sites',
+                                 treestf == TRUE & yearstf == TRUE & sitestf == FALSE ~ 'Across years and within sites',
+                                 treestf == TRUE & yearstf == TRUE & sitestf == TRUE ~ 'Across years and sites and within sites')) %>%
+  ungroup()
 
-replication_points %>% filter(replicated == TRUE) %>% nrow()
+
+replication_points$`Genotype replication` <- factor(replication_points$`Genotype replication`,
+                                       levels = c("Not replicated",
+                                                  "Within sites only",
+                                                  "Across years only",
+                                                  "Across years and within sites",
+                                                  "Across years and sites",
+                                                  "Across years and sites and within sites"),
+                                       ordered = TRUE)
+
+
 # save all replication info
 saveRDS(replication_points, "objects/replication_points.rds")

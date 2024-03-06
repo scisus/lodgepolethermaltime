@@ -80,11 +80,11 @@ provs <- readRDS("objects/phenf.rds") %>%
   select(Tree, MAT, Site, Genotype) %>%
   distinct() %>%
   left_join(replication_points) %>%
-  rename('Within Sites' = treestf, 'Across Sites' = sitestf, Replicated = replicated)
+  rename('Within Sites' = treestf, 'Across Sites' = sitestf, 'Across Years' = yearstf, Replicated = replicated)
 
 siteplot <- ggplot(data=sites) +
   geom_point(aes(x = "Sites", y = MAT, shape = `Site Type`)) +
-  geom_text_repel(aes(x = "Sites", y = MAT, label = Site), size = 2.5, point.padding = 0.05, min.segment.length = 0.15) +
+  geom_text_repel(aes(x = "Sites", y = MAT, label = Site), size = 2, point.padding = 0.05, min.segment.length = 0.16) +
   xlab("") +
   ylab("Mean Annual Temperature (\u00B0C)") +
   scale_y_continuous(limits = c(min(sites$MAT), max(sites$MAT))) +
@@ -92,45 +92,39 @@ siteplot <- ggplot(data=sites) +
   theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5)) +
   ggtitle("Site MATs") +
   guides(shape = guide_legend(nrow = 2, title.position = 'top'))
-#size =3, segment.colour = 'black', min.segment.length = 0.2,
 
 
-# Version with no colours
-# provplot <- ggplot(data=provs) +
-#   geom_quasirandom(data = provs, aes(x = Site, y = MAT, fill = `Within Sites`, shape = Replicated, size = `Across Sites`),
-#                    varwidth = TRUE, alpha = 0.7) +
-#   scale_shape_manual(values = c('TRUE' = 21, 'FALSE' = 3)) +
-#   scale_size_manual(values = c('TRUE' = 2, 'FALSE' = 1)) +
-#   scale_fill_manual(values = c('TRUE' = 'grey', 'FALSE' = 'white')) +
-#   scale_y_continuous(limits = c(min(sites$MAT), max(sites$MAT)), position = "right") +
-#   ylab("Mean Annual Temperature (\u00B0C)") +
-#   guides(fill = guide_legend(override.aes = list(shape = 21), nrow = 2, title.position = 'top'),
-#          size = guide_legend(override.aes = list(shape = 21), nrow = 2, title.position = 'top'),
-#          shape = guide_legend(nrow = 2, title.position = 'top')) +
-#   theme(legend.position = "bottom", legend.direction = "horizontal", plot.title = element_text(hjust = 0.5)) +
-#   ggtitle("Provenance MATs")
-
-provplot <- ggplot(data=provs) +
-  geom_quasirandom(data = provs, aes(x = Site, y = MAT, fill = `Within Sites`, shape = Replicated, colour = `Across Sites`),
-                   varwidth = TRUE, alpha = 0.7) +
-  scale_shape_manual(values = c('TRUE' = 21, 'FALSE' = 3)) +
-  scale_colour_manual(values = c('TRUE' = '#DF536B', 'FALSE' = 'black')) +
-  scale_fill_manual(values = c('TRUE' = 'grey28', 'FALSE' = 'white')) +
-  scale_y_continuous(limits = c(min(sites$MAT), max(sites$MAT)), position = "right") +
+provplot <- ggplot(provs, aes(x = Site, y = MAT,
+                  shape = `Genotype replication`,
+                  fill = `Within Sites`,
+                  color = `Across Sites`,
+                  group = `Genotype replication`)) +
+  geom_quasirandom(varwidth = TRUE, alpha = 0.5) +
+  scale_shape_manual(values = c("Not replicated" = 4,
+                                "Within sites only" = 17,
+                                "Across years only" = 21,
+                                "Across years and sites" = 21,
+                                "Across years and within sites" = 21,
+                                "Across years and sites and within sites" = 21)) +
+  scale_fill_manual(values = c("TRUE" = "grey28", "FALSE" = "transparent"),
+                    guide = FALSE) +  # Hide separate fill legend
+  scale_colour_manual(values = c("TRUE" = "#DF536B", "FALSE" = 'black'),
+                      guide = FALSE) +  # Hide separate color legend
+  scale_y_continuous(limits = c(min(provs$MAT), max(provs$MAT)), position = "right") +
   ylab("Mean Annual Temperature (\u00B0C)") +
-  guides(fill = guide_legend(override.aes = list(shape = 21), nrow = 2, title.position = 'top'),
-         colour = guide_legend(override.aes = list(shape = 21), nrow = 2, title.position = 'top'),
-         shape = guide_legend(nrow = 2, title.position = 'top')) +
-  theme(legend.position = "bottom", legend.direction = "horizontal", plot.title = element_text(hjust = 0.5)) +
-  ggtitle("Provenance MATs")
+  theme(legend.position = "bottom") +
+  ggtitle("Provenance MATs") +
+  guides(shape = guide_legend(override.aes = list(fill = c(rep(c("transparent", "grey28"),3)),
+                                                  color = c(rep("black", 4 ), rep("#DF536B", 2))),
+                              title.position = 'top',
+                              nrow = 3))
+
 
 
 siteplot + provplot + patchwork::plot_layout(widths = c(1,4)) + patchwork::plot_annotation(tag_levels = 'A')
 
 ggsave("../flowering-cline/figures/MAT.png", width = 7, height = 5, scale = 1.1)
 
-ggplot(data = provs, aes(x = SiteMAT, y = MAT, colour = Site)) +
-  geom_quasirandom(pch = 3, varwidth = TRUE)
 
 # cumulative_distribution ####
 # raw data plot using phenf from modelmethods.R
