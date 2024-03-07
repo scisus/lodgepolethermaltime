@@ -14,6 +14,8 @@ modells <- readRDS("objects/modells.rds")
 alldatls <- readRDS("objects/datlist.rds")
 sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv") %>% filter(id == "site")
 
+labdf <- readRDS("objects/labdf.rds")
+
 n <- 3000 # when downsampling required
 
 siteMAT <- sitedat %>%
