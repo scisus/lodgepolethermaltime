@@ -147,6 +147,18 @@ pointmap <- basemap +
   geom_label_repel(data = sitezoomin, aes(label = Site, geometry = geometry),
                    stat = "sf_coordinates", nudge_x = -5e5, nudge_y = 5e4)
 
+pointmap <- basemap +
+  geom_sf(data = sites, color = "white", size = 2, aes(shape = orchard)) +
+  scale_shape_manual(values = c('FALSE' = 17, 'TRUE' = 16)) +
+  #scale_colour_brewer(type = "qual", palette = 3) +
+  geom_sf(data = parents, shape = 3, alpha = 0.8) +
+  coord_sf(xlim = c(bboxparents$xmin - 3e5, bboxparents$xmax + 2e5),
+           ylim = c(bboxsites$ymin - 1e5, bboxsites$ymax + 3e5)) +
+  geom_label_repel(data = sitezoomout, aes(label = Site, geometry = geometry),
+                   stat = "sf_coordinates", nudge_x = 5e5) +
+  geom_label_repel(data = sitezoomin, aes(label = Site, geometry = geometry),
+                   stat = "sf_coordinates", nudge_x = -5e5, nudge_y = 5e4)
+
 print(pointmap)
 
 # Save the plot
