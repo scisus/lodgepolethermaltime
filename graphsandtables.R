@@ -226,7 +226,7 @@ ggsave("../flowering-cline/figures/obsvsretro.png", width = 6, height = 5)
 # plot of population means using means from modelparameters.R - better as a table?
 intercepts <- readRDS("objects/intercepts.rds")
 interceptplot <- ggplot(intercepts, aes(y = fct_rev(event), x = .value, colour = Sex)) +
-  stat_halfeye(position = "dodge") +
+  stat_halfeye(position = "dodge", point_interval = "mean_qi", .width = c(0.50, 0.90)) +
   scale_colour_viridis_d() +
   #labs(title = expression(paste("Mean forcing requirement at 0 \u00B0C (", mu, ")")), caption = "6000 draws from the posterior") +
   ylab("") +
