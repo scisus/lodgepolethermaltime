@@ -251,7 +251,17 @@ ggsave("../flowering-cline/figures/intercepts.png", width = 6, height = 6)
 #   xlab("Mean Annual Temperature (\u00B0C)")
 
 slopes <- readRDS(file = "objects/slopes.rds")
-# slopesummary <- slopes %>%
+
+slopesummary <- slopes %>%
+  group_by(Sex, event) %>%
+  mean_hdci(.value) %>%
+  mutate(
+    Value_CI = paste0(round(.value, 2), " (", round(.lower, 2), "-", round(.upper, 2), ")")
+  ) %>%
+  select(-starts_with(".")) %>%
+  pivot_wider(names_from = Sex, values_from = Value_CI)
+slopesummary
+saveRDS(slopesummary, file = "../flowering-cline/tables/slopesummary.rds")
 
 ggplot(slopes, aes(x = .value, y = event, fill = Sex)) +
   stat_slabinterval(alpha = 0.5) +
