@@ -24,9 +24,40 @@ siteMAT <- sitedat %>%
   mutate(MAT = round(MAT, 1)) #DUPLICATED IN DOY TRANS
 
 # orchards ############
-# Make orchard specific predictions using full posterior
+## generic orchard ############
+neworchdat_avg <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
+                                    to = range(alldatls$fbdat$MAT)[2], length.out = 2),
+                          Year = "newyear",
+                          Tree = "newtree",
+                          Genotype = "newgenotype",
+                          Site = "neworchard",
+                          event = c("begin", "end"),
+                          Sex = c("FEMALE", "MALE")) %>%
+  split(list(.$event, .$Sex))
 
-shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Kalamalka") # let kalamalka be stand in for tolko, prt, and vernon
+# posterior prediction #########
+# for each site for the full range of provenances using an average year, genotype, and tree (using estimated gaussian prior to generate random effects). 2000 draws, 95% HDPI #######
+
+fpred_orch_avg <- purrr::map2(neworchdat_avg, modells,
+                          .f = function(x,y) {add_predicted_draws(newdata = x,
+                                                                  object = y,
+                                                                  re_formula = NULL,
+                                                                  allow_new_levels = TRUE,
+                                                                  sample_new_levels = "gaussian",
+                                                                  ndraws = n)}) %>%
+  bind_rows()
+saveRDS(fpred_orch_avg, file = "objects/fpred_orch_avg.rds")
+
+fpred_orch_summary_avg <- fpred_orch_avg %>%
+  group_by(MAT, Year, Tree, Genotype, Site, event, Sex) %>%
+  median_hdci(.prediction)
+saveRDS(fpred_orch_summary_avg, "objects/fpred_orch_summary.rds")
+
+
+
+## orchard specific predictions using full posterior ############
+
+shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Tolko", "PRT", "Vernon", "Kalamalka") # drop border and trench
 neworchdat <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
                                     to = range(alldatls$fbdat$MAT)[2], length.out = 2),
                          Year = "newyear",

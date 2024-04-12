@@ -346,9 +346,49 @@ ggplot(yearr, aes(y=level, x = .value, colour = Sex)) +
 ggsave("plots/year_offsets.pdf", width = 6, height = 5)
 
 # retrodictions ####
+#
+## Observed vs retrodicted ##############
+fretro_summary <- readRDS("objects/fretro_summary.rds")
+censorpal <- c4a("icefire", 3)
+ggplot(fretro_summary, aes(x = sum_forcing, y = .prediction, color = censored)) +
+  geom_point(alpha = .5, shape = 3) +
+  facet_grid(Sex ~ event) +
+  geom_abline(color = "grey20") +
+  xlab("Observed accumulated forcing (GDD)") +
+  ylab("Median retrodicted accumulated forcing (GDD)") +
+  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
+  scale_colour_manual(values = c(censorpal[2], censorpal[3], censorpal[1])) +
+  theme(legend.position = "bottom")
+ggsave("../flowering-cline/figures/obsvsretro.png", width = 6, height = 5)
+
+# build a diagram to explain table
+overlapex <- data.frame(data = c("observation", "model", "model", "model"),
+                        label = c("observation interval", "mean in interval", "one sigma overlap", "no overlap"),
+                        overlap = c(NA, TRUE, TRUE, FALSE),
+                        mean = c(15, 13, 3, 25),
+                        .lower = c(5, 8, -2, 20),
+                        .upper = c(15, 18, 8, 30))
+overlapex$label <- factor(overlapex$label, levels = unique(overlapex$label))
+
+ggplot(overlapex, aes(x = mean, y = forcats::fct_rev(label), xmin = .lower, xmax = .upper, colour = overlap, )) +
+  geom_pointinterval(size = 5, linewidth = 3) +
+  ylab("") +
+  facet_grid(forcats::fct_rev(data) ~ ., scales = "free_y") +
+  scale_color_manual(values = c("TRUE" = "#1B9E77", "FALSE" = "#D95F02")) +
+  geom_vline(xintercept = c(5,15), colour = "grey", linetype = 2) +
+  theme_bw(base_size = 12) +
+  theme(legend.position = "bottom") +
+  theme(axis.title.x = element_blank(), # Removes the x-axis title
+                axis.text.x = element_blank(),  # Removes the x-axis tick labels
+                axis.ticks.x = element_blank()) # Removes the x-axis ticks)
+
+ggsave("../flowering-cline/figures/obsvsretroconceptual.png", width = 4, height = 3)
 
 ## orchard specific retrodictions ####
-### GDD ##########
+### specific ############
+#### GDD ##########
+###
+
 # using 95% HDCI, median posterior prediction for each site for the full range of provenances (MATs) using an average year, Genotype, and tree (i.e. using estimated gaussian prior to generate those random effects), but using site specific effects estimated from the model (delta offset). Posterior predictions contain full range of uncertainty because I want the orchard managers to know what to actually expect
 
 fpred_orch_summary <- readRDS("objects/fpred_orch_summary.rds")
@@ -384,7 +424,7 @@ ggplot(fpred_orch_summary) +
 ggsave("../flowering-cline/figures/orchpred_gdd.png", width = 3, height = 4)
 
 
-### DoY #####
+#### DoY #####
 
 doy_annual_pp_sum <- readRDS("objects/doy_annual_pp_sum.rds")
 doy_annual_pp_sum$MAT_label <- paste("MAT:", doy_annual_pp_sum$MAT)
