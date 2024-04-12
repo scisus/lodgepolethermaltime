@@ -208,48 +208,37 @@ ggsave("../flowering-cline/figures/sampling.png", width = 6, height = 8)
 censdf <- readRDS("objects/censdf.rds")
 knitr::kable(censdf, caption="Proportion of observations for each event interval censored or left or right end censored")
 
-# Observed vs retrodicted ##############
-fretro_summary <- readRDS("objects/fretro_summary.rds")
-censorpal <- c4a("icefire", 3)
-ggplot(fretro_summary, aes(x = sum_forcing, y = .prediction, color = censored)) +
-  geom_point(alpha = .5, shape = 3) +
-  facet_grid(Sex ~ event) +
-  geom_abline(color = "grey20") +
-  xlab("Observed accumulated forcing (GDD)") +
-  ylab("Median retrodicted accumulated forcing (GDD)") +
-  guides(colour = guide_legend(override.aes = list(alpha = 1))) +
-  scale_colour_manual(values = c(censorpal[2], censorpal[3], censorpal[1]))
-ggsave("../flowering-cline/figures/obsvsretro.png", width = 6, height = 5)
-
 # parameters ####
 ## means ####
 # plot of population means using means from modelparameters.R - better as a table?
 intercepts <- readRDS("objects/intercepts.rds")
-interceptplot <- ggplot(intercepts, aes(y = fct_rev(event), x = .value, colour = Sex)) +
+interceptplot <- ggplot(intercepts, aes(y = fct_rev(event), x = .value, colour = Sex, shape = event)) +
   stat_halfeye(position = "dodge", point_interval = "mean_qi", .width = c(0.50, 0.90)) +
-  scale_colour_viridis_d() +
+  scale_colour_discrete_c4a_div(palette = "acadia") +
   #labs(title = expression(paste("Mean forcing requirement at 0 \u00B0C (", mu, ")")), caption = "6000 draws from the posterior") +
   ylab("") +
-  xlab(expression(paste("Mean forcing accumulation required at MAT 0 \u00B0C - ", mu, " (GDD)"))) +
- # theme_dark(base_size = 18) +
-  theme(legend.position = "bottom") +
+  xlab(expression(paste("Mean forcing accumulation ", mu, " (GDD)"))) +
   scale_x_continuous(breaks = scales::pretty_breaks(n=10)) +
-  scale_y_discrete(expand = expansion(add = c(0, .75)))
+  scale_y_discrete(expand = expansion(add = c(0, .75))) +
+  theme_bw(base_size = 9) +
+  theme(legend.position = "top") +
+  labs(shape = "Event")
 interceptplot
 #smallmeans <- filter(means, .draw %in% sample(unique(means$.draw), size = 200))
 ggsave("../flowering-cline/figures/intercepts.png", width = 6, height = 6)
 
-## slopes ####
-# ggplot(fepred_allprovs, aes(x = MAT, y = .epred)) +
-#   stat_lineribbon(aes(y = .epred, linetype = event), .width = c(.95, .5), show.legend = FALSE) +
-#   scale_fill_brewer() +
-#   theme_bw() +
-#   facet_grid(. ~ Sex) +
-#   theme(legend.position = "none") +
-#   #ggtitle("Forcing requirements across all provenances", subtitle = "expectation (mean) predictions, caption = "6000 draws from the posterior") +
-#   ylab("Accumulated forcing (Growing Degree Days)") +
-#   xlab("Mean Annual Temperature (\u00B0C)")
+interceptsummary <- intercepts %>%
+  group_by(Sex, event) %>%
+  mean_hdci(.value) %>%
+  mutate(
+    Value_CI = paste0(round(.value), " (", round(.lower), "-", round(.upper), ")")
+  ) %>%
+  select(-starts_with(".")) %>%
+  pivot_wider(names_from = Sex, values_from = Value_CI)
 
+#saveRDS(interceptsummary, file = "../flowering-cline/tables/interceptsummary.rds")
+
+### slopes
 slopes <- readRDS(file = "objects/slopes.rds")
 
 slopesummary <- slopes %>%
@@ -261,57 +250,78 @@ slopesummary <- slopes %>%
   select(-starts_with(".")) %>%
   pivot_wider(names_from = Sex, values_from = Value_CI)
 slopesummary
-saveRDS(slopesummary, file = "../flowering-cline/tables/slopesummary.rds")
+#saveRDS(slopesummary, file = "../flowering-cline/tables/slopesummary.rds")
 
-ggplot(slopes, aes(x = .value, y = event, fill = Sex)) +
-  stat_slabinterval(alpha = 0.5) +
-  scale_fill_viridis_d(option = "B") +
-  xlab("GDD per MAT") +
+slopeplot <- ggplot(slopes, aes(y = fct_rev(event), x = .value, colour = Sex, shape = event)) +
+  stat_halfeye(position = "dodge", point_interval = "mean_qi", .width = c(0.50, 0.90)) +
+  scale_colour_discrete_c4a_div(palette = "acadia") +
+  #labs(title = expression(paste("Mean forcing requirement at 0 \u00B0C (", mu, ")")), caption = "6000 draws from the posterior") +
   ylab("") +
-  labs(title = 'MAT effect', caption = '6000 draws from the posterior')
+  xlab(expression(paste("Provenance MAT effect ", beta, " (GDD/\u00B0C)"))) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n=10)) +
+  scale_y_discrete(expand = expansion(add = c(0, .75))) +
+  theme_bw(base_size = 9) +
+  theme(legend.position = "none")
+
+interceptplot + slopeplot +
+  plot_layout(widths = c(2,1)) +
+  plot_annotation(tag_levels = 'A')
+ggsave("../flowering-cline/figures/slopeinterceptgraph.png", width = 7, height = 3)
+
+slopeintercepttable <- cbind(interceptsummary, slopesummary[, c(-1)])
+saveRDS(slopeintercepttable, "../flowering-cline/tables/slopeintercepttable.rds")
 
 ## sd ####
 # plot sd parameters using variation from modelparameters.R
-variation <- readRDS("objects/variation.rds")
-varplot <- ggplot(variation, aes(y = forcats::fct_rev(event), x = .value, colour = forcats::fct_rev(Sex), shape = event)) +
+variation <- readRDS("objects/variation.rds") %>% ungroup()
+#varplot <- ggplot(variation, aes(y = forcats::fct_rev(event), x = .value, colour = forcats::fct_rev(Sex), shape = event)) +
+varplot <- ggplot(variation, aes(y = forcats::fct_rev(event), x = .value, colour = Sex, shape = event)) +
   stat_pointinterval(position = "dodge") +
-  scale_colour_viridis_d(limits = c("FEMALE", "MALE")) +
+  #scale_colour_viridis_d(limits = c("FEMALE", "MALE")) +
  # labs(title = "Standard deviation of pop mean & offsets", caption = "6000 draws from the posterior") +
-  ylab("Event") +
+  ylab("") +
   xlab("Standard deviation (GDD)") +
   facet_grid(.variable ~ ., scales = "free_y") +
-  guides(color = "none", shape = "none") +
-  theme_dark() +
-  theme(legend.position = "top")
-#ggsave("plots/sd.pdf", width = 6, height = 5)
-#ggsave("../flowering-cline/figures/sd.png", width = 6, height = 5)
+  guides(shape = "none", colour = guide_legend(nrow=2)) +
+  scale_colour_discrete_c4a_div(palette = "acadia") +
+  theme_bw(base_size = 10) +
+  theme(legend.position = "bottom", legend.justification = "right") +
+  geom_vline(xintercept = 0, linetype = 3, colour = 'darkgray')
+ # labs(colour = "Sex", shape = "Event")
+varplot
+#ggsave("../flowering-cline/figures/sd.png", width = 5, height = 4.5)
 
 ## offset_medians ####
-# plot medians of offset parameters in point clouds (like beeswarm)
+# plot medians of offset parameters in point clouds (like beeswarm) 6000 draws
 offsets_summary <- readRDS("objects/offsets_summary.rds") %>%
   mutate(model = factor(model, levels = c("mb", "fb", "me", "fe")))
 offsetplot <- offsets_summary %>%
   select(model, Sex, event, factor, level, .value, .point) %>% distinct() %>%
-  ggplot(aes(y=.value, x = model, colour = Sex, shape = event)) +
-  geom_quasirandom(alpha = 0.5) +
+  ggplot(aes(y=forcats::fct_rev(event), x = .value, colour = Sex, shape = event, group = model)) +
+  geom_quasirandom(dodge.width = 1) +
   facet_wrap("factor") +
-  #labs(title = "Offset medians", caption = "6000 draws from posterior") +
-  #guides(color = "none", shape = "none") +
-  geom_hline(yintercept = 0, linetype =3, colour = "darkgray") +
-  scale_colour_viridis_d() +
-  theme_dark() +
-  xlab("") +
-  ylab("Offset median (GDD)") +
-  theme(legend.position = "bottom", axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
-  geom_hline(yintercept = 0, linetype = 3) +
-  coord_flip()
-#ggsave("plots/offsets_medians.pdf", width = 6, height = 5)
-#
+  scale_colour_discrete_c4a_div(palette = "acadia", guide = "none") +
+  ylab("") +
+  xlab("Offset median (GDD)") +
+  theme_bw(base_size = 10) +
+  geom_vline(xintercept = 0, linetype = 3, colour = 'darkgray') +
+  theme(axis.ticks.y = element_blank(), legend.position = "bottom", legend.justification = "left") +
+  guides(shape = guide_legend(nrow=2)) +
+  labs(shape = "Event")
+offsetplot
+#ggsave("../flowering-cline/figures/offsets_medians.png", width = 6, height = 5)
+
+
+# interceptplot +
+#   (varplot + offsetplot + plot_layout(ncol = 2, widths = c(1,2.5))) +
+#   plot_layout(nrow = 2, heights = c(1, 1.5)) +
+#   plot_annotation(tag_levels = 'A')
 
 varplot + offsetplot +
   plot_layout(widths = c(1,2.5)) +
   plot_annotation(tag_levels = 'A')
-ggsave("../flowering-cline/figures/varoffsets.png", width = 7, height = 6)
+
+ggsave("../flowering-cline/figures/varoffsets.png", width = 6.5, height = 5)
 
 ## site_offsets ####
 # interval plot for site level offsets using siter from modelparameters.R
