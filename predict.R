@@ -48,10 +48,10 @@ fpred_orch_avg <- purrr::map2(neworchdat_avg, modells,
   bind_rows()
 saveRDS(fpred_orch_avg, file = "objects/fpred_orch_avg.rds")
 
-fpred_orch_summary_avg <- fpred_orch_avg %>%
+fpred_orch_avg_summary <- fpred_orch_avg %>%
   group_by(MAT, Year, Tree, Genotype, Site, event, Sex) %>%
   median_hdci(.prediction)
-saveRDS(fpred_orch_summary_avg, "objects/fpred_orch_summary.rds")
+saveRDS(fpred_orch_avg_summary, "objects/fpred_orch_avg_summary.rds")
 
 
 

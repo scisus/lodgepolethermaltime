@@ -394,7 +394,28 @@ ggplot(overlapex, aes(x = mean, y = forcats::fct_rev(label), xmin = .lower, xmax
 
 ggsave("../flowering-cline/figures/obsvsretroconceptual.png", width = 4, height = 3)
 
-## orchard specific retrodictions ####
+## orchard retrodictions ####
+### generic #################
+
+fpred_orch_avg_summary <- readRDS("objects/fpred_orch_avg_summary.rds")
+
+ggplot(fpred_orch_avg_summary) +
+  # colored ribbons for start and end
+  geom_ribbon(aes(x = MAT, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  geom_line(aes(x = MAT, y = .prediction, colour = event)) +
+  facet_grid(. ~ Sex) +
+  scale_fill_discrete_c4a_div(palette = "icefire") +
+  scale_colour_discrete_c4a_div(palette = "icefire") +
+  theme_bw() +
+  ylab("Accumulated forcing (GDD)") +
+  xlab("Provenance MAT") +
+  theme(
+    axis.text.y = element_text(size = 7),
+    strip.text.y = element_text(size = 8),
+    legend.position = "bottom"
+  )
+ggsave("../flowering-cline/figures/orchpred_gdd.png", width = 6, height = 4)
+
 ### specific ############
 #### GDD ##########
 ###
@@ -431,12 +452,13 @@ ggplot(fpred_orch_summary) +
     legend.position = "bottom"
   )
   #labs(fill = "95% HDPI", colour = "95% HDPI")
-ggsave("../flowering-cline/figures/orchpred_gdd.png", width = 3, height = 4)
+ggsave("../flowering-cline/figures/orchpred_gdd_specific.png", width = 3, height = 4)
 
 
 #### DoY #####
 
-doy_annual_pp_sum <- readRDS("objects/doy_annual_pp_sum.rds")
+doy_annual_pp_sum <- readRDS("objects/doy_annual_pp_sum.rds") %>%
+  filter(Site %in% c("PGTIS", "Kalamalka"))
 doy_annual_pp_sum$MAT_label <- paste("MAT:", doy_annual_pp_sum$MAT)
 
 # widedoypporchsum <- doy_annual_pp_sum %>%
