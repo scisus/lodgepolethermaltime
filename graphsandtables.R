@@ -471,9 +471,9 @@ doy_annual_pp_sum$MAT_label <- paste("MAT:", doy_annual_pp_sum$MAT)
 # widedoypporchsum$MAT_label <- paste("MAT:", widedoypporchsum$MAT)
 
 phenf_orchplot <- readRDS("objects/phenf.rds") %>%
-  filter(Event_Obs %in% c(2,3), Site %in% shortsites) %>%
+  filter(Event_Obs %in% c(2,3), Site %in% c("PGTIS", "Kalamalka")) %>%
   select(-MAT) %>%
-  mutate(Site = forcats::fct_relevel(Site, shortsites), Year = as.numeric(Year))
+  mutate(Site = forcats::fct_relevel(Site, c("PGTIS", "Kalamalka")), Year = as.numeric(Year))
 
 # 2000 draws, 1945-2011 model preds. grey ribbon shows median start to median end, blue and pink ribbons show uncertainty for start and end. Used coldest and warmest source MAT for contrast. Vertical black lines show range of flowering observations in data.
 ggplot() +
@@ -487,7 +487,7 @@ ggplot() +
   theme_bw() +
   xlab("Year") +
   ylab("Date") +
-  facet_grid(Site ~ Sex + MAT_label) +
+  facet_grid(Site + Sex ~ MAT_label) +
   scale_y_continuous(
     breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
     labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
@@ -496,7 +496,7 @@ ggplot() +
     strip.text.y = element_text(size = 8),
     legend.position = "bottom"
   )
-ggsave("../flowering-cline/figures/orchpred_doy.png", width = 8, height = 6)
+ggsave("../flowering-cline/figures/orchpred_doy.png", width = 6, height = 7)
 
 gdd_orch + doy_orch +
   plot_layout(widths = c(1,2)) +
@@ -614,24 +614,41 @@ ggsave("plots/forcing_fullandexpectation.png", width = 6, height = 5)
 
 ## Home vs away #######
 ## graphs from lab meeting presentation
-doy_typical_home <- readRDS("objects/doy_typical_home.rds")
+doy_typical_home <- readRDS("objects/doy_typical_home.rds") %>%
+  pivot_longer(cols = c(intercept, DoY), names_to = "proveffect", values_to = "DoY")
+
 
 
 #home
-ggplot(doy_typical_home, aes(x = intercept, xend = wMAT, y=Sex, shape = Sex)) +
-  geom_dumbbell(
-    colour = "#a3c4dc",
-    colour_xend = "#0e668b",
-    size = 3
-  ) +
-  facet_grid(MAT ~ event) +
-  xlab("Day of Year") +
-  ggtitle("Change in flowering day of year expectation with MAT effect", subtitle = "typical year, trees grown at home") +
-  theme(legend.position = "top")
+# "Change in flowering day of year expectation with MAT effect" typical year, trees grown at home
+# ggplot(doy_typical_home, aes(x = intercept, xend = DoY, y=MAT)) +
+#   geom_dumbbell(
+#     colour = "#a3c4dc",
+#     colour_xend = "#0e668b",
+#     size = 3
+#   ) +
+#   facet_grid(Sex ~ event) +
+#   xlab("Day of Year") +
+#   ggtitle("Home") +
+#   theme(legend.position = "top")
 
-doy_typical_all_at_PGTIS <- readRDS("objects/doy_typical_all_at_PGTIS.rds")
+ggplot(doy_typical_home, aes(x = DoY, y = MAT, colour = proveffect, group = MAT)) +
+  geom_point() +
+  geom_line(colour = "darkgrey") +
+  facet_grid(Sex ~ event) +
+  labs(x = "Day of Year",
+       y = "Site and provenance MAT (\u00B0C)",
+       title = "Home",
+       colour = "") +  # Removes the title of the colour legend
+  scale_colour_manual(values = c("#1B9E77", "darkgrey"),
+                     labels = c("With provenance effect", "No provenance effect")) +
+  theme_bw(base_size = 12) +
+  theme(legend.position = "bottom")
+
 #away
-ggplot(doy_typical_all_at_PGTIS, aes(x = intercept, xend = DoY, y=MAT, shape = Sex)) +
+#Change in flowering day of year expectation with MAT effect, typical year, trees grown at PGTIS
+doy_typical_all_at_PGTIS <- readRDS("objects/doy_typical_all_at_PGTIS.rds")
+ggplot(doy_typical_all_at_PGTIS, aes(x = intercept, xend = DoY, y=MAT,)) +
   geom_dumbbell(
     colour = "#a3c4dc",
     colour_xend = "#0e668b",
@@ -639,7 +656,7 @@ ggplot(doy_typical_all_at_PGTIS, aes(x = intercept, xend = DoY, y=MAT, shape = S
   ) +
   facet_grid(Sex ~ event) +
   xlab("Day of Year") +
-  ggtitle("Change in flowering day of year expectation with MAT effect", subtitle = "typical year, trees grown at PGTIS") +
+  ggtitle("Away",) +
   geom_vline(data = doy_typical_all_at_PGTIS, aes(xintercept = intercept)) +
   theme(legend.position = "top")
 # When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap
