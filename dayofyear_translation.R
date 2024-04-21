@@ -45,6 +45,7 @@ siteMAT <- sitedat %>%
   select(Site, MAT, Elevation) %>%
   mutate(MAT = round(MAT, 1))
 
+
 # avg predicted DoY for flowering at seed orchard sites (my observations/retrodictions) ####
 # in a typical year at all my sites (mean temp 1945-2012 to create sum_forcing), calculate average predicted DoY for flowering (excluding site effects)
 # 9000 draws per site
@@ -58,6 +59,8 @@ doy_typical <- map_dfr(split(typical_year_forc, f = list(typical_year_forc$Site)
   left_join(select(typical_year_forc, Date, DoY) %>% distinct())
 saveRDS(doy_typical, "objects/doy_typical.rds")
 
+
+# HOME vs AWAY ############
 # typical year where trees grown only at their source ###########
 # now consider doy expectations in a typical year for trees from each of the sites of interest grown at those sites of interest
 
@@ -72,8 +75,8 @@ doy_typical_allsites_interceptonly <- map_dfr(split(typical_year_forc, f = list(
   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site))) %>%
   left_join(select(typical_year_forc, Date, DoY) %>% distinct()) %>%
   mutate(provenance_effect = FALSE) %>%
-  left_join(siteMAT ) %>%
-  filter(Site %in% focalsites)
+  left_join(siteMAT )
+  #filter(Site %in% focalsites)
 saveRDS(doy_typical_allsites_interceptonly, "objects/doy_typical_allsites_interceptonly.rds")
 
 # including MAT #######
@@ -87,11 +90,13 @@ doy_typical_allsites <- map_dfr(split(typical_year_forc, f = list(typical_year_f
   left_join(select(typical_year_forc, Date, DoY) %>% distinct()) %>%
   left_join(select(ungroup(intercepts), model, Sex, event) %>% distinct) %>% # add sex and event
   mutate(provenance_effect = TRUE)
+ # filter(Site %in% focalsites)
 saveRDS(doy_typical_allsites, "objects/doy_typical_allsites.rds")
 
 # only when provenances are grown at home
-doy_typical_home <- filter(doy_typical_allsites, Source %in% focalsites,
-                           Site %in% focalsites,
+doy_typical_home <- filter(doy_typical_allsites,
+                           #Source %in% focalsites,
+                          # Site %in% focalsites,
                            Site == Source) %>%
   full_join(doy_typical_allsites_interceptonly) %>%
   group_by(Site, MAT, Sex, event, provenance_effect) %>%
@@ -99,7 +104,7 @@ doy_typical_home <- filter(doy_typical_allsites, Source %in% focalsites,
   filter(.width == 0.95) %>%
   select(-starts_with(".")) %>%
   pivot_wider(names_from = provenance_effect, values_from = DoY) %>%
-  rename(intercept = `FALSE`, wMAT = `TRUE`)
+  rename(intercept = `FALSE`, DoY = `TRUE`)
 saveRDS(doy_typical_home, "objects/doy_typical_home.rds")
 
 # provenance effect pushes southern provenances to flower later and northern to flower earlier, shortening the overall flowering period from south to north - and increasing overlap between north and south
@@ -115,6 +120,7 @@ doy_typical_allsites_interceptonly_intermediate <- doy_typical_allsites_intercep
 
 # now do all sources grown at a single site
 doy_typical_all_at_PGTIS <- doy_typical_allsites %>%
+  #filter(Source %in% focalsites) %>%
   filter(Site == "PGTIS") %>%
   group_by(Site, MAT, Sex, event) %>%
   median_hdci(DoY) %>%
@@ -123,7 +129,7 @@ doy_typical_all_at_PGTIS <- doy_typical_allsites %>%
   merge(doy_typical_allsites_interceptonly_intermediate)
 saveRDS(doy_typical_all_at_PGTIS, "objects/doy_typical_all_at_PGTIS.rds")
 
-# When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap
+ # When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap
 
 # normal periods ########
 doy_normal <- map_dfr(split(normal_forc, f = list(normal_forc$index), drop = TRUE),
