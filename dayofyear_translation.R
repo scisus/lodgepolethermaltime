@@ -11,15 +11,20 @@ library(tidyr)
 source('phenology_functions.R')
 focalsites <- c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")
 shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Kalamalka")
-# daily forcing data
 
-dailyforc <- read.csv("data/forcing/dailyforc_1945_2012.csv") %>% # daily "real" forcing
+# daily forcing data ############
+
+# daily "real" forcing
+dailyforc <- read.csv("data/forcing/dailyforc_1945_2012.csv") %>%
   group_by(Site, Year) %>%
   mutate(index = cur_group_id()) %>% ungroup()
-dailyforc_ss <- dailyforc %>% filter(Site %in% shortsites) #orchard only, excluding vernon, tolko, prt and letting kal stand in for them
-typical_year_forc <- read.csv("data/forcing/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
+#orchard only, excluding vernon, tolko, prt and letting kal stand in for them
+dailyforc_ss <- dailyforc %>% filter(Site %in% shortsites)
+# from temp mean at each site across 1945-2012
+typical_year_forc <- read.csv("data/forcing/typical_year_forc.csv") %>%
   mutate(Date = as.Date(Date_scale)) %>% select(-Date_scale)
-normal_forc <- read.csv("data/forcing/normalforc_1901-2100.csv") %>% # averaged over 30 year periods
+# averaged over 30 year periods
+normal_forc <- read.csv("data/forcing/normalforc_1901-2100.csv") %>%
   group_by(Site, period, scenario) %>%  # index
   mutate(index = cur_group_id()) %>% ungroup()
 
