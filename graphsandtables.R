@@ -632,8 +632,8 @@ doy_typical_home <- readRDS("objects/doy_typical_home.rds") %>%
 #   ggtitle("Home") +
 #   theme(legend.position = "top")
 
-ggplot(doy_typical_home, aes(x = DoY, y = MAT, colour = proveffect, group = MAT)) +
-  geom_point() +
+homeplot <- ggplot(doy_typical_home, aes(x = DoY, y = MAT, colour = proveffect, group = MAT)) +
+  geom_point(size = 2) +
   geom_line(colour = "darkgrey") +
   facet_grid(Sex ~ event) +
   labs(x = "Day of Year",
@@ -645,21 +645,37 @@ ggplot(doy_typical_home, aes(x = DoY, y = MAT, colour = proveffect, group = MAT)
   theme_bw(base_size = 12) +
   theme(legend.position = "bottom")
 
+
 #away
 #Change in flowering day of year expectation with MAT effect, typical year, trees grown at PGTIS
-doy_typical_all_at_PGTIS <- readRDS("objects/doy_typical_all_at_PGTIS.rds")
-ggplot(doy_typical_all_at_PGTIS, aes(x = intercept, xend = DoY, y=MAT,)) +
-  geom_dumbbell(
-    colour = "#a3c4dc",
-    colour_xend = "#0e668b",
-    size = 3
-  ) +
+doy_typical_all_at_PGTIS <- readRDS("objects/doy_typical_all_at_PGTIS.rds") %>%
+  pivot_longer(cols = c(intercept, DoY), names_to = "proveffect", values_to = "DoY")
+
+pgtis_intercepts <- doy_typical_all_at_PGTIS %>%
+  filter(proveffect == "intercept") %>%
+  select(Sex, event, DoY) %>%
+  distinct()
+
+awayplot <- ggplot(doy_typical_all_at_PGTIS, aes(x = DoY, y=MAT, colour = proveffect, group = MAT)) +
+  geom_point(size = 2) +
+  geom_vline(data = pgtis_intercepts, aes(xintercept = DoY), colour = "darkgrey", linetype = 3) +
+  geom_line(colour = 'darkgrey') +
   facet_grid(Sex ~ event) +
-  xlab("Day of Year") +
-  ggtitle("Away",) +
-  geom_vline(data = doy_typical_all_at_PGTIS, aes(xintercept = intercept)) +
-  theme(legend.position = "top")
-# When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap
+  labs(x = "Day of Year",
+       y = "Provenance MAT (\u00B0C)",
+       title = "Away",
+       colour = "") +  # Removes the title of the colour legend
+  scale_colour_manual(values = c("#1B9E77", "darkgrey"),
+                      labels = c("With provenance effect", "No provenance effect")) +
+  theme_bw(base_size = 12) +
+  theme(legend.position = "bottom")
+
+
+# When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap, increases differences between provenances
+
+homeplot + awayplot +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
 
 ## year to year variation ####
 doy_annual_plotting <- readRDS('objects/doy_annual_plotting.rds')
