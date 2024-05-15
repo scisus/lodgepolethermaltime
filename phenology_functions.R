@@ -266,14 +266,20 @@ find_day_of_forcing <- function(adf, bdf, aforce, bforce) {
   return(bdf)
 }
 
-# match forcing to doy for future climates and add identifying info about the future climates
-match_force_future <- function(adf, bdf, aforce, bforce) {
-  matched <- find_day_of_forcing(adf, bdf, aforce, bforce)
-
-  idf <- select(adf, Year, Site, name, SSP, climate_forcing, normal_period) %>%
-    distinct()
-
-  df <- merge(matched, idf)
-
-  return(df)
+find_day_of_forcing_mapper <- function(alist, bdf) {
+  map_dfr(split(alist, f = list(alist$index), drop = TRUE),
+          find_day_of_forcing, .id = ".id",
+          bdf = bdf, aforce = "sum_forcing", bforce = ".epred")
 }
+
+# match forcing to doy for future climates and add identifying info about the future climates
+# match_force_future <- function(adf, bdf, aforce, bforce) {
+#   matched <- find_day_of_forcing(adf, bdf, aforce, bforce)
+#
+#   idf <- select(adf, Year, Site, name, SSP, climate_forcing, normal_period) %>%
+#     distinct()
+#
+#   df <- merge(matched, idf)
+#
+#   return(df)
+# }

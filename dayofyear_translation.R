@@ -132,15 +132,29 @@ saveRDS(doy_typical_all_at_PGTIS, "objects/doy_typical_all_at_PGTIS.rds")
  # When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap
 
 # normal periods ########
-doy_normal <- map_dfr(split(normal_forc, f = list(normal_forc$index), drop = TRUE),
-                      find_day_of_forcing, .id = ".id",
-                      bdf = fepred_allsites %>% filter(Site %in% focalsites), aforce = "sum_forcing", bforce = ".epred") %>%
+normal_forc_focal <- normal_forc %>% filter(Site %in% focalsites)
+fepred_allsites_focal <- fepred_allsites %>% filter(Site %in% focalsites) %>% ungroup()
+# doy_normal <- map_dfr(split(normal_forc_focal, f = list(normal_forc_focal$index), drop = TRUE),
+#                       find_day_of_forcing, .id = ".id",
+#                       bdf = fepred_allsites_focal, aforce = "sum_forcing", bforce = ".epred") %>%
+#   rename(index = .id, DoY = newdoycol) %>%
+#   mutate(index = as.numeric(index)) %>%
+#   ungroup() %>%
+#   select(-.row, -.draw) %>%
+#   left_join(select(normal_forc_focal, index, Site, period, scenario), distinct()) #%>%
+#   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site)))
+
+climatelist_nff <- split(normal_forc_focal, f = list(normal_forc_focal$Site), drop = TRUE)
+phenlist_af <- split(fepred_allsites_focal, f = list(fepred_allsites_focal$Site), drop = TRUE)
+
+doy_normal <- map2_dfr(.x = climatelist_nff, .y = phenlist_af, .f = find_day_of_forcing_mapper) %>%
   rename(index = .id, DoY = newdoycol) %>%
   mutate(index = as.numeric(index)) %>%
   ungroup() %>%
   select(-.row, -.draw) %>%
-  left_join(select(normal_forc, index, Site, period, scenario) %>% distinct()) %>%
+  left_join(select(normal_forc_focal, index, Site, period, scenario) %>% distinct()) %>%
   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site)))
+
 saveRDS(doy_normal, 'objects/doy_normal.rds')
 
 
