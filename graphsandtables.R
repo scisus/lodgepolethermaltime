@@ -633,7 +633,7 @@ doy_typical_home <- readRDS("objects/doy_typical_home.rds") %>%
 #   theme(legend.position = "top")
 
 homeplot <- ggplot(doy_typical_home, aes(x = DoY, y = MAT, colour = proveffect, group = MAT)) +
-  geom_point(size = 2) +
+  geom_point() +
   geom_line(colour = "darkgrey") +
   facet_grid(Sex ~ event) +
   labs(x = "Day of Year",
@@ -642,8 +642,9 @@ homeplot <- ggplot(doy_typical_home, aes(x = DoY, y = MAT, colour = proveffect, 
        colour = "") +  # Removes the title of the colour legend
   scale_colour_manual(values = c("#1B9E77", "darkgrey"),
                      labels = c("With provenance effect", "No provenance effect")) +
-  theme_bw(base_size = 12) +
-  theme(legend.position = "bottom")
+  theme_bw(base_size = 10) +
+  theme(legend.position = "bottom") +
+  coord_flip()
 
 
 #away
@@ -657,7 +658,7 @@ pgtis_intercepts <- doy_typical_all_at_PGTIS %>%
   distinct()
 
 awayplot <- ggplot(doy_typical_all_at_PGTIS, aes(x = DoY, y=MAT, colour = proveffect, group = MAT)) +
-  geom_point(size = 2) +
+  geom_point() +
   geom_vline(data = pgtis_intercepts, aes(xintercept = DoY), colour = "darkgrey", linetype = 3) +
   geom_line(colour = 'darkgrey') +
   facet_grid(Sex ~ event) +
@@ -667,15 +668,19 @@ awayplot <- ggplot(doy_typical_all_at_PGTIS, aes(x = DoY, y=MAT, colour = provef
        colour = "") +  # Removes the title of the colour legend
   scale_colour_manual(values = c("#1B9E77", "darkgrey"),
                       labels = c("With provenance effect", "No provenance effect")) +
-  theme_bw(base_size = 12) +
-  theme(legend.position = "bottom")
+  theme_bw(base_size = 10) +
+  theme(legend.position = "bottom") +
+  coord_flip()
 
 
 # When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap, increases differences between provenances
 
-homeplot + awayplot +
+homeplot / awayplot +
+  patchwork::plot_annotation(tag_levels = 'A') +
   plot_layout(guides = "collect") &
   theme(legend.position = "bottom")
+
+ggsave("../flowering-cline/figures/homeaway.png", width = 5, height = 7)
 
 ## year to year variation ####
 doy_annual_plotting <- readRDS('objects/doy_annual_plotting.rds')
