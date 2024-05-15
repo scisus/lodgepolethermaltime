@@ -711,16 +711,19 @@ ggsave("../flowering-cline/figures/year2yearvar.png", width = 10, height = 6, un
 
 
 ## prediction climate change ####
-doy_normal_plotting.rds <- readRDS("objects/doy_normal_plotting.rds")
-ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = scenario, y = DoY, colour = Site, shape = Sex)) +
+doy_normal_plotting <- readRDS("objects/doy_normal_plotting.rds")
+doy_normal_plotting$MATlabel <- paste(doy_normal_plotting$Site, " (", doy_normal_plotting$MAT, "\u00B0C", ")", sep = "")
+ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = scenario, y = DoY, colour = MATlabel, shape = Sex)) +
   stat_pointinterval(position = "dodge") +
   stat_pointinterval(data = filter(doy_normal_plotting, event == "end"), position = "dodge") +
   #scale_y_date(date_breaks = "1 month", date_labels =  "%b") +
   facet_wrap("period", scales = "free_x", nrow = 1) +
   theme_bw() +
   theme(legend.position = "bottom")  +
-  labs(title = "Flowering period expectation", subtitle = "1951-2100 for 4 Shared Socioeconomic Pathways") +
+  labs(title = "Expectation for flowering period start and end", subtitle = "1951-2100 for 2 Shared Socioeconomic Pathways", colour = "Site") +
   xlab("Shared Socioeconomic Pathway") +
   ylab("Day of Year")
+
 ggsave("../flowering-cline/figures/normal_predictions.png", width = 13, height = 5, units = "in")
+
 

@@ -242,7 +242,7 @@ forcing_to_doy <- function(a, b, aforce, bforce, newdoycolname) {
   return(df)
 }
 
-# given dataframes adf (climate) and bdf (phenology) identify the day of year corresponding to reaching each sum_forcing bcol in df. adf must have a sum_forcing column identified by name aforce and a DoY column and b must have a sum_forcing column identified with name bforce.
+# given dataframes adf (climate) and bdf (phenology) identify the day of year in adf corresponding to reaching each sum_forcing bcol in bdf. adf must have a sum_forcing column identified by name aforce and a DoY column and b must have a sum_forcing column identified with name bforce.
 find_day_of_forcing <- function(adf, bdf, aforce, bforce) {
 
   # what row in a contains the interval for entries in b. Add 1 to the index because phenological events require the threshold to be reached. this introduces error, but is unavoidable in some direction.
@@ -252,7 +252,7 @@ find_day_of_forcing <- function(adf, bdf, aforce, bforce) {
   # add a column to b for Day of Year and extract the correct Day of year from a using the index
   bdf$newdoycol <- adf$DoY[a_index]
 
-  # when sum_forcing in b is exactly identical to sum_forcing in b, a_index will be +1 day. Re-write those
+  # when sum_forcing in b is exactly identical to sum_forcing in b, a_index will (incorrectly) be +1 day. Re-write those to be the correct day - the day the sum_forcing is reached
   identical_forcing_index <- which(bdf[[bforce]] %in% adf[[aforce]])
   bdf$newdoycol[identical_forcing_index] <- bdf$newdoycol[identical_forcing_index] - 1
 
