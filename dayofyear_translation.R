@@ -33,6 +33,7 @@ fepred_allsites <- readRDS("objects/fepred_allsites.rds") ## expectation for tre
 fpred_orch <- readRDS("objects/fpred_orch.rds") %>% #posterior prediction for each site for the full range of provenances using an average year, genotype, and tree (using estimated gaussian prior to generate random effects). 3000 draws
   ungroup() %>%
   select(-.row, -.draw, -.chain, -.iteration)
+fpred_focalsites_landscape <- readRDS("objects/fpred_focalsites_landscape.rds") # simulate for 5 sites on the landscape. posterior prediction # for each site as a site on the landscape with trees sourced from that site only using an average year, genotype, and tree (using estimated gaussian prior to generate random effects). 3000 draws, 95% HDPI #######
 factororder <- readRDS("objects/factororder.rds")
 sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv")
 
@@ -132,8 +133,11 @@ saveRDS(doy_typical_all_at_PGTIS, "objects/doy_typical_all_at_PGTIS.rds")
  # When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap
 
 # normal periods ########
+# use fpred instead of fepred
 normal_forc_focal <- normal_forc %>% filter(Site %in% focalsites)
 fepred_allsites_focal <- fepred_allsites %>% filter(Site %in% focalsites) %>% ungroup()
+fpred_focalsites_landscape <- readRDS('objects/fpred_focalsites_landscape.rds')
+
 # doy_normal <- map_dfr(split(normal_forc_focal, f = list(normal_forc_focal$index), drop = TRUE),
 #                       find_day_of_forcing, .id = ".id",
 #                       bdf = fepred_allsites_focal, aforce = "sum_forcing", bforce = ".epred") %>%
@@ -144,20 +148,73 @@ fepred_allsites_focal <- fepred_allsites %>% filter(Site %in% focalsites) %>% un
 #   left_join(select(normal_forc_focal, index, Site, period, scenario), distinct()) #%>%
 #   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site)))
 
-climatelist_nff <- split(normal_forc_focal, f = list(normal_forc_focal$Site), drop = TRUE)
-phenlist_af <- split(fepred_allsites_focal, f = list(fepred_allsites_focal$Site), drop = TRUE)
+climate_nff <- normal_forc_focal %>%
+  mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site))) %>%
+  arrange(Site)
+climatelist_nff <- split(climate_nff, f = list(climate_nff$Site), drop = TRUE)
+phen_af <- fpred_focalsites_landscape %>%
+  ungroup() %>%
+  mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site))) %>%
+  arrange(Site) %>%
+  select(MAT, Site, event, Sex, .row, .draw, .prediction)
+phenlist_af <- split(phen_af, f = list(phen_af$Site), drop = TRUE)
 
-doy_normal <- map2_dfr(.x = climatelist_nff, .y = phenlist_af, .f = find_day_of_forcing_mapper) %>%
+names(climatelist_nff) == names(phenlist_af)
+# doy_normal <- map2_dfr(.x = climatelist_nff, .y = phenlist_af, .f = find_day_of_forcing_mapper, bforce = ".prediction") %>%
+#   rename(index = .id, DoY = newdoycol) %>%
+#   mutate(index = as.numeric(index)) %>%
+#   ungroup() %>%
+#   select(-.row, -.draw) %>%
+#   left_join(select(normal_forc_focal, index, Site, period, scenario) %>% distinct()) %>%
+#   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site)))
+
+doy_normal <- map2_dfr(.x = climatelist_nff, .y = phenlist_af, .f = find_day_of_forcing_mapper, bforce = ".prediction") %>%
   rename(index = .id, DoY = newdoycol) %>%
   mutate(index = as.numeric(index)) %>%
   ungroup() %>%
   select(-.row, -.draw) %>%
-  left_join(select(normal_forc_focal, index, Site, period, scenario) %>% distinct()) %>%
+  left_join(select(climate_nff, index, Site, period, scenario) %>% distinct()) %>%
   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site)))
+#saveRDS(doy_normal, 'objects/doy_normal.rds')
 
-saveRDS(doy_normal, 'objects/doy_normal.rds')
+# graph climate change normals ####
 
+doy_normal_plotting <- doy_normal %>%
+  filter(period %in% c("1951-1980", "1981-2010", "2011-2040", "2041-2070", "2071-2100"),
+    Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border"),
+    scenario %in% c("historical", "ssp245", "ssp585")) %>%
+  mutate(Date = ymd("2023-12-31") + DoY) %>%
+  mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, focalsites)))
+doy_normal_plotting$MATlabel <- paste(doy_normal_plotting$Site, " (", doy_normal_plotting$MAT, "\u00B0C", ")", sep = "")
+doy_normal_plotting <- doy_normal_plotting %>%
+  arrange(desc(MAT)) %>%
+  mutate(MATlabel = factor(MATlabel, levels = unique(MATlabel), ordered = TRUE))
+saveRDS(doy_normal_plotting, "objects/doy_normal_plotting.rds")
 
+doy_normal_summary <- doy_normal_plotting %>%
+  group_by(Sex, event, Site, period, scenario) %>%
+  mean_hdci(DoY, .width = .95) %>%
+  ungroup() %>%
+  arrange(DoY)
+
+# calculate how much advancement occurs between the two historical normal periods (1951-1980 and 1981-2010) and between the earliest normal period and the end of the 21st century
+
+historicaltemp <- doy_normal_summary %>%
+  filter(scenario == "historical") %>%
+  pivot_wider(names_from = period, values_from = DoY, id_cols = c(Sex, event, Site))
+
+doy_normal_advance <- doy_normal_summary %>%
+  filter(! scenario == "historical", period == "2071-2100") %>%
+  pivot_wider(names_from = period, values_from = DoY, id_cols = c(Sex, event, Site, scenario)) %>%
+  left_join(historicaltemp) %>%
+  rename(endofcentury = `2071-2100`, endhist = `1981-2010`, starthist = `1951-1980`) %>%
+  mutate(historicalchange = starthist - endhist, fullchange = starthist - endofcentury) %>%
+  arrange(scenario, Site, Sex, event) %>%
+  left_join(siteMAT)
+
+ggplot(doy_normal_advance, aes(x = MAT, y = fullchange, colour = event)) +
+  geom_point() +
+  facet_grid(scenario ~ Sex)
 # year to year variation ####
 
 ## posterior prediction, 2000 draws, avg year, genotype, tree. 1945-2011. See comments on fpred_orch generation in predict.R####
@@ -220,15 +277,6 @@ summary_doy_annual <- doy_annual %>%
   summarise(median_forcing = median(.epred), median_DoY = median(DoY), sd_forcing = sd(.epred), sd_DoY = sd(DoY))
 saveRDS(summary_doy_annual, "objects/summary_doy_annual.rds")
 
- # graph climate change normals ####
-
-doy_normal_plotting <- doy_normal %>%
-  filter(#! scenario %in% c( "ssp370"),
-         period %in% c("1951-1980", "1981-2010", "2011-2040", "2041-2070", "2071-2100"),
-         Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border"),
-         scenario %in% c("historical", "ssp245", "ssp585")) %>%
-  mutate(Date = ymd("2023-12-31") + DoY)
-saveRDS(doy_normal_plotting, "objects/doy_normal_plotting.rds")
 
 
 

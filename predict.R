@@ -68,7 +68,6 @@ neworchdat <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
                          Sex = c("FEMALE", "MALE")) %>%
   split(list(.$event, .$Sex))
 
-# posterior prediction #########
 # for each site for the full range of provenances using an average year, genotype, and tree (using estimated gaussian prior to generate random effects). 2000 draws, 95% HDPI #######
 
 fpred_orch <- purrr::map2(neworchdat, modells,
@@ -87,7 +86,31 @@ fpred_orch_summary <- fpred_orch %>%
   mutate(Site = forcats::fct_relevel(Site, shortsites))
 saveRDS(fpred_orch_summary, "objects/fpred_orch_summary.rds")
 
+# for each site as a site on the landscape with trees sourced from that site only using an average year, genotype, and tree (using estimated gaussian prior to generate random effects). 3000 draws, 95% HDPI #######
 
+focalsites <- c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")
+focalsites_mat <- data.frame(Site = focalsites) %>%
+  left_join(select(sitedat, Site, MAT)) %>% distinct()
+
+focalsites_landscape <- expand.grid(Year = "newyear",
+                          Tree = "newtree",
+                          Genotype = "newgenotype",
+                          Site = focalsites_mat$Site,
+                          event = c("begin", "end"),
+                          Sex = c("FEMALE", "MALE")) %>%
+  left_join(focalsites_mat) %>%
+  split(list(.$event, .$Sex))
+
+fpred_focalsites_landscape <- purrr::map2(focalsites_landscape, modells,
+                          .f = function(x,y) {add_predicted_draws(newdata = x,
+                                                                  object = y,
+                                                                  re_formula = NULL,
+                                                                  allow_new_levels = TRUE,
+                                                                  sample_new_levels = "gaussian",
+                                                                  ndraws = n)}) %>%
+  bind_rows()
+
+saveRDS(fpred_focalsites_landscape, "objects/fpred_focalsites_landscape.rds")
 
 # predict the global grand means: average predicted outcome ignoring group-specific deviations in intercept or slope
 
