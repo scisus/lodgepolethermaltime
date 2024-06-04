@@ -712,42 +712,18 @@ ggsave("../flowering-cline/figures/year2yearvar.png", width = 10, height = 6, un
 
 ## prediction climate change ####
 doy_normal_plotting <- readRDS("objects/doy_normal_plotting.rds")
-
-# ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = scenario, y = DoY, colour = MATlabel, shape = Sex)) +
-#   stat_pointinterval(position = "dodge") +
-#   stat_pointinterval(data = filter(doy_normal_plotting, event == "end"), position = "dodge") +
-#   #scale_y_date(date_breaks = "1 month", date_labels =  "%b") +
-#   facet_wrap("period", scales = "free_x", nrow = 1) +
-#   theme_bw() +
-#   theme(legend.position = "bottom")  +
-#   labs(title = "Expectation for flowering period start and end", subtitle = "1951-2100 for 2 Shared Socioeconomic Pathways", colour = "Site") +
-#   xlab("Shared Socioeconomic Pathway") +
-#   ylab("Day of Year")
-#
-# ggsave("../flowering-cline/figures/normal_predictions.png", width = 13, height = 5, units = "in")
-
-historicalonly <- doy_normal_plotting %>% filter(scenario == "historical") %>%
-  rename(type = scenario) %>%
-  merge(data.frame(scenario = c("ssp245", "ssp585")))
-doy_normal_plotting2 <- doy_normal_plotting %>%
-  filter(scenario != "historical") %>%
-  mutate(type = "future") %>%
-  full_join(historicalonly)
-
-# 3000 draws, 50 and 95% HDPI with 1961-1991 MAT normal
-ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, colour = type, shape = Sex)) +
-  stat_pointinterval(position = "dodge", alpha = 0.5, .width = c(0.50, 0.95)) +
-  stat_pointinterval(data = filter(doy_normal_plotting2, event == "end"), position = "dodge", alpha = 0.5, .width = c(0.50, 0.95)) +
-  facet_grid(scenario ~ MATlabel) +
-  scale_color_manual(values = c("historical" = "grey50", "future" = "black"), guide = "none") +
+doy_normal_plotting$MATlabel <- paste(doy_normal_plotting$Site, " (", doy_normal_plotting$MAT, "\u00B0C", ")", sep = "")
+ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = scenario, y = DoY, colour = MATlabel, shape = Sex)) +
+  stat_pointinterval(position = "dodge") +
+  stat_pointinterval(data = filter(doy_normal_plotting, event == "end"), position = "dodge") +
+  #scale_y_date(date_breaks = "1 month", date_labels =  "%b") +
+  facet_wrap("period", scales = "free_x", nrow = 1) +
   theme_bw() +
-  theme(legend.position = "top",
-        axis.text.x = element_text(angle = 45, hjust=1),
-        axis.title.x = element_text(vjust = -1))+
- # labs(title = "Estimation of flowering period start and end", subtitle = "1951-2100 for two Shared Socioeconomic Pathways") +
-  xlab("Normal period") +
-  ylab("Flowering event day of year")
+  theme(legend.position = "bottom")  +
+  labs(title = "Expectation for flowering period start and end", subtitle = "1951-2100 for 2 Shared Socioeconomic Pathways", colour = "Site") +
+  xlab("Shared Socioeconomic Pathway") +
+  ylab("Day of Year")
 
-ggsave("../flowering-cline/figures/normal_predictions.png", width = 11, height = 6, units = "in")
+ggsave("../flowering-cline/figures/normal_predictions.png", width = 13, height = 5, units = "in")
 
 

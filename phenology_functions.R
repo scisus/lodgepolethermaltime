@@ -266,10 +266,10 @@ find_day_of_forcing <- function(adf, bdf, aforce, bforce) {
   return(bdf)
 }
 
-find_day_of_forcing_mapper <- function(alist, bdf, bforce) {
+find_day_of_forcing_mapper <- function(alist, bdf) {
   map_dfr(split(alist, f = list(alist$index), drop = TRUE),
           find_day_of_forcing, .id = ".id",
-          bdf = bdf, aforce = "sum_forcing", bforce = bforce)
+          bdf = bdf, aforce = "sum_forcing", bforce = ".epred")
 }
 
 # match forcing to doy for future climates and add identifying info about the future climates
