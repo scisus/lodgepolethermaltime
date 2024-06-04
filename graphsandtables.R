@@ -475,7 +475,7 @@ phenf_orchplot <- readRDS("objects/phenf.rds") %>%
   select(-MAT) %>%
   mutate(Site = forcats::fct_relevel(Site, c("PGTIS", "Kalamalka")), Year = as.numeric(Year))
 
-# 2000 draws, 1945-2011 model preds. grey ribbon shows median start to median end, blue and pink ribbons show uncertainty for start and end. Used coldest and warmest source MAT for contrast. Vertical black lines show range of flowering observations in data.
+# 6000 draws, 1945-2011 model preds. grey ribbon shows median start to median end, blue and pink ribbons show uncertainty for start and end. Used coldest and warmest source MAT for contrast. Vertical black lines show range of flowering observations in data.
 ggplot() +
   geom_line(data = phenf_orchplot, aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
   geom_ribbon(data = doy_annual_pp_sum, aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
@@ -498,10 +498,10 @@ ggplot() +
   )
 ggsave("../flowering-cline/figures/orchpred_doy.png", width = 6, height = 7)
 
-gdd_orch + doy_orch +
-  plot_layout(widths = c(1,2)) +
-  plot_annotation(tag_levels = 'A')
-ggsave("../flowering-cline/figures/orchpred.png", width = 8, height = 5.5)
+# gdd_orch + doy_orch +
+#   plot_layout(widths = c(1,2)) +
+#   plot_annotation(tag_levels = 'A')
+# ggsave("../flowering-cline/figures/orchpred.png", width = 8, height = 5.5)
 
 
 ### For Both Outputs
@@ -543,20 +543,20 @@ saveRDS(etab, "objects/etab.rds")
 
 ## forcing and day of year expectations ####
 # doy
-doy_typical <- readRDS("objects/doy_typical.rds") %>%
-  filter(! Site %in% c("Sorrento", "Tolko", "PRT", "Vernon"))
-expdoy <- ggplot(doy_typical, aes(x = DoY, y = forcats::fct_rev(Sex), color = Sex, shape = event)) +
-  stat_pointinterval() +
-  facet_grid(forcats::fct_rev(Site) ~ .) +
- # labs(caption = "typical year based on mean daily heat sum accumulation at 7 sites between 1945 and 2012") +
-  xlab("Day of Year") +
-  scale_color_viridis_d() +
-  theme_dark() +
-  theme(strip.text.y.right = element_text(angle = 0),
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.title.y = element_blank(),
-        legend.position = "bottom")
+# doy_typical <- readRDS("objects/doy_typical.rds") %>%
+#   filter(! Site %in% c("Sorrento", "Tolko", "PRT", "Vernon"))
+# expdoy <- ggplot(doy_typical, aes(x = DoY, y = forcats::fct_rev(Sex), color = Sex, shape = event)) +
+#   stat_pointinterval() +
+#   facet_grid(forcats::fct_rev(Site) ~ .) +
+#  # labs(caption = "typical year based on mean daily heat sum accumulation at 7 sites between 1945 and 2012") +
+#   xlab("Day of Year") +
+#   scale_color_viridis_d() +
+#   theme_dark() +
+#   theme(strip.text.y.right = element_text(angle = 0),
+#         axis.text.y = element_blank(),
+#         axis.ticks.y = element_blank(),
+#         axis.title.y = element_blank(),
+#         legend.position = "bottom")
 
 
 # forcing, which is the same for each site!
@@ -710,18 +710,40 @@ ggplot(summary_doy_annual, aes(x = Site, y = sd_DoY, color = normal_period)) +
 ggsave("../flowering-cline/figures/year2yearvar.png", width = 10, height = 6, units = "in")
 
 
-## prediction climate change ####
+## climate change prediction ####
 doy_normal_plotting <- readRDS("objects/doy_normal_plotting.rds")
 doy_normal_plotting$MATlabel <- paste(doy_normal_plotting$Site, " (", doy_normal_plotting$MAT, "\u00B0C", ")", sep = "")
-ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = scenario, y = DoY, colour = MATlabel, shape = Sex)) +
-  stat_pointinterval(position = "dodge") +
-  stat_pointinterval(data = filter(doy_normal_plotting, event == "end"), position = "dodge") +
-  #scale_y_date(date_breaks = "1 month", date_labels =  "%b") +
-  facet_wrap("period", scales = "free_x", nrow = 1) +
+# ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = scenario, y = DoY, colour = MATlabel, shape = Sex)) +
+#   stat_pointinterval(position = "dodge") +
+#   stat_pointinterval(data = filter(doy_normal_plotting, event == "end"), position = "dodge") +
+#   #scale_y_date(date_breaks = "1 month", date_labels =  "%b") +
+#   facet_wrap("period", scales = "free_x", nrow = 1) +
+#   theme_bw() +
+#   theme(legend.position = "bottom")  +
+#   labs(title = "Expectation for flowering period start and end", subtitle = "1951-2100 for two Shared Socioeconomic Pathways", colour = "Site") +
+#   xlab("Shared Socioeconomic Pathway") +
+#   ylab("Day of Year")
+
+historicalonly <- doy_normal_plotting %>% filter(scenario == "historical") %>%
+  rename(type = scenario) %>%
+  merge(data.frame(scenario = c("ssp245", "ssp585")))
+doy_normal_plotting2 <- doy_normal_plotting %>%
+  filter(scenario != "historical") %>%
+  mutate(type = "future") %>%
+  full_join(historicalonly)
+
+# 50 and 95% HDPI with 1961-1991 MAT normal
+ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, colour = type, shape = Sex)) +
+  stat_pointinterval(position = "dodge", alpha = 0.5, .width = c(0.50, 0.95)) +
+  stat_pointinterval(data = filter(doy_normal_plotting2, event == "end"), position = "dodge", alpha = 0.5, .width = c(0.50, 0.95)) +
+  facet_grid(scenario ~ MATlabel) +
+  scale_color_manual(values = c("historical" = "grey50", "future" = "black"), guide = "none") +
   theme_bw() +
-  theme(legend.position = "bottom")  +
-  labs(title = "Expectation for flowering period start and end", subtitle = "1951-2100 for 2 Shared Socioeconomic Pathways", colour = "Site") +
-  xlab("Shared Socioeconomic Pathway") +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 45, hjust=1),
+        axis.title.x = element_text(vjust = -1))+
+  labs(title = "Expectation of flowering period start and end", subtitle = "1951-2100 for two Shared Socioeconomic Pathways") +
+  xlab("Normal period") +
   ylab("Day of Year")
 
 ggsave("../flowering-cline/figures/normal_predictions.png", width = 13, height = 5, units = "in")
