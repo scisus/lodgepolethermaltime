@@ -730,13 +730,15 @@ historicalonly <- doy_normal_plotting %>% filter(scenario == "historical") %>%
 doy_normal_plotting2 <- doy_normal_plotting %>%
   filter(scenario != "historical") %>%
   mutate(type = "future") %>%
-  full_join(historicalonly)
+  full_join(historicalonly) %>%
+  arrange(desc(MAT)) %>%
+  mutate(MATlabel = factor(MATlabel, levels = unique(MATlabel), ordered = TRUE))
 
 # 50 and 95% HDPI with 1961-1991 MAT normal
 ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, colour = type, shape = Sex)) +
   stat_pointinterval(position = "dodge", alpha = 0.5, .width = c(0.50, 0.95)) +
   stat_pointinterval(data = filter(doy_normal_plotting2, event == "end"), position = "dodge", alpha = 0.5, .width = c(0.50, 0.95)) +
-  facet_grid(scenario ~ MATlabel) +
+  facet_grid(scenario ~ MATlabel, labeller = labeller(scenario = c(ssp245 = "SSP2 4.5 W/m²", ssp585 = "SSP5 8.5 W/m²"))) +
   scale_color_manual(values = c("historical" = "grey50", "future" = "black"), guide = "none") +
   theme_bw() +
   theme(legend.position = "bottom",
@@ -746,6 +748,6 @@ ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, 
   xlab("Normal period") +
   ylab("Day of Year")
 
-ggsave("../flowering-cline/figures/normal_predictions.png", width = 13, height = 5, units = "in")
+ggsave("../flowering-cline/figures/normal_predictions.png", width = 12, height = 5, units = "in")
 
 
