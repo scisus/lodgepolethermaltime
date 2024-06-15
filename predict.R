@@ -69,7 +69,7 @@ neworchdat <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
   split(list(.$event, .$Sex))
 
 # posterior prediction #########
-# for each site for the full range of provenances using an average year, genotype, and tree (using estimated gaussian prior to generate random effects). 3000 draws, 95% HDPI #######
+# for each site for the full range of provenances using an average year, genotype, and tree (using estimated gaussian prior to generate random effects). 6000 draws, 95% HDPI #######
 
 fpred_orch <- purrr::map2(neworchdat, modells,
                           .f = function(x,y) {add_predicted_draws(newdata = x,
