@@ -6,11 +6,13 @@ library(dplyr)
 library(lubridate)
 library(tidybayes)
 library(tidyr)
+library(forcats)
 
 
 source('phenology_functions.R')
-focalsites <- c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")
+focalsites <- c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border") # warmest to coldest
 shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Kalamalka")
+seedorchardsites <- c("PGTIS", "KettleRiver", "Sorrento", "Tolko", "PRT", "Vernon", "Kalamalka")
 
 # daily forcing data ############
 
@@ -19,7 +21,9 @@ dailyforc <- read.csv("data/forcing/dailyforc_1945_2012.csv") %>%
   group_by(Site, Year) %>%
   mutate(index = cur_group_id()) %>% ungroup()
 #orchard only historic, excluding vernon, tolko, prt and letting kal stand in for them
-dailyforc_ss <- dailyforc %>% filter(Site %in% shortsites)
+dailyforc_so <- dailyforc %>% filter(Site %in% seedorchardsites) %>%
+  mutate(Site = forcats::fct_relevel(Site, seedorchardsites)) %>%
+  arrange(Site)
 # from temp mean at each site across 1945-2012
 typical_year_forc <- read.csv("data/forcing/typical_year_forc.csv") %>%
   mutate(Date = as.Date(Date_scale)) %>% select(-Date_scale)
@@ -32,7 +36,9 @@ normal_forc <- read.csv("data/forcing/normalforc_1901-2100.csv") %>%
 fepred_allsites <- readRDS("objects/fepred_allsites.rds") ## expectation for trees sourced from all sites - no downsampling
 fpred_orch <- readRDS("objects/fpred_orch.rds") %>% #posterior prediction for each site for the full range of provenances using an average year, genotype, and tree (using estimated gaussian prior to generate random effects). 6000 draws
   ungroup() %>%
-  select(-.row, -.draw, -.chain, -.iteration)
+  select(-.row, -.draw, -.chain, -.iteration) %>%
+  mutate(Site = forcats::fct_relevel(Site, seedorchardsites)) %>%
+  arrange(Site)
 factororder <- readRDS("objects/factororder.rds")
 sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv")
 
@@ -135,20 +141,29 @@ saveRDS(doy_typical_all_at_PGTIS, "objects/doy_typical_all_at_PGTIS.rds")
 # year to year variation ####
 
 ## posterior prediction, 6000 draws, avg year, genotype, tree. 1945-2011. See comments on fpred_orch generation in predict.R####
-doy_annual_pp_sum <- map_dfr(split(dailyforc_ss, f = list(dailyforc_ss$index), drop = TRUE),
-                         find_day_of_forcing, .id = "index",
-                         bdf = fpred_orch %>% ungroup() %>% select(-Year), aforce = "sum_forcing", bforce = ".prediction") %>%
-  rename(DoY = newdoycol) %>%
+
+# split climate data and forcing predictions into lists based on site
+dailyforc_so_list <- split(dailyforc_so, f = list(dailyforc_so$Site), drop = TRUE)
+fpred_orch_list <- split(fpred_orch, f = list(fpred_orch$Site), drop = TRUE)
+
+all(names(dailyforc_so_list) == names(fpred_orch_list)) # test that lists have sites in same order
+
+doy_annual_pp <- map2_dfr(.x = dailyforc_so_list, .y = fpred_orch_list, .f = find_day_of_forcing_mapper, bforce = ".prediction") %>%
+  rename(DoY = newdoycol, index = .id) %>%
   mutate(index = as.numeric(index)) %>%
   ungroup() %>%
-  select(-Tree, -Genotype) %>%
-  left_join(select(dailyforc_ss, index, Site, Year) %>% distinct()) %>% #now summarise
+  select(-Year, -Tree, -Genotype) %>%
+  left_join(select(dailyforc_so, index, Site, Year) %>% distinct())
+
+#now summarise
+doy_annual_pp_sum <- doy_annual_pp %>%
   group_by(MAT, Site, event, Sex, Year) %>%
   median_hdci(DoY) %>%
   ungroup() %>%
-  mutate(Site = forcats::fct_relevel(Site, shortsites))
+  mutate(Site = forcats::fct_relevel(Site, seedorchardsites)) # correct to full sites
 doy_annual_pp_sum$MAT_label <- paste("MAT:", doy_annual_pp_sum$MAT)
 saveRDS(doy_annual_pp_sum, "objects/doy_annual_pp_sum.rds")
+
 
 
 # normal periods ########
