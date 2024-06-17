@@ -459,7 +459,7 @@ ggsave("../flowering-cline/figures/orchpred_gdd_specific.png", width = 3, height
 
 doy_annual_pp_sum <- readRDS("objects/doy_annual_pp_sum.rds") %>%
   filter(Site %in% c("PGTIS", "Kalamalka"))
-doy_annual_pp_sum$MAT_label <- paste("MAT:", doy_annual_pp_sum$MAT)
+doy_annual_pp_sum$MAT_label <- paste("Provenance MAT:", doy_annual_pp_sum$MAT)
 
 # widedoypporchsum <- doy_annual_pp_sum %>%
 #   tidyr::pivot_wider(
@@ -471,15 +471,41 @@ doy_annual_pp_sum$MAT_label <- paste("MAT:", doy_annual_pp_sum$MAT)
 # widedoypporchsum$MAT_label <- paste("MAT:", widedoypporchsum$MAT)
 
 phenf_orchplot <- readRDS("objects/phenf.rds") %>%
-  filter(Event_Obs %in% c(2,3), Site %in% c("PGTIS", "Kalamalka")) %>%
   select(-MAT) %>%
-  mutate(Site = forcats::fct_relevel(Site, c("PGTIS", "Kalamalka")), Year = as.numeric(Year))
+  filter(Event_Obs %in% c(2,3)) %>%
+  mutate(Year = as.numeric(Year), Site = forcats::fct_relevel(Site, factororder$site))
+# Site %in% c("PGTIS", "Kalamalka")) %>%
+  # select(-MAT) %>%
+  # mutate(Site = forcats::fct_relevel(Site, c("PGTIS", "Kalamalka")), Year = as.numeric(Year))
 
 # 6000 draws, 1945-2011 model preds. grey ribbon shows median start to median end, blue and pink ribbons show uncertainty for start and end. Used coldest and warmest source MAT for contrast. Vertical black lines show range of flowering observations in data.
+# ggplot() +
+#   geom_line(data = phenf_orchplot, aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
+#   geom_ribbon(data = doy_annual_pp_sum, aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+#   geom_line(data = doy_annual_pp_sum, aes(x = Year, y = DoY, colour = event)) +
+#   scale_fill_discrete_c4a_div(palette = "icefire") +
+#   scale_colour_discrete_c4a_div(palette = "icefire") +
+#   #labs(fill = "95% HDPI", colour = "95% HDPI") +
+#   #geom_ribbon(data = widedoypporchsum, aes(x = Year, ymin = DoY.begin, ymax = DoY.end), alpha = 0.5) +
+#   theme_bw() +
+#   xlab("Year") +
+#   ylab("Date") +
+#   facet_grid(Site + Sex ~ MAT_label) +
+#   scale_y_continuous(
+#     breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
+#     labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
+#   theme(
+#     axis.text.y = element_text(size = 7),
+#     strip.text.y = element_text(size = 8),
+#     legend.position = "bottom"
+#   )
+# ggsave("../flowering-cline/figures/orchpred_doy.png", width = 6, height = 10)
+
+# male only
 ggplot() +
-  geom_line(data = phenf_orchplot, aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
-  geom_ribbon(data = doy_annual_pp_sum, aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
-  geom_line(data = doy_annual_pp_sum, aes(x = Year, y = DoY, colour = event)) +
+  geom_line(data = filter(phenf_orchplot, Sex == "MALE"), aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
+  geom_ribbon(data = filter(doy_annual_pp_sum, Sex == "MALE"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  geom_line(data = filter(doy_annual_pp_sum, Sex == "MALE"), aes(x = Year, y = DoY, colour = event)) +
   scale_fill_discrete_c4a_div(palette = "icefire") +
   scale_colour_discrete_c4a_div(palette = "icefire") +
   #labs(fill = "95% HDPI", colour = "95% HDPI") +
@@ -487,7 +513,7 @@ ggplot() +
   theme_bw() +
   xlab("Year") +
   ylab("Date") +
-  facet_grid(Site + Sex ~ MAT_label) +
+  facet_grid(Site ~ MAT_label) +
   scale_y_continuous(
     breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
     labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
@@ -496,8 +522,83 @@ ggplot() +
     strip.text.y = element_text(size = 8),
     legend.position = "bottom"
   )
-ggsave("../flowering-cline/figures/orchpred_doy.png", width = 6, height = 7)
 
+#
+
+# female only
+ggplot() +
+  geom_line(data = filter(phenf_orchplot, Sex == "FEMALE"), aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
+  geom_ribbon(data = filter(doy_annual_pp_sum, Sex == "FEMALE"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  geom_line(data = filter(doy_annual_pp_sum, Sex == "FEMALE"), aes(x = Year, y = DoY, colour = event)) +
+  scale_fill_discrete_c4a_div(palette = "icefire") +
+  scale_colour_discrete_c4a_div(palette = "icefire") +
+  #labs(fill = "95% HDPI", colour = "95% HDPI") +
+  #geom_ribbon(data = widedoypporchsum, aes(x = Year, ymin = DoY.begin, ymax = DoY.end), alpha = 0.5) +
+  theme_bw() +
+  xlab("Year") +
+  ylab("Date") +
+  facet_grid(Site ~ MAT_label) +
+  scale_y_continuous(
+    breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
+    labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
+  theme(
+    axis.text.y = element_text(size = 7),
+    strip.text.y = element_text(size = 8),
+    legend.position = "bottom"
+  )
+
+# for paper, do separate graphs for PGTIS and Kalamalka with faceting MAT x Sex
+
+pgtisorch <- ggplot() +
+  geom_line(data = filter(phenf_orchplot, Site == "PGTIS"), aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
+  geom_ribbon(data = filter(doy_annual_pp_sum, Site == "PGTIS"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  geom_line(data = filter(doy_annual_pp_sum, Site == "PGTIS"), aes(x = Year, y = DoY, colour = event)) +
+  scale_fill_discrete_c4a_div(palette = "icefire") +
+  scale_colour_discrete_c4a_div(palette = "icefire") +
+  #labs(fill = "95% HDPI", colour = "95% HDPI") +
+  #geom_ribbon(data = widedoypporchsum, aes(x = Year, ymin = DoY.begin, ymax = DoY.end), alpha = 0.5) +
+  theme_bw() +
+  xlab("Year") +
+  ylab("Date") +
+  ggtitle("PGTIS - 1961-1990 normal MAT: 3.9") +
+  facet_grid(Sex ~ MAT_label) +
+  scale_y_continuous(
+    breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
+    labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
+  theme(
+    axis.text.y = element_text(size = 7),
+    strip.text.y = element_text(size = 8),
+    legend.position = "bottom"
+  )
+
+kalorch <- ggplot() +
+  geom_line(data = filter(phenf_orchplot, Site == "Kalamalka"), aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
+  geom_ribbon(data = filter(doy_annual_pp_sum, Site == "Kalamalka"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  geom_line(data = filter(doy_annual_pp_sum, Site == "Kalamalka"), aes(x = Year, y = DoY, colour = event)) +
+  scale_fill_discrete_c4a_div(palette = "icefire") +
+  scale_colour_discrete_c4a_div(palette = "icefire") +
+  #labs(fill = "95% HDPI", colour = "95% HDPI") +
+  #geom_ribbon(data = widedoypporchsum, aes(x = Year, ymin = DoY.begin, ymax = DoY.end), alpha = 0.5) +
+  theme_bw() +
+  xlab("Year") +
+  ylab("Date") +
+  ggtitle("Kalamalka =1961-1990 normal MAT:8.0") +
+  facet_grid(Sex ~ MAT_label) +
+  scale_y_continuous(
+    breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
+    labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
+  theme(
+    axis.text.y = element_text(size = 7),
+    strip.text.y = element_text(size = 8),
+    legend.position = "bottom"
+  )
+
+kalorch / pgtisorch +
+  plot_annotation(tag_levels = 'A') +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "top")
+
+ggsave("../flowering-cline/figures/orchpred_doy.png", width = 6, height = 10)
 # gdd_orch + doy_orch +
 #   plot_layout(widths = c(1,2)) +
 #   plot_annotation(tag_levels = 'A')
@@ -748,6 +849,6 @@ ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, 
   xlab("Normal period") +
   ylab("Day of Year")
 
-ggsave("../flowering-cline/figures/normal_predictions.png", width = 12, height = 5, units = "in")
+ggsave("../flowering-cline/figures/normal_predictions.png", width = 12, height = 7, units = "in")
 
 
