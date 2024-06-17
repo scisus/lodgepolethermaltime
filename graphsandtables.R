@@ -457,9 +457,8 @@ ggsave("../flowering-cline/figures/orchpred_gdd_specific.png", width = 3, height
 
 #### DoY #####
 
-doy_annual_pp_sum <- readRDS("objects/doy_annual_pp_sum.rds") %>%
-  filter(Site %in% c("PGTIS", "Kalamalka"))
-doy_annual_pp_sum$MAT_label <- paste("Provenance MAT:", doy_annual_pp_sum$MAT)
+doy_annual_pp_sum <- readRDS("objects/doy_annual_pp_sum.rds")
+doy_annual_pp_sum$MAT_label <- paste("Provenance MAT:", doy_annual_pp_sum$MAT, "\u00B0C")
 
 # widedoypporchsum <- doy_annual_pp_sum %>%
 #   tidyr::pivot_wider(
@@ -513,6 +512,7 @@ ggplot() +
   theme_bw() +
   xlab("Year") +
   ylab("Date") +
+  ggtitle("Pollen shed (MALE)") +
   facet_grid(Site ~ MAT_label) +
   scale_y_continuous(
     breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
@@ -523,6 +523,7 @@ ggplot() +
     legend.position = "bottom"
   )
 
+ggsave("../flowering-cline/figures/orchpred_doy_male.png", width = 6, height = 10)
 #
 
 # female only
@@ -537,6 +538,7 @@ ggplot() +
   theme_bw() +
   xlab("Year") +
   ylab("Date") +
+  ggtitle("Receptivity (FEMALE)") +
   facet_grid(Site ~ MAT_label) +
   scale_y_continuous(
     breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
@@ -546,6 +548,7 @@ ggplot() +
     strip.text.y = element_text(size = 8),
     legend.position = "bottom"
   )
+ggsave("../flowering-cline/figures/orchpred_doy_female.png", width = 6, height = 10)
 
 # for paper, do separate graphs for PGTIS and Kalamalka with faceting MAT x Sex
 
@@ -555,19 +558,17 @@ pgtisorch <- ggplot() +
   geom_line(data = filter(doy_annual_pp_sum, Site == "PGTIS"), aes(x = Year, y = DoY, colour = event)) +
   scale_fill_discrete_c4a_div(palette = "icefire") +
   scale_colour_discrete_c4a_div(palette = "icefire") +
-  #labs(fill = "95% HDPI", colour = "95% HDPI") +
-  #geom_ribbon(data = widedoypporchsum, aes(x = Year, ymin = DoY.begin, ymax = DoY.end), alpha = 0.5) +
-  theme_bw() +
+  theme_bw(base_size = 8) +
   xlab("Year") +
   ylab("Date") +
-  ggtitle("PGTIS - 1961-1990 normal MAT: 3.9") +
+  ggtitle("PGTIS", subtitle = "1961-1990 normal MAT: 3.9 \u00B0C") +
   facet_grid(Sex ~ MAT_label) +
   scale_y_continuous(
     breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
     labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
   theme(
-    axis.text.y = element_text(size = 7),
-    strip.text.y = element_text(size = 8),
+    axis.text.y = element_text(size = 8),
+    strip.text.y = element_text(size = 9),
     legend.position = "bottom"
   )
 
@@ -577,28 +578,26 @@ kalorch <- ggplot() +
   geom_line(data = filter(doy_annual_pp_sum, Site == "Kalamalka"), aes(x = Year, y = DoY, colour = event)) +
   scale_fill_discrete_c4a_div(palette = "icefire") +
   scale_colour_discrete_c4a_div(palette = "icefire") +
-  #labs(fill = "95% HDPI", colour = "95% HDPI") +
-  #geom_ribbon(data = widedoypporchsum, aes(x = Year, ymin = DoY.begin, ymax = DoY.end), alpha = 0.5) +
-  theme_bw() +
+  theme_bw(base_size = 8) +
   xlab("Year") +
   ylab("Date") +
-  ggtitle("Kalamalka =1961-1990 normal MAT:8.0") +
+  ggtitle("Kalamalka", subtitle = "1961-1990 normal MAT: 8.0 \u00B0C") +
   facet_grid(Sex ~ MAT_label) +
   scale_y_continuous(
     breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
     labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
   theme(
-    axis.text.y = element_text(size = 7),
-    strip.text.y = element_text(size = 8),
+    axis.text.y = element_text(size = 8),
+    strip.text.y = element_text(size = 9),
     legend.position = "bottom"
   )
 
 kalorch / pgtisorch +
   plot_annotation(tag_levels = 'A') +
   plot_layout(guides = "collect") &
-  theme(legend.position = "top")
+  theme(legend.position = "bottom")
 
-ggsave("../flowering-cline/figures/orchpred_doy.png", width = 6, height = 10)
+ggsave("../flowering-cline/figures/orchpred_doy.png", width = 6, height = 7)
 # gdd_orch + doy_orch +
 #   plot_layout(widths = c(1,2)) +
 #   plot_annotation(tag_levels = 'A')
