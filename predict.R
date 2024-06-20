@@ -25,8 +25,9 @@ siteMAT <- sitedat %>%
 
 # orchards ############
 ## generic orchard ############
+## at 100 points spanning full range of provenances in the data
 neworchdat_avg <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
-                                    to = range(alldatls$fbdat$MAT)[2], length.out = 2),
+                                    to = range(alldatls$fbdat$MAT)[2], length.out = 100),
                           Year = "newyear",
                           Tree = "newtree",
                           Genotype = "newgenotype",
@@ -36,7 +37,7 @@ neworchdat_avg <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
   split(list(.$event, .$Sex))
 
 # posterior prediction #########
-# for each site for the full range of provenances using an average year, genotype, and tree (using estimated gaussian prior to generate random effects). n draws, 95% HDPI #######
+# for each site for the full range of provenances using an average site, year, genotype, and tree (using estimated gaussian prior to generate random effects). n draws, 95% HDPI #######
 
 fpred_orch_avg <- purrr::map2(neworchdat_avg, modells,
                           .f = function(x,y) {add_predicted_draws(newdata = x,
@@ -59,7 +60,7 @@ saveRDS(fpred_orch_avg_summary, "objects/fpred_orch_avg_summary.rds")
 
 shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Tolko", "PRT", "Vernon", "Kalamalka") # drop border and trench
 neworchdat <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
-                                    to = range(alldatls$fbdat$MAT)[2], length.out = 2),
+                                    to = range(alldatls$fbdat$MAT)[2], length.out = 100),
                          Year = "newyear",
                          Tree = "newtree",
                          Genotype = "newgenotype",

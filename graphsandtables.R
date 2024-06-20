@@ -394,29 +394,33 @@ ggplot(overlapex, aes(x = mean, y = forcats::fct_rev(label), xmin = .lower, xmax
 
 ggsave("../flowering-cline/figures/obsvsretroconceptual.png", width = 4, height = 3)
 
-## orchard retrodictions ####
-### generic #################
+
+## GDD predictions for a generic site, year, tree, etc. #################
 
 fpred_orch_avg_summary <- readRDS("objects/fpred_orch_avg_summary.rds")
+phenf_orchplot_prov <- readRDS("objects/phenf.rds") %>%
+  filter(Event_Obs %in% c(2,3)) %>%
+  mutate(Site = forcats::fct_relevel(Site, factororder$site))
 
 ggplot(fpred_orch_avg_summary) +
   # colored ribbons for start and end
   geom_ribbon(aes(x = MAT, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
   geom_line(aes(x = MAT, y = .prediction, colour = event)) +
+  #geom_line(data = phenf_orchplot_prov, aes(x = MAT, y = sum_forcing, group = MAT), alpha = 0.9) +
   facet_grid(. ~ Sex) +
   scale_fill_discrete_c4a_div(palette = "icefire") +
   scale_colour_discrete_c4a_div(palette = "icefire") +
   theme_bw() +
-  ylab("Accumulated forcing (GDD)") +
-  xlab("Provenance MAT") +
+  ylab("Accumulated forcing (\u00B0C)") +
+  xlab("Provenance Mean Annual Temperature (\u00B0C)") +
   theme(
     axis.text.y = element_text(size = 7),
     strip.text.y = element_text(size = 8),
     legend.position = "bottom"
   )
-ggsave("../flowering-cline/figures/orchpred_gdd.png", width = 6, height = 4)
+ggsave("../flowering-cline/figures/genpred_gdd.png", width = 6, height = 4)
 
-### specific ############
+### specific orchard retrodictions ############
 #### GDD ##########
 ###
 
@@ -436,6 +440,7 @@ ggplot(fpred_orch_summary) +
   # colored ribbons for start and end
   geom_ribbon(aes(x = MAT, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
   geom_line(aes(x = MAT, y = .prediction, colour = event)) +
+  geom_line(data = phenf_orchplot_prov, aes(x = MAT, y = sum_forcing, group = MAT), alpha = 0.9) +
   # solid ribbon for median flowering period
   #geom_ribbon(data = widefpredorchsum, aes(x = MAT, ymin = .prediction.begin, ymax = .prediction.end), alpha = 0.7) +
   # outlines of start and end
@@ -452,7 +457,7 @@ ggplot(fpred_orch_summary) +
     legend.position = "bottom"
   )
   #labs(fill = "95% HDPI", colour = "95% HDPI")
-ggsave("../flowering-cline/figures/orchpred_gdd_specific.png", width = 3, height = 4)
+ggsave("../flowering-cline/figures/orchpred_gdd.png", width = 3, height = 4)
 
 
 #### DoY #####
@@ -513,7 +518,7 @@ ggplot() +
   xlab("Year") +
   ylab("Date") +
   ggtitle("Pollen shed (MALE)") +
-  facet_grid(Site ~ MAT_label) +
+  facet_grid(forcats::fct_rev(Site) ~ MAT_label) +
   scale_y_continuous(
     breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
     labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
@@ -539,7 +544,7 @@ ggplot() +
   xlab("Year") +
   ylab("Date") +
   ggtitle("Receptivity (FEMALE)") +
-  facet_grid(Site ~ MAT_label) +
+  facet_grid(forcats::fct_rev(Site) ~ MAT_label) +
   scale_y_continuous(
     breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
     labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
