@@ -428,24 +428,16 @@ ggsave("../flowering-cline/figures/genpred_gdd.png", width = 6, height = 4)
 
 fpred_orch_summary <- readRDS("objects/fpred_orch_summary.rds")
 
-# widefpredorchsum <- fpred_orch_summary %>%
-#   tidyr::pivot_wider(
-#     id_cols = c(MAT, Year, Tree, Genotype, Site, Sex),
-#     names_from = event,
-#     values_from = c(.prediction, .lower, .upper),
-#     names_sep = "."
-#   )
-
 ggplot(fpred_orch_summary) +
   # colored ribbons for start and end
   geom_ribbon(aes(x = MAT, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
   geom_line(aes(x = MAT, y = .prediction, colour = event)) +
-  geom_line(data = phenf_orchplot_prov, aes(x = MAT, y = sum_forcing, group = MAT), alpha = 0.9) +
+  geom_line(data = phenf_orchplot_prov, aes(x = MAT, y = sum_forcing, group = MAT), alpha = 0.8, linewidth = 0.25) +
   # solid ribbon for median flowering period
   #geom_ribbon(data = widefpredorchsum, aes(x = MAT, ymin = .prediction.begin, ymax = .prediction.end), alpha = 0.7) +
   # outlines of start and end
   #geom_ribbon(data=fpred_orch_summary, aes(x = MAT, ymin = .lower, ymax = .upper, colour = event), fill = "transparent", size = .5, linetype = 3) +
-  facet_grid(Site ~ Sex) +
+  facet_grid(forcats::fct_rev(Site) ~ Sex) +
   scale_fill_discrete_c4a_div(palette = "icefire") +
   scale_colour_discrete_c4a_div(palette = "icefire") +
   theme_bw() +
@@ -453,12 +445,35 @@ ggplot(fpred_orch_summary) +
   xlab("Source MAT") +
   theme(
     axis.text.y = element_text(size = 7),
-    strip.text.y = element_text(size = 8),
+    strip.text.y = element_text(size = 7),
     legend.position = "bottom"
   )
   #labs(fill = "95% HDPI", colour = "95% HDPI")
-ggsave("../flowering-cline/figures/orchpred_gdd.png", width = 3, height = 4)
+ggsave("../flowering-cline/figures/orchpred_gdd.png", width = 6, height = 7)
 
+ggplot(fpred_orch_summary) +
+  # colored ribbons for start and end
+  geom_ribbon(aes(x = MAT, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  geom_line(aes(x = MAT, y = .prediction, colour = event)) +
+  geom_line(data = phenf_orchplot_prov, aes(x = MAT, y = sum_forcing, group = MAT), alpha = 0.8, linewidth = 0.25) +
+  # solid ribbon for median flowering period
+  #geom_ribbon(data = widefpredorchsum, aes(x = MAT, ymin = .prediction.begin, ymax = .prediction.end), alpha = 0.7) +
+  # outlines of start and end
+  #geom_ribbon(data=fpred_orch_summary, aes(x = MAT, ymin = .lower, ymax = .upper, colour = event), fill = "transparent", size = .5, linetype = 3) +
+  facet_grid(forcats::fct_rev(Site) ~ Sex) +
+  scale_fill_discrete_c4a_div(palette = "icefire") +
+  scale_colour_discrete_c4a_div(palette = "icefire") +
+  theme_bw() +
+  ylab("GDD") +
+  xlab("Source MAT") +
+  theme(
+    axis.text.y = element_text(size = 7),
+    strip.text.y = element_text(size = 7),
+    legend.position = "bottom"
+  )
+#labs(fill = "95% HDPI", colour = "95% HDPI")
+
+###
 
 #### DoY #####
 
@@ -609,7 +624,19 @@ ggsave("../flowering-cline/figures/orchpred_doy.png", width = 6, height = 7)
 # ggsave("../flowering-cline/figures/orchpred.png", width = 8, height = 5.5)
 
 
-### For Both Outputs
+# differences between provenances in flowering at different sites #mean difference between coldest and warmest provenance
+warmvscold <- readRDS('objects/warmvscold.rds')
+ggplot(warmvscold, aes(x = Site, y = mean_doy_diff, colour = Sex, shape = event)) +
+  geom_point(position = position_dodge(0.4)) +
+  geom_errorbar(aes(ymin = mean_doy_diff - sd_diff, ymax = mean_doy_diff + sd_diff),
+                width = 0.2,   # Controls the width of the horizontal lines at the top and bottom of the error bars
+                position = position_dodge(0.4)) +
+  scale_colour_discrete_c4a_div(palette = "acadia") +
+  theme_bw() +
+  ylab("Mean difference (days)") +
+  theme(legend.position = "bottom")
+ggsave("../flowering-cline/figures/provdiffdoy.png", width = 5, height = 3)
+
 
 
 # predictions ####
