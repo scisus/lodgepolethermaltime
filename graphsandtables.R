@@ -420,8 +420,8 @@ ggplot(fpred_orch_avg_summary) +
   )
 ggsave("../flowering-cline/figures/genpred_gdd.png", width = 6, height = 4)
 
-### specific orchard retrodictions ############
-#### GDD ##########
+# specific orchard predictions ############
+## GDD ##########
 ###
 
 # using 95% HDCI, median posterior prediction for each site for the full range of provenances (MATs) using an average year, Genotype, and tree (i.e. using estimated gaussian prior to generate those random effects), but using site specific effects estimated from the model (delta offset). Posterior predictions contain full range of uncertainty because I want the orchard managers to know what to actually expect
@@ -475,7 +475,7 @@ ggplot(fpred_orch_summary) +
 
 ###
 
-#### DoY #####
+## DoY #####
 
 doy_annual_pp_sum <- readRDS("objects/doy_annual_pp_sum.rds")
 doy_annual_pp_sum$MAT_label <- paste("Provenance MAT:", doy_annual_pp_sum$MAT, "\u00B0C")
@@ -637,7 +637,28 @@ ggplot(warmvscold, aes(x = Site, y = mean_doy_diff, colour = Sex, shape = event)
   theme(legend.position = "bottom")
 ggsave("../flowering-cline/figures/provdiffdoy.png", width = 5, height = 3)
 
+# similar patterns of flowering across sites
+readRDS('objects/rank_correlation_wdist.rds')
+ggplot(filter(rank_correlation_wdist, Correlation < 1), aes(colour = MAT, x = Distance, y = Correlation)) +
+  geom_smooth(method = "lm", se = TRUE, aes(group = interaction(MAT, Sex, event))) +
+  geom_point(alpha = 0.7) +
+  #ggtitle("Correlation by distance") +
+  facet_grid(Sex ~ event) +
+  scale_colour_discrete_c4a_div(palette = "icefire") +
+  xlab("Distance (km)") +
+  ylab(expression("Correlation (Kendall's" ~ tau ~")")) +
+  theme_bw() +
+  theme(legend.position = "top")
+ggsave("../flowering-cline/figures/distrankcorr.png", width = 5, height = 4)
 
+corr_model_results <- readRDS('objects/corr_model_results.rds')
+
+#distance (slope) only
+corr_model_table <- corr_model_results %>%
+  filter(term == "Distance") %>%
+  select(-term, -p.value) %>%
+  mutate(across(c(r.squared:std.error), signif, digits = 2))
+saveRDS(corr_model_table, '../flowering-cline/tables/corr_model_table.rds')
 
 # predictions ####
 
