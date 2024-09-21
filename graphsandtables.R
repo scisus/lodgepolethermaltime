@@ -15,6 +15,7 @@ library(tidyr)
 library(ggrepel)
 library(cols4all)
 library(ggalt)
+library(scales)
 
 theme_set(theme_dark())
 factororder <- readRDS("objects/factororder.rds")
@@ -817,14 +818,14 @@ awayplot <- ggplot(doy_typical_all_at_PGTIS, aes(x = DoY, y=MAT, colour = provef
   facet_grid(Sex ~ event) +
   labs(x = "Day of Year",
        y = "Provenance MAT (\u00B0C)",
-       title = "Away",
+       #title = "Away",
        colour = "") +  # Removes the title of the colour legend
   scale_colour_manual(values = c("#1B9E77", "darkgrey"),
                       labels = c("With provenance effect", "No provenance effect")) +
-  theme_bw(base_size = 10) +
-  theme(legend.position = "bottom") +
-  coord_flip()
-
+  theme_bw() +
+  theme(legend.position = "bottom")
+awayplot
+ggsave("../flowering-cline/figures/away.png", width = 5, height = 4)
 
 # When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap, increases differences between provenances
 
@@ -887,12 +888,21 @@ doy_normal_plotting2 <- doy_normal_plotting %>%
   arrange(desc(MAT)) %>%
   mutate(MATlabel = factor(MATlabel, levels = unique(MATlabel), ordered = TRUE))
 
+
+#convert DoY to date labels
+doy_to_date <- function(doy) {
+  # Assuming January 1st is Day 1
+  date_labels <- format(as.Date(doy - 1, origin = "2024-01-01"), "%b %d")
+  return(date_labels)
+}
+
 # 50 and 95% HDPI with 1961-1991 MAT normal
-ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, colour = type, shape = Sex)) +
+ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, colour = Sex, shape = Sex)) +
   stat_pointinterval(position = "dodge", alpha = 0.5, .width = c(0.50, 0.95)) +
   stat_pointinterval(data = filter(doy_normal_plotting2, event == "end"), position = "dodge", alpha = 0.5, .width = c(0.50, 0.95)) +
   facet_grid(scenario ~ MATlabel, labeller = labeller(scenario = c(ssp245 = "SSP2 4.5 W/m²", ssp585 = "SSP5 8.5 W/m²"))) +
-  scale_color_manual(values = c("historical" = "grey50", "future" = "black"), guide = "none") +
+  #scale_color_manual(values = c("historical" = "grey50", "future" = "black"), guide = "none") +
+  scale_colour_discrete_c4a_div(palette = "acadia") +
   theme_bw() +
   theme(legend.position = "bottom",
         axis.text.x = element_text(angle = 45, hjust=1),
@@ -901,6 +911,20 @@ ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, 
   xlab("Normal period") +
   ylab("Day of Year")
 
-ggsave("../flowering-cline/figures/normal_predictions.png", width = 12, height = 7, units = "in")
+
+ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, colour = Sex, shape = Sex)) +
+  stat_pointinterval(position = position_dodge(width = 1), alpha = 0.5, .width = c(0.50, 0.95)) +
+  stat_pointinterval(data = filter(doy_normal_plotting2, event == "end"), position = position_dodge(width = 1), alpha = 0.5, .width = c(0.50, 0.95)) +
+  facet_grid(scenario ~ MATlabel, labeller = labeller(scenario = c(ssp245 = "SSP2 4.5 W/m²", ssp585 = "SSP5 8.5 W/m²"))) +
+  scale_colour_discrete_c4a_div(palette = "acadia") +
+  scale_y_continuous(labels = doy_to_date, breaks = seq(100, 200, by = 14)) +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 45, hjust=1),
+        axis.title.x = element_text(vjust = -1)) +
+  ylab(NULL) +
+  xlab("Normal period")
+
+ggsave("../flowering-cline/figures/normal_predictions.png", width = 9, height = 6, units = "in")
 
 
