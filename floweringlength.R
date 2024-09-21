@@ -81,3 +81,32 @@ futlen <- doypredmatchfut_medians %>%
 saveRDS(futlen, file = "objects/futlen.rds")
 
 
+## calculate length of phenological period
+doy_annual_pp_sum <- readRDS("objects/doy_annual_pp_sum.rds")
+
+wide_data <- doy_annual_pp_sum %>%
+  pivot_wider(
+    names_from = event,           # Use the event column to create new column names
+    values_from = c(DoY, .lower, .upper),  # Columns to spread into wider format
+    names_sep = "_"              # Separator for new column names
+  )
+
+diff_data <- wide_data %>%
+  mutate(
+    diff_DoY = DoY_end - DoY_begin,
+    diff_lower = .upper_end - .lower_begin,
+    diff_upper = .lower_end - .upper_begin
+  )
+
+length_annual <- doy_annual_pp %>%
+  pivot_wider(
+    names_from = event,
+    values_from = DoY
+  ) %>%
+  mutate(length = end - begin) %>%
+  group_by(MAT, Site, Sex, Year) %>%
+  median_hdci(length) %>%
+  ungroup() %>%
+  mutate(Site = forcats::fct_relevel(Site, shortsites))
+
+# is length related to length of observation period at a site or frequency of observations?

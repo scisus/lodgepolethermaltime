@@ -202,6 +202,38 @@ doy_normal_plotting <- doy_normal %>%
   mutate(Date = ymd("2023-12-31") + DoY)
 saveRDS(doy_normal_plotting, "objects/doy_normal_plotting.rds")
 
+# historical dates
+doy_normal_plotting %>%
+  filter(period %in% c('1951-1980') )%>%
+  group_by(Site, Sex, event, period) %>%
+  median_hdci(DoY) %>%
+  mutate(DoY = as.Date(DoY - 1, origin = "2024-01-01"),
+         .lower = as.Date(.lower - 1, origin = "2024-01-01"),
+         .upper = as.Date(.upper -1, origin = "2024-01-01")) %>%
+  ungroup() %>%
+  arrange(DoY)
+
+# difference between 1951-1980 and 1981-2010
+doy_normal_plotting %>%
+  filter(period %in% c('1951-1980', '1981-2010')) %>%
+  group_by(Site, Sex, event, period, MAT) %>%
+  median_hdci(DoY) %>%
+  select(Site, Sex, event, period, DoY, MAT) %>%
+  pivot_wider(names_from = period, values_from = DoY) %>%
+  mutate(advancement = `1981-2010` - `1951-1980`) %>%
+  arrange(advancement)
+
+# advancement between 1951-1980 and 2071-2100
+doy_normal_plotting %>%
+  filter(period %in% c('1951-1980', '2071-2100')) %>%
+  select(-period) %>%
+  group_by(Site, Sex, event, scenario, MAT) %>%
+  median_hdci(DoY) %>%
+  select(Site, Sex, event, scenario, DoY, MAT) %>%
+  pivot_wider(names_from = scenario, values_from = DoY) %>%
+  mutate(ssp2_adv = historical - ssp245, ssp5_adv = historical - ssp585) %>%
+  arrange(ssp5_adv)
+
 
 
 # contrast ####
