@@ -236,7 +236,7 @@ interceptsummary <- intercepts %>%
   select(-starts_with(".")) %>%
   pivot_wider(names_from = Sex, values_from = Value_CI)
 
-#saveRDS(interceptsummary, file = "../flowering-cline/tables/interceptsummary.rds")
+saveRDS(interceptsummary, file = "../flowering-cline/tables/interceptsummary.rds")
 
 ### slopes
 slopes <- readRDS(file = "objects/slopes.rds")
