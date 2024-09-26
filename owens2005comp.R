@@ -1,5 +1,6 @@
-# compare Owens 2005 results to mine
 
+# owens 2005 ####
+#
 phenf <- readRDS('objects/phenf.rds')
 dailyforc <- read.csv("data/forcing/dailyforc_1945_2012.csv") %>%
   group_by(Site, Year) %>%
@@ -9,7 +10,6 @@ dailyforc <- read.csv("data/forcing/dailyforc_1945_2012.csv") %>%
 doy_annual_pp_sum <- readRDS('objects/doy_annual_pp_sum.rds') %>%
   filter(Year == 2000) %>%
   mutate(Date = as.Date(DoY - 1, origin = "1999-12-31"))
-
 # PRT 2000 ####
 fig1 <- phenf %>%
   filter(Site == "PRT", Year == "2000")
@@ -65,6 +65,8 @@ genpred <- readRDS('objects/fpred_orch_avg.rds') %>%
   group_by(Sex, event) %>%
   mean_hdci(.prediction)
 
+## nilsson comparison
+nilsson <- read.csv('data/Nilsson1981/swedish-pollen-timeseries.csv')
 
 
 

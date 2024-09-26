@@ -356,6 +356,42 @@ ggplot(yearr, aes(y=level, x = .value, colour = Sex)) +
   theme(legend.position = "top")
 ggsave("plots/year_offsets.pdf", width = 6, height = 5)
 
+# independent data comparison ###########
+
+indpredsummary <- readRDS('objects/indpredsummary.rds')
+
+# Position the contorta label
+label_x <- 240  # Position the label slightly outside the plot
+label_y <- 175  # Vertical position near the contorta points
+
+# Subset the data to only include facets with "contorta" points
+contorta_data <- subset(indpredsummary, ssp. == "contorta")
+
+ggplot(indpredsummary, aes(x = sum_forcing, y = .prediction)) +
+  geom_errorbar(aes(ymin = .lower, ymax = .upper, colour = as.character(.width)),
+                width = 0.1, alpha = 0.5) +
+  geom_point(aes(fill = MAT, shape = Site), size = 2) +
+  geom_abline(colour = "darkgrey") +
+  facet_grid(Sex ~ event) +
+  scale_color_manual(values = c("0.5" = "black", "0.95" = "grey"), name = "HDPI") +  # For error bars
+  scale_fill_viridis_c(option = "D", name = "Provenance MAT") +  # For points
+  scale_shape_manual(values = c("Central BC" = 21, "Central Sweden" = 24)) +  # Custom shapes for ssp.
+  theme_bw() +
+  xlab("Measured forcing (GDD)") +
+  ylab("Predicted forcing (GDD)") +
+  # Add segments and label only in facets with contorta points
+  geom_segment(data = contorta_data,
+               aes(xend = label_x, yend = label_y),
+               linetype = "dashed", color = "darkgrey") +
+  geom_label(data = contorta_data,
+             aes(x = label_x, y = label_y, label = "contorta"),
+             size = 2, fill = "white", color = "black", hjust = 0) +
+  theme(legend.position = "bottom") +
+  guides(fill = guide_colorbar(title.position = "top", title.hjust = 0.5),  # Correct guide for continuous fill (MAT)
+         shape = guide_legend(title.position = "top", title.hjust = 0.5),  # Correct guide for shape
+         colour = guide_legend(title.position = "top", title.hjust = 0.5, override.aes = list(size = 2)))  # Correct guide for colour
+ggsave("../flowering-cline/figures/independent_data_comp.png", width = 7, height = 5)
+
 # retrodictions ####
 #
 ## Observed vs retrodicted ##############
