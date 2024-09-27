@@ -23,8 +23,8 @@ dailyforc_oo <- read.csv("data/forcing/dailyforc_1945_2012.csv") %>%
   filter(Year == "1983", Site == 'PGTIS')
 
 ooprovs <- ooprovsdat%>%
-  rename(MAT = MAT.1961.1990) %>%
-  mutate(provenance = gsub(".*\\((.*)\\).*", "\\1", Location.description)) %>%
+  rename(MAT = MAT.1961.1990, provenance = Location.description) %>%
+ # mutate(provenance = gsub(".*\\((.*)\\).*", "\\1", Location.description)) %>%
   select(provenance, MAT)
 
 # tree ages - 14, just reaching maturity in provenance trials at prince george

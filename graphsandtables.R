@@ -360,6 +360,16 @@ ggsave("plots/year_offsets.pdf", width = 6, height = 5)
 
 indpredsummary <- readRDS('objects/indpredsummary.rds')
 
+## table
+
+# indpredsummary %>%
+#   select(Site, provenance, MAT, ssp.) %>%
+#   rename(Provenance = provenance, `Provenance MAT` = MAT, subspecies = ssp.) %>%
+#   distinct() %>%
+#   arrange(`Provenance MAT`)
+
+## graph
+
 # Position the contorta label
 label_x <- 240  # Position the label slightly outside the plot
 label_y <- 175  # Vertical position near the contorta points
@@ -373,7 +383,7 @@ ggplot(indpredsummary, aes(x = sum_forcing, y = .prediction)) +
   geom_point(aes(fill = MAT, shape = Site), size = 2) +
   geom_abline(colour = "darkgrey") +
   facet_grid(Sex ~ event) +
-  scale_color_manual(values = c("0.5" = "black", "0.95" = "grey"), name = "HDPI") +  # For error bars
+  scale_color_manual(values = c("0.5" = "black", "0.95" = "grey"), name = "HDI") +  # For error bars
   scale_fill_viridis_c(option = "D", name = "Provenance MAT") +  # For points
   scale_shape_manual(values = c("Central BC" = 21, "Central Sweden" = 24)) +  # Custom shapes for ssp.
   theme_bw() +
