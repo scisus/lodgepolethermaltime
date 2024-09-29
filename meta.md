@@ -31,11 +31,14 @@ Modular analysis scripts write out objects needed in other scripts or for graphs
 - `diagnositics.R` calculates model diagnostics like Rhat and ESS
 - `censoring.R` end vs interval censoring: what proportion of data is censored end vs. interval?
 - `factororder.R` order factors for making good graphs
+- `replication_points.R` levels of replication
 - `obsVSretro.R` compare observations to retrodictions
 - `modelparameters.R` extract parameter values from thermal time model
 - `predict.R` predict thermal time for events from models 
 - `dayofyear_translation.R` translate predictions into day of year 
 - `doyanalysis.R` investigate patterns of flowering across sites
+- `model_check_independentdata.R` check model predictions against data in O'Reilly 1988 and Nilsson 1981
+- `owens2005comp.R` calculate GDD for dates reported in Owens 2005
 - `floweringlength.R` [DEFUNCT] length of flowering period
 - `overlap.R` [DEFUNCT] calculate historical and future overlap of phenological periods [defunct]
 - `variation.R` [DEFUNCT] variation in flowering period 
