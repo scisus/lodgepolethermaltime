@@ -685,10 +685,21 @@ ggplot(warmvscold, aes(x = Site, y = mean_doy_diff, colour = Sex, shape = event)
 ggsave("../flowering-cline/figures/provdiffdoy.png", width = 5, height = 3)
 
 # similar patterns of flowering across sites
-readRDS('objects/rank_correlation_wdist.rds')
-ggplot(filter(rank_correlation_wdist, Correlation < 1), aes(colour = MAT, x = Distance, y = Correlation)) +
-  geom_smooth(method = "lm", se = TRUE, aes(group = interaction(MAT, Sex, event))) +
-  geom_point(alpha = 0.7) +
+rank_correlation_wdist <- readRDS('objects/rank_correlation_wdist.rds')
+# ggplot(filter(rank_correlation_wdist, Correlation < 1), aes(colour = MAT, x = Distance, y = Correlation)) +
+#   geom_smooth(method = "lm", se = TRUE, aes(group = interaction(MAT, Sex, event))) +
+#   geom_point(alpha = 0.7) +
+#   #ggtitle("Correlation by distance") +
+#   facet_grid(Sex ~ event) +
+#   scale_colour_discrete_c4a_div(palette = "icefire") +
+#   xlab("Distance (km)") +
+#   ylab(expression("Correlation (Kendall's" ~ tau ~")")) +
+#   theme_bw() +
+#   theme(legend.position = "top")
+#
+ggplot(filter(rank_correlation_wdist, Correlation < 1), aes(x = Distance, y = Correlation)) +
+geom_smooth(method = "lm", se = TRUE) +
+  geom_point(alpha = 0.7, pch = 1) +
   #ggtitle("Correlation by distance") +
   facet_grid(Sex ~ event) +
   scale_colour_discrete_c4a_div(palette = "icefire") +
@@ -704,7 +715,7 @@ corr_model_results <- readRDS('objects/corr_model_results.rds')
 corr_model_table <- corr_model_results %>%
   filter(term == "Distance") %>%
   select(-term, -p.value) %>%
-  mutate(across(c(r.squared:std.error), signif, digits = 2))
+  mutate(across(c(r.squared:std.error), \(x) signif(x, digits = 2)))
 saveRDS(corr_model_table, '../flowering-cline/tables/corr_model_table.rds')
 
 # predictions ####
@@ -933,7 +944,6 @@ doy_normal_plotting2 <- doy_normal_plotting %>%
   full_join(historicalonly) %>%
   arrange(desc(MAT)) %>%
   mutate(MATlabel = factor(MATlabel, levels = unique(MATlabel), ordered = TRUE))
-
 
 #convert DoY to date labels
 doy_to_date <- function(doy) {
