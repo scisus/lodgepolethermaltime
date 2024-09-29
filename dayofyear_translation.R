@@ -13,13 +13,15 @@ source('phenology_functions.R')
 focalsites <- c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border") # warmest to coldest
 shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Kalamalka")
 seedorchardsites <- c("PGTIS", "KettleRiver", "Sorrento", "Tolko", "PRT", "Vernon", "Kalamalka")
+siteorder <- readRDS('objects/factororder.rds')$site
 
 # daily forcing data ############
 
 # daily "real" forcing
 dailyforc <- read.csv("data/forcing/dailyforc_1945_2012.csv") %>%
   group_by(Site, Year) %>%
-  mutate(index = cur_group_id()) %>% ungroup()
+  mutate(index = cur_group_id()) %>% ungroup() %>%
+  mutate(Site = forcats::fct_relevel(Site, siteorder))
 #orchard only historic, excluding vernon, tolko, prt and letting kal stand in for them
 dailyforc_so <- dailyforc %>% filter(Site %in% seedorchardsites) %>%
   mutate(Site = forcats::fct_relevel(Site, seedorchardsites)) %>%
@@ -32,8 +34,10 @@ normal_forc <- read.csv("data/forcing/normalforc_1901-2100.csv") %>%
   group_by(Site, period, scenario) %>%  # index
   mutate(index = cur_group_id()) %>% ungroup()
 
-#fepred_allprovs <- readRDS("objects/fepred_allprovs.rds") ## expectation for observed trees (sources)
-fepred_allsites <- readRDS("objects/fepred_allsites.rds") ## expectation for trees sourced from all sites - no downsampling
+#fepred_allprovs <- readRDS("objects/fepred_allprovs.rds")  ## expectation for observed trees (sources)
+fepred_allsites <- readRDS("objects/fepred_allsites.rds")  %>% ## expectation for trees sourced from all sites - no downsampling
+  ungroup() %>%
+  mutate(Site = forcats::fct_relevel(Site, siteorder))
 fpred_orch <- readRDS("objects/fpred_orch.rds") %>% #posterior prediction for each site for the full range of provenances using an average year, genotype, and tree (using estimated gaussian prior to generate random effects). 6000 draws
   ungroup() %>%
   select(-.row, -.draw, -.chain, -.iteration) %>%
@@ -140,7 +144,7 @@ saveRDS(doy_typical_all_at_PGTIS, "objects/doy_typical_all_at_PGTIS.rds")
 
 # year to year variation ####
 
-## posterior prediction, 6000 draws, avg year, genotype, tree. 1945-2011. See comments on fpred_orch generation in predict.R####
+## posterior prediction, 6000 draws, avg year, genotype, tree, site effects. 1945-2011. See comments on fpred_orch generation in predict.R####
 
 # split climate data and forcing predictions into lists based on site
 dailyforc_so_list <- split(dailyforc_so, f = list(dailyforc_so$Site), drop = TRUE)
@@ -164,7 +168,25 @@ doy_annual_pp_sum <- doy_annual_pp %>%
 doy_annual_pp_sum$MAT_label <- paste("MAT:", doy_annual_pp_sum$MAT)
 saveRDS(doy_annual_pp_sum, "objects/doy_annual_pp_sum.rds")
 
+## expectation and no random effects for y2y var and ranking correlation####
+fepred_allsites_ls <- split(fepred_allsites, f = list(fepred_allsites$Site), drop = TRUE)
+dailyforc_ls <- split(dailyforc, f = list(dailyforc$Site), drop = TRUE)
+all(names(dailyforc_ls) == names(fepred_allsites_ls))
 
+doy_annual_exp <- map2_dfr(.x = dailyforc_ls, .y = fepred_allsites_ls, .f = find_day_of_forcing_mapper, bforce = ".epred") %>%
+  rename(DoY = newdoycol, index = .id) %>%
+  mutate(index = as.numeric(index)) %>%
+  ungroup() %>%
+  left_join(select(dailyforc, index, Site, Year) %>% distinct())
+
+### and summarize
+doy_annual_exp_sum <- doy_annual_exp %>%
+  group_by(MAT, Site, event, Sex, Year) %>%
+  median_hdci(DoY) %>%
+  ungroup() %>%
+  mutate(Site = forcats::fct_relevel(Site, siteorder)) # correct to full sites
+doy_annual_exp_sum$MAT_label <- paste("MAT:", doy_annual_exp_sum$MAT)
+saveRDS(doy_annual_exp_sum, "objects/doy_annual_exp_sum.rds")
 
 # normal periods ########
 normal_forc_focal <- normal_forc %>% filter(Site %in% focalsites)
@@ -186,7 +208,8 @@ doy_normal <- map2_dfr(.x = climatelist_nff, .y = phenlist_af, .f = find_day_of_
   rename(index = .id, DoY = newdoycol) %>%
   mutate(index = as.numeric(index)) %>%
   ungroup() %>%
-  select(-.row, -.draw) %>%
+  #select(-.row, -.draw) %>%
+  select(-.row) %>%
   left_join(select(normal_forc_focal, index, Site, period, scenario) %>% distinct()) %>%
   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site)))
 
@@ -206,7 +229,7 @@ saveRDS(doy_normal_plotting, "objects/doy_normal_plotting.rds")
 doy_normal_plotting %>%
   filter(period %in% c('1951-1980') )%>%
   group_by(Site, Sex, event, period) %>%
-  median_hdci(DoY) %>%
+  median_qi(DoY) %>%
   mutate(DoY = as.Date(DoY - 1, origin = "2024-01-01"),
          .lower = as.Date(.lower - 1, origin = "2024-01-01"),
          .upper = as.Date(.upper -1, origin = "2024-01-01")) %>%
@@ -234,7 +257,33 @@ doy_normal_plotting %>%
   mutate(ssp2_adv = historical - ssp245, ssp5_adv = historical - ssp585) %>%
   arrange(ssp5_adv)
 
+doy_normal_plotting %>%
+  select(.draw, Site, Sex, event, DoY, period, scenario) %>%
+  filter(period %in% c('1951-1980', '2071-2100'),
+    scenario %in% c("historical", "ssp245", "ssp585")) %>%
+  select(-period) %>%
+  pivot_wider(names_from = scenario, values_from = DoY) %>%
+  mutate(ssp2_adv = historical - ssp245, ssp5_adv = historical - ssp585) %>%
+  group_by(Site, Sex, event) %>%
+  # summarize( #standard errors
+  #   median_ssp2 = median(ssp2_adv),
+  #   se_ssp2 = sd(ssp2_adv) / sqrt(n()),
+  #   median_ssp5 = median(ssp5_adv),
+  #   se_ssp5 = sd(ssp5_adv) / sqrt(n())
+  # ) %>%
+  #Summarize for ssp2_adv
+  summarize(
+    median_qi_ssp2 = median_qi(ssp2_adv, .width = 0.95), #quantile interval
+    median_qi_ssp5 = median_qi(ssp5_adv, .width = 0.95)
+  ) %>%
+  unnest_wider(median_qi_ssp2, names_sep = "_") %>%
+  unnest_wider(median_qi_ssp5, names_sep = "_") %>%
+  select(-contains(".width"), -contains(".point"), -contains(".interval")) %>%
+  rename_with(~ gsub("median_qi", "adv", .), starts_with("median_qi")) %>%
+  arrange(adv_ssp5_y)
 
+
+## uncertainty for extremes
 
 # contrast ####
 # this contrast does not compare site effects - uses grand means to describe how different sites are on average. forcing the same for each site
