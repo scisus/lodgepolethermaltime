@@ -6,10 +6,11 @@ library(tidybayes)
 nilssongdd <- read.csv('data/Nilsson1981/swedish-pollen-timeseries.csv') %>%
   rename(provid = provenance)
 nilssonprovs <- read.csv('data/Nilsson1981/swedish-sites-with-MATs.csv') %>%
-  rename(provenance = Name, provid = This.study, MAT = MAT.1961.1990) %>%
+  rename(Provenance = Name, provid = This.study, MAT = MAT.1961.1990) %>%
   filter(Used.Ange == "X") %>%
-  select(provenance, provid, MAT) %>%
+  select(Provenance, provid, MAT) %>%
   mutate(provid = as.character(provid), Site = "Central Sweden")
+nilssondat <- left_join(nilssongdd, nilssonprovs)
 
 # provenance and date data from o'reilly and owens 1988
 
@@ -23,14 +24,15 @@ dailyforc_oo <- read.csv("data/forcing/dailyforc_1945_2012.csv") %>%
   filter(Year == "1983", Site == 'PGTIS')
 
 ooprovs <- ooprovsdat%>%
-  rename(MAT = MAT.1961.1990, provenance = Location.description) %>%
- # mutate(provenance = gsub(".*\\((.*)\\).*", "\\1", Location.description)) %>%
-  select(provenance, MAT)
+  rename(MAT = MAT.1961.1990, Provenance = Provenance.name.) %>%
+  mutate(provid = gsub(".*\\((.*)\\).*", "\\1", Location.description)) %>%
+  select(Provenance, provid, MAT)
 
 # tree ages - 14, just reaching maturity in provenance trials at prince george
 
 oophen <- oophendat %>%
-  select(provenance = Provenance, starts_with("Seed"), starts_with("Pollen"), -ends_with("3.Date")) %>%
+  rename(provid = Provenance) %>%
+  select(provid, starts_with("Seed"), starts_with("Pollen"), -ends_with("3.Date")) %>%
   pivot_longer(cols = contains("Date"), names_to = "event", values_to = "Date") %>%
   mutate(Sex = case_when(
     grepl("^Seed", event) ~ "FEMALE",
@@ -44,19 +46,18 @@ oophen <- oophendat %>%
     DoY = yday(Date_parsed) ) %>%
   select(-starts_with("Date")) %>%
   left_join(ooprovs) %>%
-  left_join(dailyforc_oo) # add forcing
+  left_join(dailyforc_oo) %>% # add forcing
+  select(event, Provenance, provid, Year, Sex, sum_forcing, MAT) %>%
+  mutate(Site = "Central BC")
 
-
+#model data
 modells <- readRDS("objects/modells.rds")
 
 # alldatls <- readRDS("objects/datlist.rds")
 # sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv") %>% filter(id == "site")
 
 # combine nilsson & oreilly & owens data and prep for model comparison
-independentdat <- left_join(nilssongdd, nilssonprovs) %>%
-  full_join(oophen %>%
-              select(event, provenance, Year, Sex, sum_forcing, MAT) %>%
-              mutate(Site = "Central BC")) %>%
+independentdat <- full_join(nilssondat, oophen ) %>%
   filter(!is.na(MAT), !is.na(sum_forcing)) %>%
   split(list(.$event, .$Sex))
 
@@ -82,7 +83,7 @@ indpred <- purrr::map2(independentdat, modells,
 # saveRDS(fpred_orch_avg, file = "objects/fpred_orch_avg.rds")
 
 indpredsummary <- indpred %>%
-  group_by(MAT, Year, Site, provid, provenance, event, Sex, sum_forcing) %>%
+  group_by(MAT, Year, Site, provid, Provenance, event, Sex, sum_forcing) %>%
   median_hdci(.prediction, .width = c(0.5, 0.95)) %>%
   mutate(ssp. = case_when(provid == 4846 ~ "contorta",
                           provid != 4846 | is.na(provid) ~ "latifolia"))
