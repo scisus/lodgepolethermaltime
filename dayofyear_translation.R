@@ -13,7 +13,7 @@ source('phenology_functions.R')
 focalsites <- c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border") # warmest to coldest
 shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Kalamalka")
 seedorchardsites <- c("PGTIS", "KettleRiver", "Sorrento", "Tolko", "PRT", "Vernon", "Kalamalka")
-siteorder <- readRDS('objects/factororder.rds')$site
+factororder <- readRDS('objects/factororder.rds')
 
 # daily forcing data ############
 
@@ -21,7 +21,7 @@ siteorder <- readRDS('objects/factororder.rds')$site
 dailyforc <- read.csv("data/forcing/dailyforc_1945_2012.csv") %>%
   group_by(Site, Year) %>%
   mutate(index = cur_group_id()) %>% ungroup() %>%
-  mutate(Site = forcats::fct_relevel(Site, siteorder))
+  mutate(Site = forcats::fct_relevel(Site, factororder$site))
 #orchard only historic, excluding vernon, tolko, prt and letting kal stand in for them
 dailyforc_so <- dailyforc %>% filter(Site %in% seedorchardsites) %>%
   mutate(Site = forcats::fct_relevel(Site, seedorchardsites)) %>%
@@ -37,7 +37,7 @@ normal_forc <- read.csv("data/forcing/normalforc_1901-2100.csv") %>%
 #fepred_allprovs <- readRDS("objects/fepred_allprovs.rds")  ## expectation for observed trees (sources)
 fepred_allsites <- readRDS("objects/fepred_allsites.rds")  %>% ## expectation for trees sourced from all sites - no downsampling
   ungroup() %>%
-  mutate(Site = forcats::fct_relevel(Site, siteorder))
+  mutate(Site = forcats::fct_relevel(Site, factororder$site))
 fpred_orch <- readRDS("objects/fpred_orch.rds") %>% #posterior prediction for each site for the full range of provenances using an average year, genotype, and tree (using estimated gaussian prior to generate random effects). 6000 draws
   ungroup() %>%
   select(-.row, -.draw, -.chain, -.iteration) %>%
@@ -168,6 +168,59 @@ doy_annual_pp_sum <- doy_annual_pp %>%
 doy_annual_pp_sum$MAT_label <- paste("MAT:", doy_annual_pp_sum$MAT)
 saveRDS(doy_annual_pp_sum, "objects/doy_annual_pp_sum.rds")
 
+## no site posterior prediction, 6000 draws, avg year, genotype, tree, NO site effects. 1945-2011. See comments on fpred_orch generation in predict.R####
+
+
+# split climate data into list based on site and year
+dailyforc_list <- dailyforc %>%
+  arrange(Site, Year, DoY) %>%
+  split(f = list(.$Site, .$Year), drop = TRUE)
+fpred_orch_avg <- readRDS('objects/fpred_orch_avg.rds') %>%
+  filter(MAT %in% c(-0.7, 6.8)) %>%
+  ungroup() %>%
+  select( -Year, -Site, -Tree, -Genotype, -.chain, -.iteration)
+
+# match forcing predictions in fpred_orch_avg to doy in dailyforc_list
+doy_annual_avg_pp <- map_dfr(dailyforc_list, .f = find_day_of_forcing,
+                          .id = "index",
+                          bdf = fpred_orch_avg,
+                          aforce = "sum_forcing",
+                          bforce = ".prediction") %>%
+  rename(DoY = newdoycol)
+
+# Use strsplit to split the .id column by the period (separate toooo slow)
+split_id <- strsplit(doy_annual_avg_pp$index, "\\.")
+
+# Create new Site and Year columns by extracting the split components
+doy_annual_avg_pp$Site <- sapply(split_id, `[`, 1)
+doy_annual_avg_pp$Year <- as.numeric(sapply(split_id, `[`, 2))
+
+#now summarise
+doy_annual_avg_pp_sum <- doy_annual_avg_pp %>%
+  select(-index) %>%
+  group_by(MAT, Site, Year, event, Sex) %>%
+  median_hdci(DoY, .width = c(0.50, 0.95)) %>%
+  ungroup() %>%
+  mutate(Year = as.numeric(Year)) %>%
+  #left_join(select(dailyforc, index, Site, Year), relationship = "many-to-many") %>%
+  mutate(Site = forcats::fct_relevel(Site, factororder$site)) # order sites
+doy_annual_avg_pp_sum$MAT_label <- paste("MAT:", doy_annual_avg_pp_sum$MAT)
+saveRDS(doy_annual_avg_pp_sum, "objects/doy_annual_avg_pp_sum.rds")
+
+# calculate year to year variancevariance
+vardoy <- doy_annual_avg_pp %>%
+  rename(provMAT = MAT) %>%
+  group_by(Site, event, Sex, provMAT) %>%
+  summarise(standarddev = sd(DoY)) %>%
+  left_join(siteMAT)
+
+ggplot(vardoy, aes(x = MAT, y = standarddev, colour = as.factor(provMAT))) +
+  geom_point(size = 2, alpha = 0.7) +
+  facet_grid(event ~ Sex) +
+  xlab("Site MAT") +
+  ylab("Standard deviation (GDD)") +
+  theme_bw()
+
 ## expectation and no random effects for y2y var and ranking correlation####
 fepred_allsites_ls <- split(fepred_allsites, f = list(fepred_allsites$Site), drop = TRUE)
 dailyforc_ls <- split(dailyforc, f = list(dailyforc$Site), drop = TRUE)
@@ -184,7 +237,7 @@ doy_annual_exp_sum <- doy_annual_exp %>%
   group_by(MAT, Site, event, Sex, Year) %>%
   median_hdci(DoY) %>%
   ungroup() %>%
-  mutate(Site = forcats::fct_relevel(Site, siteorder)) # correct to full sites
+  mutate(Site = forcats::fct_relevel(Site, factororder$site)) # correct to full sites
 doy_annual_exp_sum$MAT_label <- paste("MAT:", doy_annual_exp_sum$MAT)
 saveRDS(doy_annual_exp_sum, "objects/doy_annual_exp_sum.rds")
 

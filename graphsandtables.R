@@ -467,6 +467,7 @@ ggplot(fpred_orch_avg_summary) +
   )
 ggsave("../flowering-cline/figures/genpred_gdd.png", width = 6, height = 4)
 
+
 # specific orchard predictions ############
 ## GDD ##########
 ###
@@ -524,58 +525,24 @@ ggplot(fpred_orch_summary) +
 
 ## DoY #####
 
-doy_annual_pp_sum <- readRDS("objects/doy_annual_pp_sum.rds")
-doy_annual_pp_sum$MAT_label <- paste("Provenance MAT:", doy_annual_pp_sum$MAT, "\u00B0C")
+doy_annual_avg_pp_sum <- readRDS("objects/doy_annual_avg_pp_sum.rds") %>%
+  filter(.width == 0.95)
+doy_annual_avg_pp_sum$MAT_label <- paste("Provenance MAT:", doy_annual_avg_pp_sum$MAT, "\u00B0C")
 
-# widedoypporchsum <- doy_annual_pp_sum %>%
-#   tidyr::pivot_wider(
-#     id_cols = c(MAT, Year, Site, Sex),
-#     names_from = event,
-#     values_from = c(DoY, .lower, .upper),
-#     names_sep = "."
-#   )
-# widedoypporchsum$MAT_label <- paste("MAT:", widedoypporchsum$MAT)
+doy_annual_pp_sum <- readRDS("objects/doy_annual_pp_sum.rds")
 
 phenf_orchplot <- readRDS("objects/phenf.rds") %>%
   select(-MAT) %>%
   filter(Event_Obs %in% c(2,3)) %>%
   mutate(Year = as.numeric(Year), Site = forcats::fct_relevel(Site, factororder$site))
-# Site %in% c("PGTIS", "Kalamalka")) %>%
-  # select(-MAT) %>%
-  # mutate(Site = forcats::fct_relevel(Site, c("PGTIS", "Kalamalka")), Year = as.numeric(Year))
-
-# 6000 draws, 1945-2011 model preds. grey ribbon shows median start to median end, blue and pink ribbons show uncertainty for start and end. Used coldest and warmest source MAT for contrast. Vertical black lines show range of flowering observations in data.
-# ggplot() +
-#   geom_line(data = phenf_orchplot, aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
-#   geom_ribbon(data = doy_annual_pp_sum, aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
-#   geom_line(data = doy_annual_pp_sum, aes(x = Year, y = DoY, colour = event)) +
-#   scale_fill_discrete_c4a_div(palette = "icefire") +
-#   scale_colour_discrete_c4a_div(palette = "icefire") +
-#   #labs(fill = "95% HDPI", colour = "95% HDPI") +
-#   #geom_ribbon(data = widedoypporchsum, aes(x = Year, ymin = DoY.begin, ymax = DoY.end), alpha = 0.5) +
-#   theme_bw() +
-#   xlab("Year") +
-#   ylab("Date") +
-#   facet_grid(Site + Sex ~ MAT_label) +
-#   scale_y_continuous(
-#     breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
-#     labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
-#   theme(
-#     axis.text.y = element_text(size = 7),
-#     strip.text.y = element_text(size = 8),
-#     legend.position = "bottom"
-#   )
-# ggsave("../flowering-cline/figures/orchpred_doy.png", width = 6, height = 10)
 
 # male only
 ggplot() +
   geom_line(data = filter(phenf_orchplot, Sex == "MALE"), aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
-  geom_ribbon(data = filter(doy_annual_pp_sum, Sex == "MALE"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
-  geom_line(data = filter(doy_annual_pp_sum, Sex == "MALE"), aes(x = Year, y = DoY, colour = event)) +
+  geom_ribbon(data = filter(doy_annual_avg_pp_sum, Sex == "MALE"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  geom_line(data = filter(doy_annual_avg_pp_sum, Sex == "MALE"), aes(x = Year, y = DoY, colour = event)) +
   scale_fill_discrete_c4a_div(palette = "icefire") +
   scale_colour_discrete_c4a_div(palette = "icefire") +
-  #labs(fill = "95% HDPI", colour = "95% HDPI") +
-  #geom_ribbon(data = widedoypporchsum, aes(x = Year, ymin = DoY.begin, ymax = DoY.end), alpha = 0.5) +
   theme_bw() +
   xlab("Year") +
   ylab("Date") +
@@ -596,8 +563,8 @@ ggsave("../flowering-cline/figures/orchpred_doy_male.png", width = 6, height = 1
 # female only
 ggplot() +
   geom_line(data = filter(phenf_orchplot, Sex == "FEMALE"), aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
-  geom_ribbon(data = filter(doy_annual_pp_sum, Sex == "FEMALE"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
-  geom_line(data = filter(doy_annual_pp_sum, Sex == "FEMALE"), aes(x = Year, y = DoY, colour = event)) +
+  geom_ribbon(data = filter(doy_annual_avg_pp_sum, Sex == "FEMALE"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  geom_line(data = filter(doy_annual_avg_pp_sum, Sex == "FEMALE"), aes(x = Year, y = DoY, colour = event)) +
   scale_fill_discrete_c4a_div(palette = "icefire") +
   scale_colour_discrete_c4a_div(palette = "icefire") +
   #labs(fill = "95% HDPI", colour = "95% HDPI") +
@@ -621,8 +588,8 @@ ggsave("../flowering-cline/figures/orchpred_doy_female.png", width = 6, height =
 
 pgtisorch <- ggplot() +
   geom_line(data = filter(phenf_orchplot, Site == "PGTIS"), aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
-  geom_ribbon(data = filter(doy_annual_pp_sum, Site == "PGTIS"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
-  geom_line(data = filter(doy_annual_pp_sum, Site == "PGTIS"), aes(x = Year, y = DoY, colour = event)) +
+  geom_ribbon(data = filter(doy_annual_avg_pp_sum, Site == "PGTIS"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  geom_line(data = filter(doy_annual_avg_pp_sum, Site == "PGTIS"), aes(x = Year, y = DoY, colour = event)) +
   scale_fill_discrete_c4a_div(palette = "icefire") +
   scale_colour_discrete_c4a_div(palette = "icefire") +
   theme_bw(base_size = 8) +
@@ -641,8 +608,8 @@ pgtisorch <- ggplot() +
 
 kalorch <- ggplot() +
   geom_line(data = filter(phenf_orchplot, Site == "Kalamalka"), aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
-  geom_ribbon(data = filter(doy_annual_pp_sum, Site == "Kalamalka"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
-  geom_line(data = filter(doy_annual_pp_sum, Site == "Kalamalka"), aes(x = Year, y = DoY, colour = event)) +
+  geom_ribbon(data = filter(doy_annual_avg_pp_sum, Site == "Kalamalka"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  geom_line(data = filter(doy_annual_avg_pp_sum, Site == "Kalamalka"), aes(x = Year, y = DoY, colour = event)) +
   scale_fill_discrete_c4a_div(palette = "icefire") +
   scale_colour_discrete_c4a_div(palette = "icefire") +
   theme_bw(base_size = 8) +
@@ -698,8 +665,8 @@ rank_correlation_wdist <- readRDS('objects/rank_correlation_wdist.rds')
 #   theme(legend.position = "top")
 #
 ggplot(filter(rank_correlation_wdist, Correlation < 1), aes(x = Distance, y = Correlation)) +
-geom_smooth(method = "lm", se = TRUE) +
-  geom_point(alpha = 0.7, pch = 1) +
+geom_smooth(method = "lm", se = TRUE, color = "grey25", fill = "grey") +
+  geom_point(alpha = 0.5, pch = 1) +
   #ggtitle("Correlation by distance") +
   facet_grid(Sex ~ event) +
   scale_colour_discrete_c4a_div(palette = "icefire") +
