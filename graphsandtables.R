@@ -529,8 +529,6 @@ doy_annual_avg_pp_sum <- readRDS("objects/doy_annual_avg_pp_sum.rds") %>%
   filter(.width == 0.95)
 doy_annual_avg_pp_sum$MAT_label <- paste("Provenance MAT:", doy_annual_avg_pp_sum$MAT, "\u00B0C")
 
-doy_annual_pp_sum <- readRDS("objects/doy_annual_pp_sum.rds")
-
 phenf_orchplot <- readRDS("objects/phenf.rds") %>%
   select(-MAT) %>%
   filter(Event_Obs %in% c(2,3)) %>%
