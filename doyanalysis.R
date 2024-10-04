@@ -251,9 +251,14 @@ ggplot(doysd, aes(x = Site, y = sd, colour = MAT)) +
 
 ## lower for warmer provs at all sites for male begin, but no consistent patterns, not even in gaps (basically 0 to huge)
 
+# warm vs cold provs ####
 # avg difference in doy for flowering between coldest and warmest prov at each site
 
-warmvscold <- doy_annual_pp_sum %>%
+doy_annual_avg_pp_sum <- readRDS('objects/doy_annual_avg_pp_sum.rds') %>%
+  filter(.width == 0.95)
+doy_annual_avg_pp_sum$MAT_label <- paste("Provenance MAT:", doy_annual_avg_pp_sum$MAT, "\u00B0C")
+
+warmvscold <- doy_annual_avg_pp_sum %>%
   select(-starts_with("."), -MAT_label) %>%
   pivot_wider(names_from = MAT, names_prefix = "MAT", values_from = DoY) %>%
   mutate(diff = MAT6.8 - `MAT-0.7`) %>%
@@ -262,11 +267,11 @@ warmvscold <- doy_annual_pp_sum %>%
   summarise(mean_doy_diff = mean(diff), sd_diff = sd(diff))
 saveRDS(warmvscold, "objects/warmvscold.rds")
 
-ggplot(warmvscold, aes(x = Site, y = mean_doy_diff, colour = Sex, shape = event)) +
-  geom_point(position = position_dodge(0.2), size = 3) +
-  geom_errorbar(aes(ymin = mean_doy_diff - sd_diff, ymax = mean_doy_diff + sd_diff),
-                width = 0.2,   # Controls the width of the horizontal lines at the top and bottom of the error bars
-                position = position_dodge(0.2)) +
-  theme_bw() +
-  ylab("Mean difference (days)")
+# ggplot(warmvscold, aes(x = Site, y = mean_doy_diff, colour = Sex, shape = event)) +
+#   geom_point(position = position_dodge(0.2), size = 3) +
+#   geom_errorbar(aes(ymin = mean_doy_diff - sd_diff, ymax = mean_doy_diff + sd_diff),
+#                 width = 0.2,   # Controls the width of the horizontal lines at the top and bottom of the error bars
+#                 position = position_dodge(0.2)) +
+#   theme_bw() +
+#   ylab("Mean difference (days)")
 #mean difference between coldest and warmest provenance
