@@ -40,18 +40,8 @@ meantempplot <- ggplot(typical_year_forc, aes(x = Date, y = mean_temp, color = S
   scale_colour_viridis_d() +
   theme_bw() +
   ylab("Temperature (\u00B0C)") + xlab("") +
-  theme(legend.position = "none")
-
-
-sumforcplot <- ggplot(typical_year_forc, aes(x = Date, y = sum_forcing, color = Site, linetype = Site_type)) +
-  geom_line() +
-  scale_x_date(date_breaks = "1 month", date_labels =  "%b") +
-  ggtitle("Forcing accumulation") +
-  scale_color_viridis_d() +
-  theme_bw() +
-  ylab("Growing Degree Days (GDD)") + xlab("") +
-  guides(linetype = "none", color = guide_legend(ncol = 3)) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "none",
+        axis.title.y = element_text(size = 8))
 
 forcplot <- ggplot(typical_year_forc, aes(x = Date, y = forcing, color = Site, linetype = Site_type)) +
   geom_line() +
@@ -59,14 +49,39 @@ forcplot <- ggplot(typical_year_forc, aes(x = Date, y = forcing, color = Site, l
   ggtitle("Daily forcing") +
   scale_color_viridis_d() +
   theme_bw() +
-  ylab("Growing Degree Days (GDD)") + xlab("") +
-  guides(linetype = "none", color = guide_legend(ncol = 3)) +
-  theme(legend.position = "none")
+  ylab("Growing Degree Days (\u00B0C)") + xlab("") +
+  theme(legend.position = "none",
+        axis.title.y = element_text(size = 8))
 
+sumforcplot <- ggplot(typical_year_forc, aes(x = Date, y = sum_forcing, color = Site, linetype = Site_type)) +
+  geom_line() +
+  scale_x_date(date_breaks = "1 month", date_labels =  "%b") +
+  ggtitle("Forcing accumulation") +
+  scale_color_viridis_d() +
+  theme_bw() +
+  ylab("Growing Degree Days (\u00B0C)") + xlab("") +
+  labs(linetype = "Site type", color = "Site") +
+  guides(
+    color = guide_legend(ncol = 1),        # Color guide with 3 columns
+    linetype = guide_legend(ncol = 1)      # Linetype guide with 1 column (stacked vertically)
+  ) +
+  # Move the legend inside the top-left corner of the plot
+  theme(
+    legend.position = "right",
+    legend.background = element_rect(fill = alpha("white", 0.5)),  # Semi-transparent background
 
-siteclimplot <- meantempplot / forcplot / sumforcplot+
-  plot_annotation(tag_levels = 'A')
-ggsave("../flowering-cline/figures/siteclimplot.png", width = 4, height = 9)
+    # Decrease the font size of the legend text and title
+    legend.text = element_text(size = 7),
+    legend.title = element_text(size = 8),
+    axis.title.y = element_text(size = 8)
+  )
+sumforcplot
+
+siteclimplot <- meantempplot / forcplot / sumforcplot +
+  plot_annotation(tag_levels = 'A') +
+  plot_layout(guides = 'collect')
+siteclimplot
+ggsave("../flowering-cline/figures/siteclimplot.png", width = 5, height = 7.5)
 
 # MAT (and replication) #####
 sites <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv") %>%
