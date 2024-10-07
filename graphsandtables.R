@@ -660,9 +660,10 @@ ggplot(warmvscold, aes(x = Site, y = mean_doy_diff, colour = Sex, shape = event)
                 position = position_dodge(0.4)) +
   scale_colour_discrete_c4a_div(palette = "acadia") +
   theme_bw() +
+  theme(axis.text.x = element_text(angle=40, vjust=1, hjust=1)) +
   ylab("Mean difference (days)") +
   theme(legend.position = "bottom")
-ggsave("../flowering-cline/figures/provdiffdoy.png", width = 5, height = 3)
+ggsave("../flowering-cline/figures/provdiffdoy.png", width = 5.5, height = 3.25)
 
 # similar patterns of flowering across sites
 rank_correlation_wdist <- readRDS('objects/rank_correlation_wdist.rds')
