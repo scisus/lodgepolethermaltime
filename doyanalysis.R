@@ -267,6 +267,12 @@ warmvscold <- doy_annual_avg_pp_sum %>%
   summarise(mean_doy_diff = mean(diff), sd_diff = sd(diff))
 saveRDS(warmvscold, "objects/warmvscold.rds")
 
+range(warmvscold$mean_doy_diff)
+warmvscold %>%
+  group_by(Site) %>%
+  summarise(intrasitediff = max(mean_doy_diff - min(mean_doy_diff)))
+range(warmvscold$sd_diff)
+
 # ggplot(warmvscold, aes(x = Site, y = mean_doy_diff, colour = Sex, shape = event)) +
 #   geom_point(position = position_dodge(0.2), size = 3) +
 #   geom_errorbar(aes(ymin = mean_doy_diff - sd_diff, ymax = mean_doy_diff + sd_diff),
