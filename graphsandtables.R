@@ -373,7 +373,8 @@ ggsave("plots/year_offsets.pdf", width = 6, height = 5)
 
 # independent data comparison ###########
 
-indpredsummary <- readRDS('objects/indpredsummary.rds')
+indpredsummary <- readRDS('objects/indpredsummary.rds') %>%
+  filter(!(Site == "Central BC" & event == "end"))
 
 ## table
 
