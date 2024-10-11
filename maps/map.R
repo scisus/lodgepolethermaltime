@@ -54,7 +54,19 @@ elevations <- get_elevations(extent = extent_points, zoom = 4)
 pcontorta <- st_read("data/latifoliaDistribution/shapefiles/latifolia_distribution_prj.shp") %>%
     st_make_valid()
 
-# genotype locations
+# pcontorta_wgs84 <- st_transform(pcontorta, crs = 4326)
+#
+# # Extract coordinates again
+# coords_wgs84 <- st_coordinates(pcontorta_wgs84)
+#
+# # Calculate latitude range
+# min_lat_wgs84 <- min(coords_wgs84[, 2])
+# max_lat_wgs84 <- max(coords_wgs84[, 2])
+#
+# # Print the latitude range in WGS84
+# cat("Latitude range in WGS84:", min_lat_wgs84, "to", max_lat_wgs84, "\n")
+# # genotype locations
+#
 genotypes <- select(flowers::lodgepole_phenology_event, Genotype) %>% distinct()
 
 parents <- read.csv('data/parents.csv') %>%
