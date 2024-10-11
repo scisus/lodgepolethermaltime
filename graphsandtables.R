@@ -22,6 +22,14 @@ factororder <- readRDS("objects/factororder.rds")
 factororder_site_so <- factororder$site[-c(1,2)]
 shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Kalamalka")
 
+# sites ####
+sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv") %>%
+  filter(id == "site") %>%
+  select(Site, Latitude, Longitude, Elevation, MAT) %>%
+  arrange(MAT)
+sitedat$Type <- c("comparison", "comparison", rep("seed orchard", 7))
+saveRDS(sitedat, "../flowering-cline/tables/sitedat.rds")
+
 # forcing and climate ##########
 typical_year_forc <- read.csv("data/forcing/typical_year_forc.csv") %>% # from temp mean at each site across 1945-2012
   mutate(Date = as.Date(Date_scale)) %>%
