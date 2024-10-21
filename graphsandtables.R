@@ -444,7 +444,7 @@ ggsave("../flowering-cline/figures/obsvsretro.png", width = 6, height = 5)
 
 # build a diagram to explain table
 overlapex <- data.frame(data = c("observation", "model", "model", "model"),
-                        label = c("observation interval", "mean in interval", "one sigma overlap", "no overlap"),
+                        label = c("observation interval", "mean in interval", "one sd overlap", "no overlap"),
                         overlap = c(NA, TRUE, TRUE, FALSE),
                         mean = c(15, 13, 3, 25),
                         .lower = c(5, 8, -2, 20),
