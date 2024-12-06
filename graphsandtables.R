@@ -4,23 +4,21 @@ library(dplyr)
 library(ggplot2)
 library(forcats)
 library(ggbeeswarm)
-library(tidybayes)
+#library(tidybayes)
 library(patchwork)
-#library(sjPlot) #html tables
-#library(RColorBrewer)
-library(ggokabeito)   # Neat accessible color palette
-library(ggthemes)    # Nice themes
-library(html2latex) # convert sjplot tables to tex and pdf
-library(tidyr)
-library(ggrepel)
+#library(ggokabeito)   # Neat accessible color palette
+#library(ggthemes)    # Nice themes
+#library(html2latex) # convert sjplot tables to tex and pdf
+#library(tidyr)
+#library(ggrepel)
 library(cols4all)
-library(ggalt)
-library(scales)
+#library(ggalt)
+#library(scales)
 
-theme_set(theme_dark())
+#theme_set(theme_dark())
 factororder <- readRDS("objects/factororder.rds")
-factororder_site_so <- factororder$site[-c(1,2)]
-shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Kalamalka")
+#factororder_site_so <- factororder$site[-c(1,2)]
+#shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Kalamalka")
 
 # sites ####
 sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv") %>%
@@ -91,6 +89,22 @@ siteclimplot <- meantempplot / forcplot / sumforcplot +
 siteclimplot
 ggsave("../flowering-cline/figures/siteclimplot.png", width = 5, height = 7.5)
 
+## monthly climate normals ####
+
+monthly_climate_normals <- readRDS("objects/monthly_climate_normals.rds")
+ggplot(monthly_climate_normals, aes(x = normal_period, y = Tave, group = Month, colour = season)) +
+  geom_point(size = 0.5) +
+  geom_line(linewidth = 0.25) +
+  scale_colour_viridis_d(option = "rocket", end = 0.8, direction = -1) +
+  facet_wrap("Site") +
+  ggtitle("Monthly mean temperature", subtitle = "overlapping 30 year climate normal periods") +
+  xlab("Climate normal period") +
+  ylab("Monthly average temperature (\u00B0C)") +
+  theme(legend.position = "top",
+        axis.text.x = element_text(angle = 45, hjust=1) )
+
+ggsave("../flowering-cline/figures/monthly_climate_normals.png", width = 6, height = 7)
+
 # MAT (and replication) #####
 sites <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv") %>%
   filter(id == "site") %>%
@@ -153,15 +167,15 @@ ggsave("../flowering-cline/figures/MAT.png", width = 7, height = 5, scale = 1.1)
 
 # cumulative_distribution ####
 # raw data plot using phenf from modelmethods.R
-phenf <- readRDS("objects/phenf.rds")
-ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
-  stat_ecdf() +
-  labs(title = "Cumulative distribution of accumulated forcing at observation", caption = "raw data") +
-  scale_colour_viridis_d() +
-  #theme_dark(base_size = 18) +
-  ylab("") +
-  xlab("GDD")
-ggsave("plots/cumulative_distribution.png", width = 6, height = 5)
+# phenf <- readRDS("objects/phenf.rds")
+# ggplot(phenf, aes(x = sum_forcing, color = Event_Label, linetype = Sex)) +
+#   stat_ecdf() +
+#   labs(title = "Cumulative distribution of accumulated forcing at observation", caption = "raw data") +
+#   scale_colour_viridis_d() +
+#   #theme_dark(base_size = 18) +
+#   ylab("") +
+#   xlab("GDD")
+# ggsave("plots/cumulative_distribution.png", width = 6, height = 5)
 
 # sampling events ####
 phenf <- readRDS("objects/phenf.rds")
@@ -199,7 +213,7 @@ facet_labeller_site <- function(variable, value) {
   )
 }
 
-# https://stackoverflow.com/questions/54178285/how-to-remove-only-some-facet-labels
+# thanks for help from https://stackoverflow.com/questions/54178285/how-to-remove-only-some-facet-labels
 
 ggplot(surveydf, aes(x=DoY, y=as.factor(sampleindex), colour = Site, group = as.factor(Orchard))) +
   geom_point(pch=3) +
@@ -229,27 +243,27 @@ ggsave("../flowering-cline/figures/sampling.png", width = 6, height = 8)
 # censoring ####
 
 ## table
-censdf <- readRDS("objects/censdf.rds")
-knitr::kable(censdf, caption="Proportion of observations for each event interval censored or left or right end censored")
+# censdf <- readRDS("objects/censdf.rds")
+# knitr::kable(censdf, caption="Proportion of observations for each event interval censored or left or right end censored")
 
 # parameters ####
 ## means ####
 # plot of population means using means from modelparameters.R - better as a table?
 intercepts <- readRDS("objects/intercepts.rds")
-interceptplot <- ggplot(intercepts, aes(y = fct_rev(event), x = .value, colour = Sex, shape = event)) +
-  stat_halfeye(position = "dodge", point_interval = "mean_qi", .width = c(0.50, 0.90)) +
-  scale_colour_discrete_c4a_div(palette = "acadia") +
-  #labs(title = expression(paste("Mean forcing requirement at 0 \u00B0C (", mu, ")")), caption = "6000 draws from the posterior") +
-  ylab("") +
-  xlab(expression(paste("Mean forcing accumulation ", mu, " (GDD)"))) +
-  scale_x_continuous(breaks = scales::pretty_breaks(n=10)) +
-  scale_y_discrete(expand = expansion(add = c(0, .75))) +
-  theme_bw(base_size = 9) +
-  theme(legend.position = "top") +
-  labs(shape = "Event")
-interceptplot
-#smallmeans <- filter(means, .draw %in% sample(unique(means$.draw), size = 200))
-ggsave("../flowering-cline/figures/intercepts.png", width = 6, height = 6)
+# interceptplot <- ggplot(intercepts, aes(y = fct_rev(event), x = .value, colour = Sex, shape = event)) +
+#   stat_halfeye(position = "dodge", point_interval = "mean_qi", .width = c(0.50, 0.90)) +
+#   scale_colour_discrete_c4a_div(palette = "acadia") +
+#   #labs(title = expression(paste("Mean forcing requirement at 0 \u00B0C (", mu, ")")), caption = "6000 draws from the posterior") +
+#   ylab("") +
+#   xlab(expression(paste("Mean forcing accumulation ", mu, " (GDD)"))) +
+#   scale_x_continuous(breaks = scales::pretty_breaks(n=10)) +
+#   scale_y_discrete(expand = expansion(add = c(0, .75))) +
+#   theme_bw(base_size = 9) +
+#   theme(legend.position = "top") +
+#   labs(shape = "Event")
+# interceptplot
+# #smallmeans <- filter(means, .draw %in% sample(unique(means$.draw), size = 200))
+# ggsave("../flowering-cline/figures/intercepts.png", width = 6, height = 6)
 
 interceptsummary <- intercepts %>%
   group_by(Sex, event) %>%
@@ -274,23 +288,23 @@ slopesummary <- slopes %>%
   select(-starts_with(".")) %>%
   pivot_wider(names_from = Sex, values_from = Value_CI)
 slopesummary
-#saveRDS(slopesummary, file = "../flowering-cline/tables/slopesummary.rds")
+saveRDS(slopesummary, file = "../flowering-cline/tables/slopesummary.rds")
 
-slopeplot <- ggplot(slopes, aes(y = fct_rev(event), x = .value, colour = Sex, shape = event)) +
-  stat_halfeye(position = "dodge", point_interval = "mean_qi", .width = c(0.50, 0.90)) +
-  scale_colour_discrete_c4a_div(palette = "acadia") +
-  #labs(title = expression(paste("Mean forcing requirement at 0 \u00B0C (", mu, ")")), caption = "6000 draws from the posterior") +
-  ylab("") +
-  xlab(expression(paste("Provenance MAT effect ", beta, " (GDD/\u00B0C)"))) +
-  scale_x_continuous(breaks = scales::pretty_breaks(n=10)) +
-  scale_y_discrete(expand = expansion(add = c(0, .75))) +
-  theme_bw(base_size = 9) +
-  theme(legend.position = "none")
-
-interceptplot + slopeplot +
-  plot_layout(widths = c(2,1)) +
-  plot_annotation(tag_levels = 'A')
-ggsave("../flowering-cline/figures/slopeinterceptgraph.png", width = 7, height = 3)
+# slopeplot <- ggplot(slopes, aes(y = fct_rev(event), x = .value, colour = Sex, shape = event)) +
+#   stat_halfeye(position = "dodge", point_interval = "mean_qi", .width = c(0.50, 0.90)) +
+#   scale_colour_discrete_c4a_div(palette = "acadia") +
+#   #labs(title = expression(paste("Mean forcing requirement at 0 \u00B0C (", mu, ")")), caption = "6000 draws from the posterior") +
+#   ylab("") +
+#   xlab(expression(paste("Provenance MAT effect ", beta, " (GDD/\u00B0C)"))) +
+#   scale_x_continuous(breaks = scales::pretty_breaks(n=10)) +
+#   scale_y_discrete(expand = expansion(add = c(0, .75))) +
+#   theme_bw(base_size = 9) +
+#   theme(legend.position = "none")
+#
+# interceptplot + slopeplot +
+#   plot_layout(widths = c(2,1)) +
+#   plot_annotation(tag_levels = 'A')
+# ggsave("../flowering-cline/figures/slopeinterceptgraph.png", width = 7, height = 3)
 
 slopeintercepttable <- cbind(interceptsummary, slopesummary[, c(-1)])
 saveRDS(slopeintercepttable, "../flowering-cline/tables/slopeintercepttable.rds")
@@ -301,8 +315,6 @@ variation <- readRDS("objects/variation.rds") %>% ungroup()
 #varplot <- ggplot(variation, aes(y = forcats::fct_rev(event), x = .value, colour = forcats::fct_rev(Sex), shape = event)) +
 varplot <- ggplot(variation, aes(y = forcats::fct_rev(event), x = .value, colour = Sex, shape = event)) +
   stat_pointinterval(position = "dodge") +
-  #scale_colour_viridis_d(limits = c("FEMALE", "MALE")) +
- # labs(title = "Standard deviation of pop mean & offsets", caption = "6000 draws from the posterior") +
   ylab("") +
   xlab("Standard deviation (GDD)") +
   facet_grid(.variable ~ ., scales = "free_y") +
@@ -311,9 +323,8 @@ varplot <- ggplot(variation, aes(y = forcats::fct_rev(event), x = .value, colour
   theme_bw(base_size = 10) +
   theme(legend.position = "bottom", legend.justification = "right") +
   geom_vline(xintercept = 0, linetype = 3, colour = 'darkgray')
- # labs(colour = "Sex", shape = "Event")
 varplot
-#ggsave("../flowering-cline/figures/sd.png", width = 5, height = 4.5)
+
 
 ## offset_medians ####
 # plot medians of offset parameters in point clouds (like beeswarm) 6000 draws
@@ -333,13 +344,6 @@ offsetplot <- offsets_summary %>%
   guides(shape = guide_legend(nrow=2)) +
   labs(shape = "Event")
 offsetplot
-#ggsave("../flowering-cline/figures/offsets_medians.png", width = 6, height = 5)
-
-
-# interceptplot +
-#   (varplot + offsetplot + plot_layout(ncol = 2, widths = c(1,2.5))) +
-#   plot_layout(nrow = 2, heights = c(1, 1.5)) +
-#   plot_annotation(tag_levels = 'A')
 
 varplot + offsetplot +
   plot_layout(widths = c(1,2.5)) +
@@ -349,48 +353,40 @@ ggsave("../flowering-cline/figures/varoffsets.png", width = 6.5, height = 5)
 
 ## site_offsets ####
 # interval plot for site level offsets using siter from modelparameters.R
-siter <- readRDS("objects/siter.rds")
-ggplot(siter, aes(y=level, x = .value, colour = Sex)) +
-  stat_pointinterval() +
-  facet_grid(event ~ Sex) +
-  ggtitle("Site offsets", subtitle = "Ordered warmest to coldest MAT") +
- # theme_dark(base_size = 18) +
-  ylab("Site") +
-  xlab("GDD") +
-  geom_vline(xintercept = 0, linetype =3) +
-  xlim(c(-90,90)) +
-  scale_colour_viridis_d() +
-  theme(legend.position = "top")
-ggsave("plots/site_offsets.pdf", width = 6, height = 5)
-
-## year_offsets.rds ####
-# interval plot for year level offsets using yearr from modelparameters.R
-yearr <- readRDS("objects/yearr.rds")
-ggplot(yearr, aes(y=level, x = .value, colour = Sex)) +
-  stat_pointinterval() +
-  facet_grid(event ~ Sex) +
-  ggtitle("Year offsets", subtitle = "Ordered warmest to coldest MAT") +
- # theme_dark(base_size = 18) +
-  xlab("GDD") +
-  ylab("Year") +
-  geom_vline(xintercept = 0, linetype =3, colour = "darkgray")  +
-  xlim(c(-90,90)) +
-  scale_colour_viridis_d() +
-  theme(legend.position = "top")
-ggsave("plots/year_offsets.pdf", width = 6, height = 5)
+# siter <- readRDS("objects/siter.rds")
+# ggplot(siter, aes(y=level, x = .value, colour = Sex)) +
+#   stat_pointinterval() +
+#   facet_grid(event ~ Sex) +
+#   ggtitle("Site offsets", subtitle = "Ordered warmest to coldest MAT") +
+#  # theme_dark(base_size = 18) +
+#   ylab("Site") +
+#   xlab("GDD") +
+#   geom_vline(xintercept = 0, linetype =3) +
+#   xlim(c(-90,90)) +
+#   scale_colour_viridis_d() +
+#   theme(legend.position = "top")
+# ggsave("plots/site_offsets.pdf", width = 6, height = 5)
+#
+# ## year_offsets.rds ####
+# # interval plot for year level offsets using yearr from modelparameters.R
+# yearr <- readRDS("objects/yearr.rds")
+# ggplot(yearr, aes(y=level, x = .value, colour = Sex)) +
+#   stat_pointinterval() +
+#   facet_grid(event ~ Sex) +
+#   ggtitle("Year offsets", subtitle = "Ordered warmest to coldest MAT") +
+#  # theme_dark(base_size = 18) +
+#   xlab("GDD") +
+#   ylab("Year") +
+#   geom_vline(xintercept = 0, linetype =3, colour = "darkgray")  +
+#   xlim(c(-90,90)) +
+#   scale_colour_viridis_d() +
+#   theme(legend.position = "top")
+# ggsave("plots/year_offsets.pdf", width = 6, height = 5)
 
 # independent data comparison ###########
 
 indpredsummary <- readRDS('objects/indpredsummary.rds') %>%
   filter(!(Site == "Central BC" & event == "end"))
-
-## table
-
-# indpredsummary %>%
-#   select(Site, provenance, MAT, ssp.) %>%
-#   rename(Provenance = provenance, `Provenance MAT` = MAT, subspecies = ssp.) %>%
-#   distinct() %>%
-#   arrange(`Provenance MAT`)
 
 ## graph
 
@@ -442,11 +438,11 @@ ggplot(fretro_summary, aes(x = sum_forcing, y = .prediction, color = censored)) 
   theme(legend.position = "bottom")
 ggsave("../flowering-cline/figures/obsvsretro.png", width = 6, height = 5)
 
-# build a diagram to explain table
+## build a diagram to explain obs vs retro table
 overlapex <- data.frame(data = c("observation", "model", "model", "model"),
                         label = c("observation interval", "mean in interval", "one sd overlap", "no overlap"),
                         overlap = c(NA, TRUE, TRUE, FALSE),
-                        mean = c(15, 13, 3, 25),
+                        mean = c(NA, 13, 3, 25),
                         .lower = c(5, 8, -2, 20),
                         .upper = c(15, 18, 8, 30))
 overlapex$label <- factor(overlapex$label, levels = unique(overlapex$label))
@@ -498,52 +494,52 @@ ggsave("../flowering-cline/figures/genpred_gdd.png", width = 6, height = 4)
 
 # using 95% HDCI, median posterior prediction for each site for the full range of provenances (MATs) using an average year, Genotype, and tree (i.e. using estimated gaussian prior to generate those random effects), but using site specific effects estimated from the model (delta offset). Posterior predictions contain full range of uncertainty because I want the orchard managers to know what to actually expect
 
-fpred_orch_summary <- readRDS("objects/fpred_orch_summary.rds")
-
-ggplot(fpred_orch_summary) +
-  # colored ribbons for start and end
-  geom_ribbon(aes(x = MAT, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
-  geom_line(aes(x = MAT, y = .prediction, colour = event)) +
-  geom_line(data = phenf_orchplot_prov, aes(x = MAT, y = sum_forcing, group = MAT), alpha = 0.8, linewidth = 0.25) +
-  # solid ribbon for median flowering period
-  #geom_ribbon(data = widefpredorchsum, aes(x = MAT, ymin = .prediction.begin, ymax = .prediction.end), alpha = 0.7) +
-  # outlines of start and end
-  #geom_ribbon(data=fpred_orch_summary, aes(x = MAT, ymin = .lower, ymax = .upper, colour = event), fill = "transparent", size = .5, linetype = 3) +
-  facet_grid(forcats::fct_rev(Site) ~ Sex) +
-  scale_fill_discrete_c4a_div(palette = "icefire") +
-  scale_colour_discrete_c4a_div(palette = "icefire") +
-  theme_bw() +
-  ylab("GDD") +
-  xlab("Source MAT") +
-  theme(
-    axis.text.y = element_text(size = 7),
-    strip.text.y = element_text(size = 7),
-    legend.position = "bottom"
-  )
-  #labs(fill = "95% HDPI", colour = "95% HDPI")
-ggsave("../flowering-cline/figures/orchpred_gdd.png", width = 6, height = 7)
-
-ggplot(fpred_orch_summary) +
-  # colored ribbons for start and end
-  geom_ribbon(aes(x = MAT, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
-  geom_line(aes(x = MAT, y = .prediction, colour = event)) +
-  geom_line(data = phenf_orchplot_prov, aes(x = MAT, y = sum_forcing, group = MAT), alpha = 0.8, linewidth = 0.25) +
-  # solid ribbon for median flowering period
-  #geom_ribbon(data = widefpredorchsum, aes(x = MAT, ymin = .prediction.begin, ymax = .prediction.end), alpha = 0.7) +
-  # outlines of start and end
-  #geom_ribbon(data=fpred_orch_summary, aes(x = MAT, ymin = .lower, ymax = .upper, colour = event), fill = "transparent", size = .5, linetype = 3) +
-  facet_grid(forcats::fct_rev(Site) ~ Sex) +
-  scale_fill_discrete_c4a_div(palette = "icefire") +
-  scale_colour_discrete_c4a_div(palette = "icefire") +
-  theme_bw() +
-  ylab("GDD") +
-  xlab("Source MAT") +
-  theme(
-    axis.text.y = element_text(size = 7),
-    strip.text.y = element_text(size = 7),
-    legend.position = "bottom"
-  )
-#labs(fill = "95% HDPI", colour = "95% HDPI")
+# fpred_orch_summary <- readRDS("objects/fpred_orch_summary.rds")
+#
+# ggplot(fpred_orch_summary) +
+#   # colored ribbons for start and end
+#   geom_ribbon(aes(x = MAT, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+#   geom_line(aes(x = MAT, y = .prediction, colour = event)) +
+#   geom_line(data = phenf_orchplot_prov, aes(x = MAT, y = sum_forcing, group = MAT), alpha = 0.8, linewidth = 0.25) +
+#   # solid ribbon for median flowering period
+#   #geom_ribbon(data = widefpredorchsum, aes(x = MAT, ymin = .prediction.begin, ymax = .prediction.end), alpha = 0.7) +
+#   # outlines of start and end
+#   #geom_ribbon(data=fpred_orch_summary, aes(x = MAT, ymin = .lower, ymax = .upper, colour = event), fill = "transparent", size = .5, linetype = 3) +
+#   facet_grid(forcats::fct_rev(Site) ~ Sex) +
+#   scale_fill_discrete_c4a_div(palette = "icefire") +
+#   scale_colour_discrete_c4a_div(palette = "icefire") +
+#   theme_bw() +
+#   ylab("GDD") +
+#   xlab("Source MAT") +
+#   theme(
+#     axis.text.y = element_text(size = 7),
+#     strip.text.y = element_text(size = 7),
+#     legend.position = "bottom"
+#   )
+#   #labs(fill = "95% HDPI", colour = "95% HDPI")
+# ggsave("../flowering-cline/figures/orchpred_gdd.png", width = 6, height = 7)
+#
+# ggplot(fpred_orch_summary) +
+#   # colored ribbons for start and end
+#   geom_ribbon(aes(x = MAT, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+#   geom_line(aes(x = MAT, y = .prediction, colour = event)) +
+#   geom_line(data = phenf_orchplot_prov, aes(x = MAT, y = sum_forcing, group = MAT), alpha = 0.8, linewidth = 0.25) +
+#   # solid ribbon for median flowering period
+#   #geom_ribbon(data = widefpredorchsum, aes(x = MAT, ymin = .prediction.begin, ymax = .prediction.end), alpha = 0.7) +
+#   # outlines of start and end
+#   #geom_ribbon(data=fpred_orch_summary, aes(x = MAT, ymin = .lower, ymax = .upper, colour = event), fill = "transparent", size = .5, linetype = 3) +
+#   facet_grid(forcats::fct_rev(Site) ~ Sex) +
+#   scale_fill_discrete_c4a_div(palette = "icefire") +
+#   scale_colour_discrete_c4a_div(palette = "icefire") +
+#   theme_bw() +
+#   ylab("GDD") +
+#   xlab("Source MAT") +
+#   theme(
+#     axis.text.y = element_text(size = 7),
+#     strip.text.y = element_text(size = 7),
+#     legend.position = "bottom"
+#   )
+# #labs(fill = "95% HDPI", colour = "95% HDPI")
 
 ###
 
@@ -608,57 +604,97 @@ ggsave("../flowering-cline/figures/orchpred_doy_female.png", width = 6, height =
 
 # for paper, do separate graphs for PGTIS and Kalamalka with faceting MAT x Sex
 
-pgtisorch <- ggplot() +
-  geom_line(data = filter(phenf_orchplot, Site == "PGTIS"), aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
-  geom_ribbon(data = filter(doy_annual_avg_pp_sum, Site == "PGTIS"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
-  geom_line(data = filter(doy_annual_avg_pp_sum, Site == "PGTIS"), aes(x = Year, y = DoY, colour = event)) +
+#
+# pgtisorch <- ggplot() +
+#   geom_line(data = filter(phenf_orchplot, Site == "PGTIS"), aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
+#   geom_ribbon(data = filter(doy_annual_avg_pp_sum, Site == "PGTIS"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+#   geom_line(data = filter(doy_annual_avg_pp_sum, Site == "PGTIS"), aes(x = Year, y = DoY, colour = event)) +
+#   scale_fill_discrete_c4a_div(palette = "icefire") +
+#   scale_colour_discrete_c4a_div(palette = "icefire") +
+#   theme_bw(base_size = 8) +
+#   xlab("Year") +
+#   ylab("Date") +
+#   ylim(ylim) +
+#   ggtitle("PGTIS", subtitle = "1961-1990 normal MAT: 3.9 \u00B0C") +
+#   facet_grid(Sex ~ MAT_label) +
+#   scale_y_continuous(
+#     breaks = seq(1, 365, by = 14),
+#     limits = c(95, 186),
+#     labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
+#   theme(
+#     axis.text.y = element_text(size = 8),
+#     strip.text.y = element_text(size = 9),
+#     legend.position = "bottom"
+#   )
+#
+# kalorch <- ggplot() +
+#   geom_line(data = filter(phenf_orchplot, Site == "Kalamalka"), aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
+#   geom_ribbon(data = filter(doy_annual_avg_pp_sum, Site == "Kalamalka"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+#   geom_line(data = filter(doy_annual_avg_pp_sum, Site == "Kalamalka"), aes(x = Year, y = DoY, colour = event)) +
+#   scale_fill_discrete_c4a_div(palette = "icefire") +
+#   scale_colour_discrete_c4a_div(palette = "icefire") +
+#   theme_bw(base_size = 8) +
+#   xlab("Year") +
+#   ylab("Date") +
+#   ggtitle("Kalamalka", subtitle = "1961-1990 normal MAT: 8.0 \u00B0C") +
+#   facet_grid(Sex ~ MAT_label) +
+#   scale_y_continuous(
+#     breaks = seq(1, 365, by = 14),
+#     limits = c(95, 186),
+#     labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
+#   theme(
+#     axis.text.y = element_text(size = 8),
+#     strip.text.y = element_text(size = 9),
+#     legend.position = "bottom"
+#   )
+#
+# kalorch / pgtisorch +
+#   plot_annotation(tag_levels = 'A') +
+#   plot_layout(guides = "collect") &
+#   theme(legend.position = "bottom")
+#
+# ggsave("../flowering-cline/figures/orchpred_doy.png", width = 6, height = 7)
+
+## mike alt for orchpreddoy
+
+doy_annual_avg_pp_sum_kalpgtis <- doy_annual_avg_pp_sum %>%
+  filter(Site %in% c("Kalamalka", "PGTIS")) %>%
+  droplevels()
+phenf_orchplot_kalpgtis <- phenf_orchplot %>%
+  filter(Site %in% c("Kalamalka", "PGTIS")) %>%
+  droplevels()
+phenf_orchplot_kalpgtis_expanded <- rbind(
+  transform(phenf_orchplot_kalpgtis, MAT_label = "Provenance MAT: -0.7 °C"),
+  transform(phenf_orchplot_kalpgtis, MAT_label = "Provenance MAT: 6.8 °C")
+)
+
+library(ggh4x)
+ggplot() +
+  geom_ribbon(data = doy_annual_avg_pp_sum_kalpgtis,
+              aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
+  geom_line(data = doy_annual_avg_pp_sum_kalpgtis,
+            aes(x = Year, y = DoY, colour = event)) +
+  geom_line(data = phenf_orchplot_kalpgtis_expanded,
+            aes(x = Year, y = DoY, group = Year), alpha = 0.9, linewidth = .2) +
   scale_fill_discrete_c4a_div(palette = "icefire") +
   scale_colour_discrete_c4a_div(palette = "icefire") +
-  theme_bw(base_size = 8) +
+  theme_bw(base_size = 7) +
   xlab("Year") +
   ylab("Date") +
-  ggtitle("PGTIS", subtitle = "1961-1990 normal MAT: 3.9 \u00B0C") +
-  facet_grid(Sex ~ MAT_label) +
+  #ggtitle(title = "placeholder", subtitle = "1961-1990 normal MAT: 3.9 \u00B0C") +
+  facet_nested(Site + MAT_label ~ Sex) +
   scale_y_continuous(
-    breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
+    breaks = seq(1, 365, by = 14),
+   # limits = c(95, 186),
     labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
   theme(
-    axis.text.y = element_text(size = 8),
-    strip.text.y = element_text(size = 9),
+    # axis.text.x = element_text(size = 8),
+    # strip.text.x = element_text(size = 8),
     legend.position = "bottom"
-  )
+  ) +
+  coord_flip()
 
-kalorch <- ggplot() +
-  geom_line(data = filter(phenf_orchplot, Site == "Kalamalka"), aes(x = Year, y = DoY, group = Year), alpha = 0.9) +
-  geom_ribbon(data = filter(doy_annual_avg_pp_sum, Site == "Kalamalka"), aes(x = Year, ymin = .lower, ymax = .upper, group = event, fill = event), alpha = 0.3) +
-  geom_line(data = filter(doy_annual_avg_pp_sum, Site == "Kalamalka"), aes(x = Year, y = DoY, colour = event)) +
-  scale_fill_discrete_c4a_div(palette = "icefire") +
-  scale_colour_discrete_c4a_div(palette = "icefire") +
-  theme_bw(base_size = 8) +
-  xlab("Year") +
-  ylab("Date") +
-  ggtitle("Kalamalka", subtitle = "1961-1990 normal MAT: 8.0 \u00B0C") +
-  facet_grid(Sex ~ MAT_label) +
-  scale_y_continuous(
-    breaks = seq(1, 365, by = 14),  # Breaks every 2 weeks
-    labels = format(seq(as.Date("2023-01-01"), as.Date("2023-12-31"), by = "2 weeks"), "%b %d")) +
-  theme(
-    axis.text.y = element_text(size = 8),
-    strip.text.y = element_text(size = 9),
-    legend.position = "bottom"
-  )
-
-kalorch / pgtisorch +
-  plot_annotation(tag_levels = 'A') +
-  plot_layout(guides = "collect") &
-  theme(legend.position = "bottom")
-
-ggsave("../flowering-cline/figures/orchpred_doy.png", width = 6, height = 7)
-# gdd_orch + doy_orch +
-#   plot_layout(widths = c(1,2)) +
-#   plot_annotation(tag_levels = 'A')
-# ggsave("../flowering-cline/figures/orchpred.png", width = 8, height = 5.5)
-
+ggsave("../flowering-cline/figures/orchpred_doy_vertical.png", width = 5, height = 8)
 
 # differences between provenances in flowering at different sites #mean difference between coldest and warmest provenance
 warmvscold <- readRDS('objects/warmvscold.rds')
@@ -676,17 +712,7 @@ ggsave("../flowering-cline/figures/provdiffdoy.png", width = 5.5, height = 3.25)
 
 # similar patterns of flowering across sites
 rank_correlation_wdist <- readRDS('objects/rank_correlation_wdist.rds')
-# ggplot(filter(rank_correlation_wdist, Correlation < 1), aes(colour = MAT, x = Distance, y = Correlation)) +
-#   geom_smooth(method = "lm", se = TRUE, aes(group = interaction(MAT, Sex, event))) +
-#   geom_point(alpha = 0.7) +
-#   #ggtitle("Correlation by distance") +
-#   facet_grid(Sex ~ event) +
-#   scale_colour_discrete_c4a_div(palette = "icefire") +
-#   xlab("Distance (km)") +
-#   ylab(expression("Correlation (Kendall's" ~ tau ~")")) +
-#   theme_bw() +
-#   theme(legend.position = "top")
-#
+
 ggplot(filter(rank_correlation_wdist, Correlation < 1), aes(x = Distance, y = Correlation)) +
 geom_smooth(method = "lm", se = TRUE, color = "grey25", fill = "grey") +
   geom_point(alpha = 0.5, pch = 1) +
@@ -713,34 +739,31 @@ saveRDS(corr_model_table, '../flowering-cline/tables/corr_model_table.rds')
 ## grand mean posterior predictions ####
 fepred <- readRDS("objects/fepred.rds")
 fpred <- readRDS("objects/fpred.rds")
-# fepred_cenew <- readRDS("objects/fepred_cenew.rds")
-# fepred_ceold <- readRDS("objects/fepred_ceold.rds")
-#fepred_newsites <- readRDS("objects/fepred_newsites.rds")
 
-# just expectations
-ggplot(fepred,
-       aes(x = .epred, y = event, fill = Sex)) +
-  stat_halfeye(alpha = 0.8) +
-  scale_fill_okabe_ito() +
-  labs(title = "Grand mean",
-       x = "Predicted forcing", y = "Sex",
-       subtitle = "Posterior expectations") +
-  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
-  theme_clean() +
-  theme(legend.position = "bottom")
-
-# expectations table
-
-etab <- fepred %>%
-  group_by(Sex, event) %>%
-  median_hdi(.epred)  %>%
-  #rename(Event = event, Median = .epred, `2.5 qi` = .lower, `97.5 qi` = .upper) %>%
-  select(-.width, -.interval) %>%
-  mutate(Expectation = paste(round(.epred,0), " (", round(.lower, 0), ", ", round(.upper,0), ")", sep = "")) %>%
-  select(- starts_with(".")) %>%
-  pivot_wider(names_from = event, values_from = Expectation) %>%
-  rename(Begin = begin, End = end)
-saveRDS(etab, "objects/etab.rds")
+# # just expectations
+# ggplot(fepred,
+#        aes(x = .epred, y = event, fill = Sex)) +
+#   stat_halfeye(alpha = 0.8) +
+#   scale_fill_okabe_ito() +
+#   labs(title = "Grand mean",
+#        x = "Predicted forcing", y = "Sex",
+#        subtitle = "Posterior expectations") +
+#   scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+#   theme_clean() +
+#   theme(legend.position = "bottom")
+#
+# # expectations table
+#
+# etab <- fepred %>%
+#   group_by(Sex, event) %>%
+#   median_hdi(.epred)  %>%
+#   #rename(Event = event, Median = .epred, `2.5 qi` = .lower, `97.5 qi` = .upper) %>%
+#   select(-.width, -.interval) %>%
+#   mutate(Expectation = paste(round(.epred,0), " (", round(.lower, 0), ", ", round(.upper,0), ")", sep = "")) %>%
+#   select(- starts_with(".")) %>%
+#   pivot_wider(names_from = event, values_from = Expectation) %>%
+#   rename(Begin = begin, End = end)
+# saveRDS(etab, "objects/etab.rds")
 
 ## forcing and day of year expectations ####
 # doy
@@ -761,38 +784,38 @@ saveRDS(etab, "objects/etab.rds")
 
 
 # forcing, which is the same for each site!
-expforc <- ggplot(fepred, aes(x=.epred, y = forcats::fct_rev(Sex), color = Sex, shape = event)) +
-  stat_halfeye() +
-  xlab("Accumulated Growing Degree Days") +
-  scale_color_viridis_d() +
-  theme_dark() +
-  theme(legend.position = "none", axis.title.y = element_blank())
-#labs(title = "Forcing requirements", subtitle = "in any year or site")
-
-# combine forcing & doy plots
-expected <- expforc + expdoy
-expected + plot_annotation(title = "Event expectations",
-                           subtitle = "from thermal time model",
-                           tag_levels = "A")
-ggsave("../flowering-cline/figures/eventexpecations.png", width = 8, height = 6 )
+# expforc <- ggplot(fepred, aes(x=.epred, y = forcats::fct_rev(Sex), color = Sex, shape = event)) +
+#   stat_halfeye() +
+#   xlab("Accumulated Growing Degree Days") +
+#   scale_color_viridis_d() +
+#   theme_dark() +
+#   theme(legend.position = "none", axis.title.y = element_blank())
+# #labs(title = "Forcing requirements", subtitle = "in any year or site")
+#
+# # combine forcing & doy plots
+# expected <- expforc + expdoy
+# expected + plot_annotation(title = "Event expectations",
+#                            subtitle = "from thermal time model",
+#                            tag_levels = "A")
+# ggsave("../flowering-cline/figures/eventexpecations.png", width = 8, height = 6 )
 
 ## expectations and full posterior ################
-fpred <- readRDS("objects/fpred.rds")
-gmean <- full_join(fepred, fpred) %>%
-  dplyr::rename(expectation = .epred, `full posterior` = .prediction) %>%
-  pivot_longer(cols = c("expectation", "full posterior"), names_to = "pred_type", values_to = "forcing")
-
-ggplot(gmean,
-       aes(x = forcing, y = pred_type, fill = Sex, group = interaction(Sex,event))) +
-  stat_halfeye(alpha = 0.8) +
-  scale_fill_viridis_d() +
-  labs(title = "Forcing requirements",
-       x = "Predicted forcing (GDD)", y = "",
-       subtitle = "Posterior expectations and posterior predictive")+
-  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
-  theme_dark() +
-  theme(legend.position = "right")
-ggsave("plots/forcing_fullandexpectation.png", width = 6, height = 5)
+# fpred <- readRDS("objects/fpred.rds")
+# gmean <- full_join(fepred, fpred) %>%
+#   dplyr::rename(expectation = .epred, `full posterior` = .prediction) %>%
+#   pivot_longer(cols = c("expectation", "full posterior"), names_to = "pred_type", values_to = "forcing")
+#
+# ggplot(gmean,
+#        aes(x = forcing, y = pred_type, fill = Sex, group = interaction(Sex,event))) +
+#   stat_halfeye(alpha = 0.8) +
+#   scale_fill_viridis_d() +
+#   labs(title = "Forcing requirements",
+#        x = "Predicted forcing (GDD)", y = "",
+#        subtitle = "Posterior expectations and posterior predictive")+
+#   scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+#   theme_dark() +
+#   theme(legend.position = "right")
+# ggsave("plots/forcing_fullandexpectation.png", width = 6, height = 5)
 
 
 
@@ -818,34 +841,19 @@ ggsave("plots/forcing_fullandexpectation.png", width = 6, height = 5)
 doy_typical_home <- readRDS("objects/doy_typical_home.rds") %>%
   pivot_longer(cols = c(intercept, DoY), names_to = "proveffect", values_to = "DoY")
 
-
-
-#home
-# "Change in flowering day of year expectation with MAT effect" typical year, trees grown at home
-# ggplot(doy_typical_home, aes(x = intercept, xend = DoY, y=MAT)) +
-#   geom_dumbbell(
-#     colour = "#a3c4dc",
-#     colour_xend = "#0e668b",
-#     size = 3
-#   ) +
+# homeplot <- ggplot(doy_typical_home, aes(x = DoY, y = MAT, colour = proveffect, group = MAT)) +
+#   geom_point() +
+#   geom_line(colour = "darkgrey") +
 #   facet_grid(Sex ~ event) +
-#   xlab("Day of Year") +
-#   ggtitle("Home") +
-#   theme(legend.position = "top")
-
-homeplot <- ggplot(doy_typical_home, aes(x = DoY, y = MAT, colour = proveffect, group = MAT)) +
-  geom_point() +
-  geom_line(colour = "darkgrey") +
-  facet_grid(Sex ~ event) +
-  labs(x = "Day of Year",
-       y = "Site and provenance MAT (\u00B0C)",
-       title = "Home",
-       colour = "") +  # Removes the title of the colour legend
-  scale_colour_manual(values = c("#1B9E77", "darkgrey"),
-                     labels = c("With provenance effect", "No provenance effect")) +
-  theme_bw(base_size = 10) +
-  theme(legend.position = "bottom") +
-  coord_flip()
+#   labs(x = "Day of Year",
+#        y = "Site and provenance MAT (\u00B0C)",
+#        title = "Home",
+#        colour = "") +  # Removes the title of the colour legend
+#   scale_colour_manual(values = c("#1B9E77", "darkgrey"),
+#                      labels = c("With provenance effect", "No provenance effect")) +
+#   theme_bw(base_size = 10) +
+#   theme(legend.position = "bottom") +
+#   coord_flip()
 
 
 #away
@@ -876,54 +884,50 @@ ggsave("../flowering-cline/figures/away.png", width = 5, height = 4)
 
 # When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap, increases differences between provenances
 
-homeplot / awayplot +
-  patchwork::plot_annotation(tag_levels = 'A') +
-  plot_layout(guides = "collect") &
-  theme(legend.position = "bottom")
-
-ggsave("../flowering-cline/figures/homeaway.png", width = 5, height = 7)
+# homeplot / awayplot +
+#   patchwork::plot_annotation(tag_levels = 'A') +
+#   plot_layout(guides = "collect") &
+#   theme(legend.position = "bottom")
+#
+# ggsave("../flowering-cline/figures/homeaway.png", width = 5, height = 7)
 
 ## year to year variation ####
-doy_annual_plotting <- readRDS('objects/doy_annual_plotting.rds')
-dplot <- readRDS("objects/dplot2.rds")
+# doy_annual_plotting <- readRDS('objects/doy_annual_plotting.rds')
+# dplot <- readRDS("objects/dplot2.rds")
 
-ggplot(dplot2, aes(x = Year, ymin = .lower_begin, ymax = .upper_begin, fill = Sex)) +
-  geom_ribbon(alpha = 0.5) +
-  geom_ribbon(aes(x = Year, ymin = .lower_end, ymax = .upper_end, fill = Sex), alpha = 0.5) +
-  geom_line(data=doy_annual_plotting, aes(x = Year, y = DoY, color = Sex, linetype = event), inherit.aes = FALSE) +
-  facet_grid(Sex ~ Site) +
-  labs(title = "Predicted flowering periods", subtitle = "posterior expectation, ribbons = uncertainty, lines = medians") +
-  ylab("Day of Year") +
-  scale_color_viridis_d(option = "B") +
-  scale_fill_viridis_d(option = "B") +
-  theme_dark(base_size = 18) +
-  theme(legend.position = "bottom")
-ggsave("../flowering-cline/figures/yearly_phenology.png", width = 14, height = 7, units = "in")
+# ggplot(dplot2, aes(x = Year, ymin = .lower_begin, ymax = .upper_begin, fill = Sex)) +
+#   geom_ribbon(alpha = 0.5) +
+#   geom_ribbon(aes(x = Year, ymin = .lower_end, ymax = .upper_end, fill = Sex), alpha = 0.5) +
+#   geom_line(data=doy_annual_plotting, aes(x = Year, y = DoY, color = Sex, linetype = event), inherit.aes = FALSE) +
+#   facet_grid(Sex ~ Site) +
+#   labs(title = "Predicted flowering periods", subtitle = "posterior expectation, ribbons = uncertainty, lines = medians") +
+#   ylab("Day of Year") +
+#   scale_color_viridis_d(option = "B") +
+#   scale_fill_viridis_d(option = "B") +
+#   theme_dark(base_size = 18) +
+#   theme(legend.position = "bottom")
+# ggsave("../flowering-cline/figures/yearly_phenology.png", width = 14, height = 7, units = "in")
 
 
-summary_doy_annual <- readRDS("objects/summary_doy_annual.rds")
-ggplot(summary_doy_annual, aes(x = Site, y = sd_DoY, color = normal_period)) +
-  geom_point() +
-  facet_grid(Sex ~ event) +
-  labs(title = "Year-to-year variation in flowering phenology at 9 Sites", subtitle = "over two 30-year climate normal periods") +
-  theme(legend.position = "bottom") +
-  theme_bw()
-ggsave("../flowering-cline/figures/year2yearvar.png", width = 10, height = 6, units = "in")
+# summary_doy_annual <- readRDS("objects/summary_doy_annual.rds")
+# ggplot(summary_doy_annual, aes(x = Site, y = sd_DoY, color = normal_period)) +
+#   geom_point() +
+#   facet_grid(Sex ~ event) +
+#   labs(title = "Year-to-year variation in flowering phenology at 9 Sites", subtitle = "over two 30-year climate normal periods") +
+#   theme(legend.position = "bottom") +
+#   theme_bw()
+# ggsave("../flowering-cline/figures/year2yearvar.png", width = 10, height = 6, units = "in")
 
 
 ## climate change prediction ####
 doy_normal_plotting <- readRDS("objects/doy_normal_plotting.rds")
-doy_normal_plotting$MATlabel <- paste(doy_normal_plotting$Site, " (", doy_normal_plotting$MAT, "\u00B0C", ")", sep = "")
-# ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = scenario, y = DoY, colour = MATlabel, shape = Sex)) +
-#   stat_pointinterval(position = "dodge") +
-#   stat_pointinterval(data = filter(doy_normal_plotting, event == "end"), position = "dodge") +
-#   #scale_y_date(date_breaks = "1 month", date_labels =  "%b") +
-#   facet_wrap("period", scales = "free_x", nrow = 1) +
-#   theme_bw() +
-#   theme(legend.position = "bottom")  +
-#   labs(title = "Expectation for flowering period start and end", subtitle = "1951-2100 for two Shared Socioeconomic Pathways", colour = "Site") +
-#   xlab("Shared Socioeconomic Pathway") +
-#   ylab("Day of Year")
+doy_normal_plotting$MATlabel <- paste(doy_normal_plotting$Site,
+                                      " (",
+                                      doy_normal_plotting$MAT,
+                                      "\u00B0C",
+                                      ")",
+                                      sep = "")
+
 
 historicalonly <- doy_normal_plotting %>% filter(scenario == "historical") %>%
   rename(type = scenario) %>%
@@ -973,7 +977,7 @@ ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, 
 
 ggsave("../flowering-cline/figures/normal_predictions.png", width = 9, height = 6, units = "in")
 
-## climate change uncertainty
+## climate change uncertainty - keep for now, i think i need this code to calculate some numbers in the paper
 doy_normal_plotting %>%
   group_by(index, Site, event, Sex, period) %>%
   median_qi(DoY, .width = c(.50, 0.95))
