@@ -132,9 +132,9 @@ provplot <- ggplot(provs, aes(x = Site, y = MAT,
                                 "Across years and within sites" = 21,
                                 "Across years and sites and within sites" = 21)) +
   scale_fill_manual(values = c("TRUE" = "grey28", "FALSE" = "transparent"),
-                    guide = FALSE) +  # Hide separate fill legend
+                    guide = "none") +  # Hide separate fill legend
   scale_colour_manual(values = c("TRUE" = "#DF536B", "FALSE" = 'black'),
-                      guide = FALSE) +  # Hide separate color legend
+                      guide = "none") +  # Hide separate color legend
   scale_y_continuous(limits = c(min(provs$MAT), max(provs$MAT)), position = "right") +
   ylab("Mean Annual Temperature (\u00B0C)") +
   theme(legend.position = "bottom") +
