@@ -435,7 +435,8 @@ ggplot(fretro_summary, aes(x = sum_forcing, y = .prediction, color = censored)) 
   ylab("Median retrodicted accumulated forcing (GDD)") +
   guides(colour = guide_legend(override.aes = list(alpha = 1))) +
   scale_colour_manual(values = c(censorpal[2], censorpal[3], censorpal[1])) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") +
+  theme_bw()
 ggsave("../flowering-cline/figures/obsvsretro.png", width = 6, height = 5)
 
 ## build a diagram to explain obs vs retro table
