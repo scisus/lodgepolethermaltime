@@ -1,13 +1,5 @@
----
-title: "Phenology model workflow"
-author: "C. Susannah Tysor"
-date: '2021-08-24'
-output: html_document
-editor_options: 
-  chunk_output_type: console
----
 
-```{r setup}
+```{r setup, echo = FALSE, message=FALSE}
 
 library(dplyr)
 library(ggplot2)
@@ -17,44 +9,52 @@ library(dplyr)
 library(knitr)
 library(tidyr)
 
-knitr::opts_chunk$set(echo = TRUE)
-source('../phenology_functions.R')
+source('phenology_functions.R')
 ```
 
-# Conceptual Analysis
+```{r knitropts, echo = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
 
-I have a record of days that lodgepole pine were recorded flowering or not flowering during the general flowering period. Trees were not observed every day and the start or end of the flowering period may have been missed.
+## Conceptual Analysis
 
-The flowering observations ($y$) were simplified to three states - before flowering, flowering, past flowering. States are used to infer two of four events (1-last day before flowering, 2-first day flowering, 3-last day flowering, 4-first day past flowering). . The amount of forcing accumulated at each event day was calculated using Risto Sarvas's 1972 curve.
+This section outlines and justifies some of the choices made in the modeling process, especially regarding priors. Data used to make these choices includes
+- corrected daily climate dataset for 1945-2012 described in [Site weather data]
+
+I have a record of days that lodgepole pine were recorded flowering or not flowering during the general flowering period. Trees were observed for several years at several sites and trees were not observed every day and the start or end of the flowering period may have been missed.
+
+The flowering observations ($f_i$) were simplified to three states - before flowering, flowering, past flowering. States are used to infer two of four events (1-last day before flowering, 2-first day flowering, 3-last day flowering, 4-first day past flowering). The amount of forcing accumulated at each event day was calculated as growing degree days with a 5 degree threshold.
 
 I want to know how much forcing after January 1 must accumulate for events 2 and 3 - the flowering state - to occur.
 
-$y_i \sim \mathcal{N}(f_i, \sigma)$
+$f_i \sim \mathcal{N}(\phi_i, \sigma)$
 
 I wish to account for several kinds of structure in the data:
 
 - year of observation
 - site where tree was grown
 - genotype of the tree
-- genotype (individual tree)
+- individual tree
 
-and variation due to provenance climate summarised at MAT
+as well as censoring and variation due to provenance climate summarised at MAT
 
 So
 
-$f_i = \mu + \beta MAT_i + delta_{site,i} + \delta_{year,i} + \delta_{genotype,i} + \delta_{genotype,i}$
+$phi_i = \mu + \beta MAT_i + delta_{site,i} + \delta_{year,i} + \delta_{genotype,i} + \delta_{tree,i}$
 
 where $\mu$ is the average amount of forcing it takes for a tree to reach an event and the $\delta$s describe how much each level in each factor (site, prov, year, genotype) is offset from the population mean amount of forcing required to reach the event.
 
+I can account for different types of censoring by modifying the likelihood.
+
 I want priors on parameters to be regularizing and weakly informative.
 
-# Define observational space
+### Define observational space
 
 There are several thousand observations of each event. Each observation is the amount of forcing units accumulated when the event occurs for a given tree. 
 
 So, how much forcing is accumulated over the year? I use the sites in my study and all possible years in my climate dataset (1945-2012).
 
-```{r}
+```{r, echo = FALSE, fig.caption="Forcing accumulation at all sites 1945-2012.", out.extra = ''}
 
 # forcing units for 15 years and at sites included in this study
 forcing <- read.csv('~/lodgepolethermaltime/data/forcing/dailyforc_1945_2012.csv', header=TRUE) 
@@ -62,16 +62,13 @@ forcing <- read.csv('~/lodgepolethermaltime/data/forcing/dailyforc_1945_2012.csv
 ggplot(forcing, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
   geom_line() +
   theme(legend.position = "none") +
-  ggtitle("forcing (gdd) accumulated at Day of Year")
-
-
+  ylab(GDD (\u00B0C))
 
 ```
 
-What are reasonable amounts of forcing? Lodgepole in BC flower in late spring - pollination occurs, according to Owens in late May and June. I will generously set this as May 01 to June 30.
-[maybe should be more generous and use april?]
+What are reasonable amounts of forcing? Lodgepole in BC flower in late spring. Pollination occurs, according to [owens2006] in late May and June. I will generously use May 01 to June 30 as dates to consider.
 
-```{r}
+```{r, echo = FALSE, fig.cap = "Histogram of forcing accumulations May 1 to June 30 at all sites 1945-2012"}
 # likely Day of Year limits for flowering
 early_limit <- as.numeric(strftime("2020-05-01", format = "%j"))
 late_limit <- as.numeric(strftime("2020-06-30", format = "%j"))
@@ -81,7 +78,9 @@ ff <- dplyr::filter(forcing, DoY > early_limit & DoY < late_limit)
 ggplot(ff, aes(x=sum_forcing)) +
          geom_histogram(bins=60) +
   ggtitle("Range of forcing accummulations May 1 - June 30")
+```
 
+```{r, echo = FALSE, fig.cap = "Day of Year of forcing accumulations May 1 to June 30 showing increase through time."}
 ggplot(ff, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
   geom_line() +
   theme(legend.position = "none") +
@@ -91,7 +90,7 @@ ggplot(ff, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
 ```
 
 
-```{r}
+```{r, echo = FALSE}
 # Early and Late
 may01 <- as.numeric(strftime("2020-05-01", format = "%j"))
 may31 <- as.numeric(strftime("2020-05-31", format = "%j"))
@@ -106,27 +105,30 @@ ffend <- dplyr::filter(forcing, DoY > may15 & DoY < jun30)
 range(ffend$sum_forcing)
 
 ```
-Flowering is more likely to start in the first part (`r range(ffstart$sum_forcing)` forcing units) and end in the second part (`r range(ffend$sum_forcing)` forcing units) of this time period.
+Flowering is more likely to start in the earlier part of the date range and end in the later part of the date range.
+The range of forcing accumulation for May is`r min(ffstart$sum_forcing)` - `r max(ffstart$sum_forcing` GDD. The range of forcing accumulation from May 15 to June 30 is `r min(ffend$sum_forcing)` - `r max(ffend$sum_forcing` GDD.
 
 Each event is associated with a year, site, genotype, and genotype. There are 14 years, 7 sites, 259 genotypes, and 748 individual trees (genotypes).
 
+<!--
 # Construct summary statistics
 
 Histograms of $y_i$ and each $\delta_{cluster}$.
+-->
 
 # Model development
 
-$y_i$ are the observations of accumulated forcing. They are positive and continuous and should be between about 0 and 1000. 
+$f_i$ are the observations of accumulated forcing. They are positive and continuous and should be between about 0 and 1000 GDD. 
 
-$y_i$'s value can be modeled as coming from a distribution with a mean forcing accumulation ($f_i$) and standard deviation $\sigma$ that represents our uncertainty in the observation - how good our temperature measurements are, how good the forcing unit accumulation function is, and whether the event was observed on the correct day. 
+$f_i$'s value can be modeled as coming from a distribution with a mean forcing accumulation ($phi_i$) and standard deviation $\sigma$ that represents our uncertainty in the observation - how good our temperature measurements are, how good the forcing unit accumulation function is, and whether the event was observed on the correct day, etc. 
 
-## sigma
+## Residual standard deviation 
 
-Sigma could potentially be relatively large because of lackadaisical sampling and compounding errors through censoring, multiple observers, and errors in accumulated forcing measurements. I think an extreme upper limit is probably about 2 weeks of forcing. 
+$\sigma$ could potentially be relatively large because of irregular sampling and compounding errors through censoring, multiple observers, and errors in accumulated forcing. I think an extreme upper limit is probably about 2 weeks of forcing. 
 
-```{r}
+```{r, echo = FALSE}
 
-# get 7 & 14 day forcing accumulations
+# get 14 day forcing accumulations
 
 janjun <- forcing %>%
   filter(DoY < late_limit) 
@@ -134,38 +136,36 @@ janjun <- forcing %>%
 
 fortforc <- janjun %>%
   group_by(Site, Year) %>%
-  summarise(fortforc = rollsum(forcing, 14))
+  reframe(fortforc = rollsum(forcing, 14, fill = NA, align = "right"))
 
-# fortforce <- early %>%
-#   group_by(Site, Year) %>%
-#   summarise(fortforce = rollsum(forcing, 14))
-
-fextreme <- quantile(fortforc$fortforc, 0.99) #end
-
-#feextreme <- quantile(fortforce$fortforce, 0.99) # start
+fextreme <- quantile(fortforc$fortforc, 0.99, na.rm = TRUE) #end
 
 ```
 
-The amount of forcing that can accumulate over any two week period between January and June can be quite large - 99th percentile is `r fextreme`. The sd required to obtain these values in a normal distribution is:
+The amount of forcing that can accumulate over any two week period between January and June can be quite large - 99th percentile is `r fextreme`. The sd required to obtain these values in a normal distribution or the $\nu$ in a student t's distribution is:
 
-```{r}
+```{r, fig.cap = "Histogram of forcing accumulations over 14 day periods January-June. Vertical line at 99th percentile"}
 
 ggplot(fortforc, aes(x=fortforc)) +
   geom_histogram() +
   ggtitle("Forcing accumulation over 14 day periods Jan-Jun") +
-  geom_vline(xintercept = mean(fortforc$fortforc))
+  geom_vline(xintercept = fextreme)
+```
 
+```{r, fig.caption = "Histogram of a normal distribution with mean zero and sd 50"}
 # normal
 pnorm(fextreme, 0, sd=60) # sd to cap at extreme #50 prob fine too
-hist(rnorm(1000, 0, sd=60), breaks=50) 
+hist(rnorm(1000, 0, sd=50), breaks=60) 
 
 # pnorm(feextreme, 0, sd = 40)
 # hist(rnorm(1000, 0, sd = 40))
 
 #student
-pt(fextreme, 1)
-hist(rt(1000, 1), breaks = 50)
+# pt(fextreme, 1)
+# hist(rt(1000, 1), breaks = 50)
+
 ```
+
 And distributions that produce these standard deviations, for sampling sigma are
 ```{r}
 pnorm(60, 0, 20) # 15 probably lower limit when using 50sd
@@ -176,11 +176,11 @@ pt(60, 1)
 ```
 So,
 
-$y_i ~ \mathcal{N}(f_i, \sigma)$
+$f_i ~ \mathcal{N}(phi_i, \sigma)$
 
 $\sigma \sim |\mathcal{Normal}(0, 50)|$
 
-$f_i$ is a function of $\mu$ and the $\delta$ offsets. 
+$phi_i$ is a function of $\mu$ and the $\delta$ offsets. 
 
 ## mu
 
@@ -198,8 +198,6 @@ ffs1 <- quantile(ffstart$sum_forcing, 0.01)
 ffe1 <- quantile(ffend$sum_forcing, 0.01)
 ffs99 <- quantile(ffstart$sum_forcing, 0.99)
 ffe99 <- quantile(ffend$sum_forcing, 0.99)
-
-
 
 ```
 It must be positive and continuous. Values less 5 and greater than 1000 would be quite unbelievable for any phase.
@@ -262,8 +260,6 @@ Nice thing about gamma distribution is it's always positive, like forcing values
 The $\delta$ effects are modeled as offsets from $\mu$, thus the superpopulation mean must be 0. Individual effects, however, may vary by $\sigma_{factor}$
 
 A flowering period of 2 weeks for a population would be very long and a flowering period of a week very long for an individual tree, so an effect ($\delta$) that changed the timing of flowering by even a few days would be meaningful. An delta that shifted flowering by 1 weeks would be quite extreme. How much forcing can accumulate in 1 week prior to an event?
-
-[Since there aren't extreme variations in the length of flowering period, using the first part of the flowering period might be a better guide for this. Currently using January - June]
 
 ```{r}
 week_forcing <- janjun %>%
