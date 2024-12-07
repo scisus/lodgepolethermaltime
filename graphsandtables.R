@@ -4,13 +4,13 @@ library(dplyr)
 library(ggplot2)
 library(forcats)
 library(ggbeeswarm)
-#library(tidybayes)
+library(tidybayes)
 library(patchwork)
-#library(ggokabeito)   # Neat accessible color palette
+library(ggokabeito)   # Neat accessible color palette
 #library(ggthemes)    # Nice themes
 #library(html2latex) # convert sjplot tables to tex and pdf
-#library(tidyr)
-#library(ggrepel)
+library(tidyr)
+library(ggrepel)
 library(cols4all)
 #library(ggalt)
 #library(scales)
