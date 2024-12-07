@@ -738,8 +738,8 @@ saveRDS(corr_model_table, '../flowering-cline/tables/corr_model_table.rds')
 # predictions ####
 
 ## grand mean posterior predictions ####
-fepred <- readRDS("objects/fepred.rds")
-fpred <- readRDS("objects/fpred.rds")
+# fepred <- readRDS("objects/fepred.rds")
+# fpred <- readRDS("objects/fpred.rds")
 
 # # just expectations
 # ggplot(fepred,
@@ -948,19 +948,19 @@ doy_to_date <- function(doy) {
 }
 
 # 50 and 95% HDPI with 1961-1991 MAT normal
-ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, colour = Sex, shape = Sex)) +
-  stat_pointinterval(position = "dodge", alpha = 0.5, .width = c(0.50, 0.95)) +
-  stat_pointinterval(data = filter(doy_normal_plotting2, event == "end"), position = "dodge", alpha = 0.5, .width = c(0.50, 0.95)) +
-  facet_grid(scenario ~ MATlabel, labeller = labeller(scenario = c(ssp245 = "SSP2 4.5 W/m²", ssp585 = "SSP5 8.5 W/m²"))) +
-  #scale_color_manual(values = c("historical" = "grey50", "future" = "black"), guide = "none") +
-  scale_colour_discrete_c4a_div(palette = "acadia") +
-  theme_bw() +
-  theme(legend.position = "bottom",
-        axis.text.x = element_text(angle = 45, hjust=1),
-        axis.title.x = element_text(vjust = -1))+
-  labs(title = "Expectation of flowering period start and end", subtitle = "1951-2100 for two Shared Socioeconomic Pathways") +
-  xlab("Normal period") +
-  ylab("Day of Year")
+# ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, colour = Sex, shape = Sex)) +
+#   stat_pointinterval(position = "dodge", alpha = 0.5, .width = c(0.50, 0.95)) +
+#   stat_pointinterval(data = filter(doy_normal_plotting2, event == "end"), position = "dodge", alpha = 0.5, .width = c(0.50, 0.95)) +
+#   facet_grid(scenario ~ MATlabel, labeller = labeller(scenario = c(ssp245 = "SSP2 4.5 W/m²", ssp585 = "SSP5 8.5 W/m²"))) +
+#   #scale_color_manual(values = c("historical" = "grey50", "future" = "black"), guide = "none") +
+#   scale_colour_discrete_c4a_div(palette = "acadia") +
+#   theme_bw() +
+#   theme(legend.position = "bottom",
+#         axis.text.x = element_text(angle = 45, hjust=1),
+#         axis.title.x = element_text(vjust = -1))+
+#   labs(title = "Expectation of flowering period start and end", subtitle = "1951-2100 for two Shared Socioeconomic Pathways") +
+#   xlab("Normal period") +
+#   ylab("Day of Year")
 
 
 ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, colour = Sex, shape = Sex)) +
