@@ -31,7 +31,7 @@ Modular analysis scripts write out objects needed in other scripts or for graphs
 - `diagnositics.R` calculates model diagnostics like Rhat and ESS
 - `censoring.R` end vs interval censoring: what proportion of data is censored end vs. interval?
 - `factororder.R` order factors for making good graphs
-- `replication_points.R` levels of replication
+- `replication_points.R` levels of replication in data. used to build graph.
 - `obsVSretro.R` compare observations to retrodictions
 - `modelparameters.R` extract parameter values from thermal time model
 - `predict.R` predict thermal time for events from models 
