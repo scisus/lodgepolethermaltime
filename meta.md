@@ -39,6 +39,7 @@ Modular analysis scripts write out objects needed in other scripts or for graphs
 - `doyanalysis.R` investigate patterns of flowering across sites
 - `model_check_independentdata.R` check model predictions against data in O'Reilly 1988 and Nilsson 1981
 - `owens2005comp.R` calculate GDD for dates reported in Owens 2005
+- `site_climate_change.R` calculate monthly temperature over time. used for graph in supplemental materials
 - `floweringlength.R` [DEFUNCT] length of flowering period
 - `overlap.R` [DEFUNCT] calculate historical and future overlap of phenological periods [defunct]
 - `variation.R` [DEFUNCT] variation in flowering period 
