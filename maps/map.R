@@ -115,20 +115,6 @@ bboxsitezoom <- sites %>%
 
 # maps ###########
 
-# basemap <- ggplot(data = basedat) +
-#     geom_raster(data = elevations, aes(x = x, y = y, fill = elevation)) +
-#     scale_fill_gradientn(colours = grey.colors(20, end = 0.8), na.value = "#FFFFFF") +
-#     geom_sf(data = pcontorta, alpha = 0.2, fill = "darkolivegreen3") +
-#     geom_sf(fill = NA) +
-#     annotation_north_arrow(location = "bl", which_north = "true",
-#                            pad_x = unit(0.05, "in"), pad_y = unit(4, "in"),
-#                            style = north_arrow_fancy_orienteering) +
-#     coord_sf(xlim = c(bboxparents$xmin - 4e5, bboxparents$xmax + 5e5),
-#              ylim = c(bboxsites$ymin - 1e5, bboxsites$ymax + 3e5)) +
-#     theme(legend.position = "none") +
-#     ylab("") + xlab("")
-#
-# print(basemap)
 
 basemap <- ggplot(data = basedat) +
   geom_raster(data = elevations, aes(x = x, y = y, fill = elevation)) +
@@ -145,19 +131,6 @@ basemap <- ggplot(data = basedat) +
   ylab("") + xlab("")
 
 print(basemap)
-
-# plot the parent tree locations, zoomed in
-
-# pointmap <- basemap +
-#   geom_sf(data = sites, aes(color = orchard), size = 2) +
-#   scale_colour_brewer(type = "div", palette = 3) +
-#   geom_sf(data = parents, shape = 3, alpha = 0.8) +
-#   coord_sf(xlim = c(bboxparents$xmin - 3e5, bboxparents$xmax + 2e5),
-#            ylim = c(bboxsites$ymin - 1e5, bboxsites$ymax + 3e5)) +
-#   geom_label_repel(data = sitezoomout, aes(label = Site, geometry = geometry),
-#                    stat = "sf_coordinates", nudge_x = 5e5) +
-#   geom_label_repel(data = sitezoomin, aes(label = Site, geometry = geometry),
-#                    stat = "sf_coordinates", nudge_x = -5e5, nudge_y = 5e4)
 
 pointmap <- basemap +
   geom_sf(data = sites, size = 2, aes(shape = orchard, color = orchard)) +
