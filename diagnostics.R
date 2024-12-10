@@ -42,8 +42,6 @@ print(rhats)
 
 # female begin is the hardest model to fit - code below used to help diagnose problems during modeling
 # fbpars <- data.frame(rstan::extract(fbfit))
-
-
 # pairs(fbfit, variable = c("mu", "sigma", "sigma_cens", "mu_site", "sigma_site", "mu_year", "sigma_year", "mu_genotype", "sigma_genotype", "mu_prov", "sigma_prov"))
 # pairs(fbfit, pars = c("mu", "sigma", "sigma_site", "sigma_year", "sigma_genotype", "sigma_prov"))
 # pairs(fbfit, pars = c("mu", "sigma", "mu_site", "mu_year", "mu_genotype", "mu_prov"))
@@ -54,7 +52,8 @@ print(rhats)
 # bayesplot::mcmc_intervals(draws, pars = vars( contains("year")))
 # bayesplot::mcmc_areas(draws, pars = vars(contains("sigma_")))
 # bayesplot::mcmc_areas(draws, pars = vars(contains("mu_")))
-#female_begin_censored <- fit_model(phendat = censored, sex = "FEMALE", event = "begin")
+
+# don't delete below, uncomment for more diagnostic tools if something goes wrong
 # library(shinystan)
 # launch_shinystan(fbfit)
 
