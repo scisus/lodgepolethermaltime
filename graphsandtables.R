@@ -207,7 +207,7 @@ ggplot(surveydf, aes(x=DoY, y=as.factor(sampleindex), colour = Site, group = as.
   #scale_color_viridis_d(option="B") +
   scale_color_okabe_ito() +
   scale_shape_manual(values=c(1:7)) +
-  theme_bw(base_size = 15) +
+  theme_bw(base_size = 14) +
   theme(strip.text.y = element_text(angle = 0),
         axis.text.y = element_blank(),
         axis.ticks = element_blank(),
