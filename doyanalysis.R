@@ -50,6 +50,9 @@ ties <- bind_rows(lapply(1:nrow(site_pairs), function(i) {
 })) %>%
   arrange(desc(ties))
 
+max_ties = round(ties$ties[1]/length(unique(rank_years$Year)), digits = 2) * 100
+saveRDS(max_ties, "objects/max_ties.rds")
+
 #Calculate Kendall’s Tau correlation for each combination of Sex and event
 
 siteorder <- readRDS('objects/factororder.rds')$site
