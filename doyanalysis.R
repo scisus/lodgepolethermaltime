@@ -29,15 +29,6 @@ rank_years <- doy_annual_exp_sum %>%
 
 # how many ties are there? (should I use spearman's or kendall's?)
 
-# rank_years %>%
-#   group_by(MAT, Sex, event) %>%  # Group by MAT, Sex, and event
-#   summarise(across(PGTIS:Kalamalka, n_distinct), .groups = "drop")  # Calculate unique counts for each group
-
-rank_years %>%
- group_by(Sex, event) %>%
- mutate(bt = Border == Trench) %>%
-  summarise(bt_ties = sum(bt))
-
 # Define the site columns
 site_columns <- c("Border", "Trench", "PGTIS", "KettleRiver", "Sorrento", "Tolko", "PRT", "Vernon", "Kalamalka")
 
@@ -60,21 +51,6 @@ ties <- bind_rows(lapply(1:nrow(site_pairs), function(i) {
   arrange(desc(ties))
 
 #Calculate Kendall’s Tau correlation for each combination of Sex and event
-# rank_correlation <- rank_years %>%
-#   group_by(Sex, event, MAT) %>%
-#   nest() %>%
-#   mutate(correlation_matrix = map(data, ~ correlate(.x %>% select(-Year), method = "kendall", use = "pairwise.complete.obs"))) %>%
-#   select(-data) %>%
-#   unnest(correlation_matrix) %>%
-#   pivot_longer(cols = -c(MAT, Sex, event, term),
-#                names_to = "Site2",
-#                values_to = "Correlation") %>%
-#   rename(Site1 = "term") %>%
-#   ungroup() %>%
-#   mutate(Site1 = forcats::fct_relevel(Site1, seedorchardsites), Site2 = forcats::fct_relevel(Site2, seedorchardsites)) %>%
-#   mutate(Correlation = case_when(Site1 == Site2 ~ 1,
-#                                  Site1 != Site2 ~ Correlation)) # assign correlation of 1 for self
-#
 
 siteorder <- readRDS('objects/factororder.rds')$site
 #Calculate Kendall’s Tau correlation for each combination of Sex and event
