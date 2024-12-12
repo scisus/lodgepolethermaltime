@@ -63,6 +63,8 @@ varsummary <- variation %>%
   group_by(.variable, event, Sex) %>%
   mean_hdci(.value)
 
+saveRDS(varsummary, 'objects/varsummary.rds')
+
 # offsets ####
 
 offsets_raw <- purrr::map(modells, gather_offset_draws) %>%
