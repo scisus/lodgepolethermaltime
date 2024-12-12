@@ -1,5 +1,8 @@
 # genotype effect investigation
-#
+# check the relationship between genotype effects estimated in the model and site MATs to make sure site climate/latitude isn't getting picked up in the genotype effect par
+
+library(broom)
+library(dplyr)
 
 genotyper <- readRDS("objects/genotyper.rds") %>%
   rename(Genotype = level) %>%
@@ -15,7 +18,7 @@ ggplot(geneffects, aes(x = MAT, y = .value, group = MAT)) +
   geom_boxplot() +
   facet_grid(Sex ~ event)
 
-model_results <- geneffects %>%
+genotypeVsitemat_model_results <- geneffects %>%
   group_by(Sex, event) %>%
   do({
     model <- lm(.value ~ MAT, data = .)
@@ -25,15 +28,8 @@ model_results <- geneffects %>%
     tidy_model
   })
 
-model_results
-
+genotypeVsitemat_model_results
 
 genotyper %>%
   mutate(.value = abs(.value)) %>%
   arrange(desc(.value))
-
-genotyper %>%
-  filter(Genotype == 1770)
-
-phenf %>%
-  filter(Genotype == 1770)
