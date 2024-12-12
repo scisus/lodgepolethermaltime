@@ -23,7 +23,7 @@ spudat <- read.csv("../phd/data/OrchardInfo/LodgepoleSPUs.csv", header = TRUE, s
 
 prov_climate <- read.csv("../lodgepole_climate/data/climateBC/climatebc_parent_locs_Normal_1961_1990Y_v730.csv") %>%
   rename(Genotype = id1, SPZ = id2)  %>%
-  select(Genotype, SPZ, MAT) %>%
+  select(Genotype, SPZ, MAT, Latitude, Longitude) %>%
   mutate(Genotype = as.character(Genotype))
 
 ## data preparation for phenology model ####
@@ -124,5 +124,5 @@ modelseeds <- list(fb = rstan::get_seed(fb$fit),
                    mb = rstan::get_seed(mb$fit),
                    me = rstan::get_seed(me$fit))
 
-saveRDS(list(pkgversions, modelseeds), "objects/model_meta.rds")
+saveRDS(list(vers = pkgversions, seeds = modelseeds), "objects/model_meta.rds")
 

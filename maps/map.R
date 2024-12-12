@@ -67,9 +67,12 @@ pcontorta <- st_read("data/latifoliaDistribution/shapefiles/latifolia_distributi
 # cat("Latitude range in WGS84:", min_lat_wgs84, "to", max_lat_wgs84, "\n")
 # # genotype locations
 #
+
+# I think I can actually simplify this with a call to phenf which has genotypes and lat lon of parents instead of calling flowers and parents and joining
+
 genotypes <- select(flowers::lodgepole_phenology_event, Genotype) %>% distinct()
 
-parents <- read.csv('data/parents.csv') %>%
+parents <- read.csv('data/parents.csv') %>% # might not need to pull parents.csv, whatever that is. I have lat/lon in phenf now
     filter(Parent.Tree.Number %in% genotypes$Genotype) %>% # only include genotypes I have in my phenologydataset
     select(Genotype = Parent.Tree.Number, Latitude, Longitude) %>%
     st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326, agr = "constant")
