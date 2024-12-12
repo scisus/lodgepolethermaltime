@@ -34,9 +34,10 @@ Modular analysis scripts write out objects needed in other scripts or for graphs
 - `replication_points.R` levels of replication in data. used to build graph.
 - `obsVSretro.R` compare observations to retrodictions
 - `modelparameters.R` extract parameter values from thermal time model
+- `effectinvestigation_genotype.R` check the relationship between genotype effects estimated in the model and site MATs to make sure site climate/latitude isn't getting picked up in the genotype effect par
 - `predict.R` predict thermal time for events from models 
 - `dayofyear_translation.R` translate predictions into day of year 
-- `doyanalysis.R` investigate patterns of flowering across sites
+- `doyanalysis.R` investigate patterns of flowering across sites and between provs
 - `model_check_independentdata.R` check model predictions against data in O'Reilly 1988 and Nilsson 1981
 - `owens2005comp.R` calculate GDD for dates reported in Owens 2005
 - `site_climate_change.R` calculate monthly temperature over time. used for graph in supplemental materials
