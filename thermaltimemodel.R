@@ -5,14 +5,6 @@
 library(flowers)
 library(dplyr)
 library(brms)
-#library(ggplot2)
-#library(tidyr)
-#library(tidybayes)
-#library(forcats)
-#library(ggbeeswarm)
-#library(lubridate)
-
-#theme_set(theme_dark())
 
 source('phenology_functions.R')
 
@@ -123,4 +115,14 @@ mefit <- brm(bform, data = medat,
              sample_prior = TRUE,
              save_pars = save_pars(all = TRUE),
              file_refit = "always")
+
+# write out package versions and seeds
+
+pkgversions <- fbfit$version
+modelseeds <- list(fb = rstan::get_seed(fb$fit),
+                   fe = rstan::get_seed(fe$fit),
+                   mb = rstan::get_seed(mb$fit),
+                   me = rstan::get_seed(me$fit))
+
+saveRDS(list(pkgversions, modelseeds), "objects/model_meta.rds")
 
