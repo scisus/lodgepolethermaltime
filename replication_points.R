@@ -1,4 +1,4 @@
-# Special points
+# Creates objects used to build figure describing replication structure
 # Identify clones represented across multiple years
 # Clones represented in multiple orchards
 # Clones represented by multiple trees in the same orchard
