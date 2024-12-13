@@ -2,8 +2,6 @@
 
 This analysis models the mean forcing accummulation required for lodgepole pine to shed pollen and receive pollen.
 
-
-
 - `doy.R`
   
 
@@ -34,7 +32,7 @@ Modular analysis scripts write out objects needed in other scripts or for graphs
 - `replication_points.R` levels of replication in data. used to build graph.
 - `obsVSretro.R` compare observations to retrodictions
 - `modelparameters.R` extract parameter values from thermal time model
-- `effectinvestigation_genotype.R` check the relationship between genotype effects estimated in the model and site MATs to make sure site climate/latitude isn't getting picked up in the genotype effect par
+- `effectinvestigation_site.R` check the relationship between site effect and potential influences
 - `predict.R` predict thermal time for events from models 
 - `dayofyear_translation.R` translate predictions into day of year 
 - `doyanalysis.R` investigate patterns of flowering across sites and between provs
