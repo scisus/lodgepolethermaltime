@@ -87,7 +87,7 @@ offsets <- offsets_raw %>% cbind(varlevel) %>%
   mutate(factor = forcats::fct_relevel(factor, "Year", "Site", "Genotype", "Tree")) %>%
   mutate(level = forcats::fct_relevel(level, syctorder))
 
-# slow
+# (slow)
 offsets_summary <- offsets %>%
   group_by(model, Sex, event, factor, level) %>%
   median_hdci(.value) %>%
