@@ -4,8 +4,24 @@
 library(dplyr)
 library(broom)
 
+sitedat <- readRDS('../flowering-cline/tables/sitedat.rds') %>%
+  rename(siteMAT = MAT)
 siter <- readRDS("objects/siter.rds")
+sitersum <- siter %>%
+  group_by(Sex, event, level) %>%
+  summarise(median_hdci(.value), sd = sd(.value)) %>%
+  rename(Site = level) %>%
+  left_join(sitedat)
 phenf <- readRDS("objects/phenf.rds")
+
+
+# check site MAT vs site effect
+
+ggplot(sitersum, aes(x = siteMAT, y = y)) +
+  geom_point() +
+  facet_grid(Sex ~ event)
+
+## nope! phew!
 
 # how many years of data at each site
 countyrs <- phenf %>%
@@ -15,18 +31,15 @@ countyrs <- phenf %>%
   summarise(nYears = length(Year))
 
 # summarise site effects and join with years of data
-sitersum <- siter %>%
-  group_by(Sex, event, level) %>%
-  summarise(median_hdci(.value), sd = sd(.value)) %>%
-  rename(Site = level) %>%
+siteyrs <-  sitersum %>%
   left_join(countyrs)
 
 # do years of data influence site effect estimate?
-ggplot(sitersum, aes(x = nYears, y = y)) +
+ggplot(siteryrs, aes(x = nYears, y = y)) +
   geom_point() +
   facet_grid(Sex ~ event)
 
-ggplot(sitersum, aes(x = sd, y = y)) +
+ggplot(siteryrs, aes(x = sd, y = y)) +
   geom_point(alpha = 0.2) +
   facet_grid(Sex ~ event)
 
@@ -70,9 +83,9 @@ matrangeVSsd_model_results <- sitersum2 %>%
     tidy_model
   })
 
-rsq_range <- round(range(matrangeVSsd_model_results$rsq), digits = 2) *100
+sitesdvsprovmat_rsq_range <- round(range(matrangeVSsd_model_results$rsq), digits = 2) *100
 
-saveRDS(rsq_range, 'objects/rsq_range.rds')
+saveRDS(sitesdvsprovmat_rsq_range, 'objects/sitesdvsprovmat_rsq_range.rds')
 
 #does site effect sd depend on nyears of observation
 
