@@ -85,7 +85,7 @@ matrangeVSsd_model_results <- sitersum2 %>%
 
 sitesdvsprovmat_rsq_range <- round(range(matrangeVSsd_model_results$rsq), digits = 2) *100
 
-saveRDS(sitesdvsprovmat_rsq_range, 'objects/sitesdvsprovmat_rsq_range.rds')
+saveRDS(sitesdvsprovmat_rsq_range, '../flowering-cline/objects/sitesdvsprovmat_rsq_range.rds')
 
 #does site effect sd depend on nyears of observation
 
