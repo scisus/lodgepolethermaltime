@@ -271,7 +271,7 @@ saveRDS(doy_normal_subset, "objects/doy_normal_subset.rds")
 
 # historical dates
 doy_normal_subset %>%
-  filter(period %in% c('1951-1980') )%>%
+  filter(period %in% c('1951-1980')) %>%
   group_by(Site, Sex, event, period) %>%
   median_qi(DoY) %>%
   mutate(DoY = as.Date(DoY - 1, origin = "2024-01-01"),
@@ -318,3 +318,8 @@ doy_normal_subset %>%
   select(-contains(".width"), -contains(".point"), -contains(".interval")) %>%
   rename_with(~ gsub("median_qi", "adv", .), starts_with("median_qi")) %>%
   arrange(adv_ssp5_y)
+
+## climate change uncertainty
+doy_normal_subset %>%
+  group_by(index, Site, event, Sex, period) %>%
+  median_qi(DoY, .width = c(.50, 0.95))

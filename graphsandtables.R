@@ -614,9 +614,6 @@ ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = period, y = DoY, c
 
 ggsave("../flowering-cline/figures/normal_predictions.png", width = 9, height = 6, units = "in")
 
-## climate change uncertainty - keep for now, i think i need this code to calculate some numbers in the paper
-doy_normal_subset %>%
-  group_by(index, Site, event, Sex, period) %>%
-  median_qi(DoY, .width = c(.50, 0.95))
+
 
 
