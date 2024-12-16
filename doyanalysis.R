@@ -70,7 +70,8 @@ rank_correlation <- rank_years %>%
 
 
 # geographical isolation measure (IBD)
-sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv")
+sitedat <- read.csv("../lodgepole_climate/data/climateBC/climatebc_locs_Normal_1961_1990Y.csv") %>%
+  filter(id == "site")
 sitedat <- sitedat %>%
  # filter(! Site %in% c("Border", "Trench")) %>%
   select(Site, Latitude, Longitude, Elevation, MAT)
