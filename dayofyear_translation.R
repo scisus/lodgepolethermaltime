@@ -244,15 +244,6 @@ saveRDS(doy_annual_exp_sum, "objects/doy_annual_exp_sum.rds")
 # normal periods ########
 normal_forc_focal <- normal_forc %>% filter(Site %in% focalsites)
 fepred_allsites_focal <- fepred_allsites %>% filter(Site %in% focalsites) %>% ungroup()
-# doy_normal <- map_dfr(split(normal_forc_focal, f = list(normal_forc_focal$index), drop = TRUE),
-#                       find_day_of_forcing, .id = ".id",
-#                       bdf = fepred_allsites_focal, aforce = "sum_forcing", bforce = ".epred") %>%
-#   rename(index = .id, DoY = newdoycol) %>%
-#   mutate(index = as.numeric(index)) %>%
-#   ungroup() %>%
-#   select(-.row, -.draw) %>%
-#   left_join(select(normal_forc_focal, index, Site, period, scenario), distinct()) #%>%
-#   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site)))
 
 climatelist_nff <- split(normal_forc_focal, f = list(normal_forc_focal$Site), drop = TRUE)
 phenlist_af <- split(fepred_allsites_focal, f = list(fepred_allsites_focal$Site), drop = TRUE)
@@ -270,16 +261,16 @@ saveRDS(doy_normal, 'objects/doy_normal.rds')
 
  # graph climate change normals ####
 
-doy_normal_plotting <- doy_normal %>%
+doy_normal_subset <- doy_normal %>%
   filter(#! scenario %in% c( "ssp370"),
          period %in% c("1951-1980", "1981-2010", "2011-2040", "2041-2070", "2071-2100"),
          Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border"),
          scenario %in% c("historical", "ssp245", "ssp585")) %>%
-  mutate(Date = ymd("2023-12-31") + DoY)
-saveRDS(doy_normal_plotting, "objects/doy_normal_plotting.rds")
+  mutate(Date = lubridate::ymd("2023-12-31") + DoY)
+saveRDS(doy_normal_subset, "objects/doy_normal_subset.rds")
 
 # historical dates
-doy_normal_plotting %>%
+doy_normal_subset %>%
   filter(period %in% c('1951-1980') )%>%
   group_by(Site, Sex, event, period) %>%
   median_qi(DoY) %>%
@@ -290,7 +281,7 @@ doy_normal_plotting %>%
   arrange(DoY)
 
 # difference between 1951-1980 and 1981-2010
-doy_normal_plotting %>%
+doy_normal_subset %>%
   filter(period %in% c('1951-1980', '1981-2010')) %>%
   group_by(Site, Sex, event, period, MAT) %>%
   median_hdci(DoY) %>%
@@ -300,7 +291,7 @@ doy_normal_plotting %>%
   arrange(advancement)
 
 # advancement between 1951-1980 and 2071-2100
-doy_normal_plotting %>%
+doy_normal_subset %>%
   filter(period %in% c('1951-1980', '2071-2100')) %>%
   select(-period) %>%
   group_by(Site, Sex, event, scenario, MAT) %>%
@@ -310,7 +301,7 @@ doy_normal_plotting %>%
   mutate(ssp2_adv = historical - ssp245, ssp5_adv = historical - ssp585) %>%
   arrange(ssp5_adv)
 
-doy_normal_plotting %>%
+doy_normal_subset %>%
   select(.draw, Site, Sex, event, DoY, period, scenario) %>%
   filter(period %in% c('1951-1980', '2071-2100'),
     scenario %in% c("historical", "ssp245", "ssp585")) %>%
@@ -318,13 +309,6 @@ doy_normal_plotting %>%
   pivot_wider(names_from = scenario, values_from = DoY) %>%
   mutate(ssp2_adv = historical - ssp245, ssp5_adv = historical - ssp585) %>%
   group_by(Site, Sex, event) %>%
-  # summarize( #standard errors
-  #   median_ssp2 = median(ssp2_adv),
-  #   se_ssp2 = sd(ssp2_adv) / sqrt(n()),
-  #   median_ssp5 = median(ssp5_adv),
-  #   se_ssp5 = sd(ssp5_adv) / sqrt(n())
-  # ) %>%
-  #Summarize for ssp2_adv
   summarize(
     median_qi_ssp2 = median_qi(ssp2_adv, .width = 0.95), #quantile interval
     median_qi_ssp5 = median_qi(ssp5_adv, .width = 0.95)
@@ -334,59 +318,3 @@ doy_normal_plotting %>%
   select(-contains(".width"), -contains(".point"), -contains(".interval")) %>%
   rename_with(~ gsub("median_qi", "adv", .), starts_with("median_qi")) %>%
   arrange(adv_ssp5_y)
-
-
-## uncertainty for extremes
-
-# contrast ####
-# this contrast does not compare site effects - uses grand means to describe how different sites are on average. forcing the same for each site
-
-# how much do the max sites differ from one another
-# sitediff <- doy_typical %>%
-#   group_by(Site, Sex, event) %>%
-#   summarise(med_doy = mean(DoY)) %>%
-#   pivot_wider(names_from = "Site", values_from = "med_doy") %>%
-#   mutate(contrast_PGTIS = PGTIS - Kalamalka)
-
-## posterior expectation, retrodictions ####
-# 2000 draws per year 1945-2011 per site
-
-# fepred_allsites_downsampled <- fepred_allsites %>%
-#   group_by(model, Site, MAT, .row) %>%
-#   sample_n(size = 2000)
-#
-# doy_annual <- map_dfr(split(dailyforc, f = list(dailyforc$index), drop = TRUE),
-#                       find_day_of_forcing, .id = "index",
-#                       bdf = fepred_allsites_downsampled, aforce = "sum_forcing", bforce = ".epred") %>%
-#   rename(DoY = newdoycol) %>%
-#   mutate(index = as.numeric(index)) %>%
-#   ungroup() %>%
-#   select(-.row, -.draw) %>%
-#   left_join(select(dailyforc, index, Site, Year) %>% distinct()) %>%
-#   mutate(Site = forcats::fct_rev(forcats::fct_relevel(Site, factororder$site)))
-
-
-# graph year to year variation ####
-
-# labdf <- readRDS("objects/labdf.rds")
-# doy_annual_plotting <- doy_annual %>%
-#   filter(Site %in% c("Kalamalka", "KettleRiver", "PGTIS", "Trench", "Border")) %>%
-#   left_join(labdf) %>%
-#   group_by(Site, Year, Sex, event) %>%
-#   median_hdci(DoY) #slow
-# saveRDS(doy_annual_plotting, 'objects/doy_annual_plotting.rds')
-#
-# dplot2 <- doy_annual_plotting %>%
-#   pivot_wider(values_from = c(DoY, .lower, .upper), names_from = event)
-# saveRDS(dplot2, "objects/dplot2.rds")
-
-
-# # variation
-# summary_doy_annual <- doy_annual %>%
-#   mutate(normal_period = case_when(Year >= 1951 & Year <= 1980 ~ "1951-1980",
-#                                    Year >= 1981 & Year <= 2010 ~ "1981-2010")) %>%
-#   filter(!is.na(normal_period)) %>%
-#   group_by(normal_period, Sex, event, Site) %>%
-#   summarise(median_forcing = median(.epred), median_DoY = median(DoY), sd_forcing = sd(.epred), sd_DoY = sd(DoY))
-# saveRDS(summary_doy_annual, "objects/summary_doy_annual.rds")
-

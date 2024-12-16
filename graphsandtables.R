@@ -573,19 +573,19 @@ ggsave("../flowering-cline/figures/away.png", width = 5, height = 4)
 # When all sources are grown at the same Site (PGTIS), MAT effect reduces overlap, increases differences between provenances
 
 # normalphenology - climate change prediction ####
-doy_normal_plotting <- readRDS("objects/doy_normal_plotting.rds")
-doy_normal_plotting$MATlabel <- paste(doy_normal_plotting$Site,
+doy_normal_subset <- readRDS("objects/doy_normal_subset.rds")
+doy_normal_subset$MATlabel <- paste(doy_normal_subset$Site,
                                       " (",
-                                      doy_normal_plotting$MAT,
+                                      doy_normal_subset$MAT,
                                       "\u00B0C",
                                       ")",
                                       sep = "")
 
 
-historicalonly <- doy_normal_plotting %>% filter(scenario == "historical") %>%
+historicalonly <- doy_normal_subset %>% filter(scenario == "historical") %>%
   rename(type = scenario) %>%
   merge(data.frame(scenario = c("ssp245", "ssp585")))
-doy_normal_plotting2 <- doy_normal_plotting %>%
+doy_normal_plotting <- doy_normal_subset %>%
   filter(scenario != "historical") %>%
   mutate(type = "future") %>%
   full_join(historicalonly) %>%
@@ -599,9 +599,9 @@ doy_to_date <- function(doy) {
   return(date_labels)
 }
 
-ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, colour = Sex, shape = Sex)) +
+ggplot(filter(doy_normal_plotting, event == "begin"), aes(x = period, y = DoY, colour = Sex, shape = Sex)) +
   stat_pointinterval(position = position_dodge(width = 1), alpha = 0.5, .width = c(0.50, 0.95)) +
-  stat_pointinterval(data = filter(doy_normal_plotting2, event == "end"), position = position_dodge(width = 1), alpha = 0.5, .width = c(0.50, 0.95)) +
+  stat_pointinterval(data = filter(doy_normal_plotting, event == "end"), position = position_dodge(width = 1), alpha = 0.5, .width = c(0.50, 0.95)) +
   facet_grid(scenario ~ MATlabel, labeller = labeller(scenario = c(ssp245 = "SSP2 4.5 W/m²", ssp585 = "SSP5 8.5 W/m²"))) +
   scale_colour_discrete_c4a_div(palette = "acadia") +
   scale_y_continuous(labels = doy_to_date, breaks = seq(100, 200, by = 14)) +
@@ -615,7 +615,7 @@ ggplot(filter(doy_normal_plotting2, event == "begin"), aes(x = period, y = DoY, 
 ggsave("../flowering-cline/figures/normal_predictions.png", width = 9, height = 6, units = "in")
 
 ## climate change uncertainty - keep for now, i think i need this code to calculate some numbers in the paper
-doy_normal_plotting %>%
+doy_normal_subset %>%
   group_by(index, Site, event, Sex, period) %>%
   median_qi(DoY, .width = c(.50, 0.95))
 
