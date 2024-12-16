@@ -35,10 +35,10 @@ Modular analysis scripts write out objects needed in other scripts or for graphs
 - `effectinvestigation_site.R` check the relationship between site effect and potential influences
 - `predict.R` predict thermal time for events from models 
 - `dayofyear_translation.R` translate predictions into day of year 
-- `doyanalysis.R` investigate patterns of flowering across sites and between provs
+- `doyanalysis.R` investigate patterns of flowering across sites and between provs (rank correlations, provenance differences, and variation among sites)
 - `model_check_independentdata.R` check model predictions against data in O'Reilly 1988 and Nilsson 1981
 - `owens2005comp.R` calculate GDD for dates reported in Owens 2005
-- `site_climate_change.R` calculate monthly temperature over time. used for graph in supplemental materials
+- `site_climate_change.R` calculate monthly temperature over time. used for graph in supplemental materials to explain why no signal of recent climate change in flowering time
 - `floweringlength.R` [DEFUNCT] length of flowering period
 - `overlap.R` [DEFUNCT] calculate historical and future overlap of phenological periods [defunct]
 - `variation.R` [DEFUNCT] variation in flowering period 
