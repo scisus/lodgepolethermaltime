@@ -109,16 +109,6 @@ group_by(Sex, event) %>%
   select(Sex, event, r.squared, p.value = p.value...7, term, estimate, std.error)
 saveRDS(corr_model_results, 'objects/corr_model_results.rds')
 
-# variation in day of year ####
-# do different sites vary more than others in flowering?
-
-doysd <- doy_annual_pp_sum %>%
-  group_by(MAT, Site, event, Sex) %>%
-  summarise(sd = sd(DoY))
-
-ggplot(doysd, aes(x = Site, y = sd, colour = MAT)) +
-  geom_point() +
-  facet_grid(Sex ~ event)
 
 ## lower for warmer provs at all sites for male begin, but no consistent patterns, not even in gaps (basically 0 to huge)
 
@@ -138,4 +128,17 @@ warmvscold <- doy_annual_avg_pp_sum %>%
   summarise(mean_doy_diff = mean(diff), sd_diff = sd(diff))
 saveRDS(warmvscold, "objects/warmvscold.rds")
 
+# variation in day of year ####
+# do different sites vary more than others in flowering?
+# do not remove this analysis
 
+doy_annual_pp_sum <- readRDS('objects/doy_annual_pp_sum.rds')
+doysd <- doy_annual_pp_sum %>%
+  group_by(MAT, Site, event, Sex) %>%
+  summarise(sd = sd(DoY))
+
+ggplot(doysd, aes(x = Site, y = sd, colour = MAT)) +
+  geom_point() +
+  facet_grid(Sex ~ event)
+
+# maybe variation in start for cold provs at warm sites? no/inconclusive.
