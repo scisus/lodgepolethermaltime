@@ -1,5 +1,8 @@
+library(purrr)
+library(corrr)
+library(geosphere)
+
 # data ###
-#doy_annual_pp_sum <- readRDS('objects/doy_annual_pp_sum.rds')
 doy_annual_exp_sum <- readRDS('objects/doy_annual_exp_sum.rds')
 
 # rank patterns #####
@@ -9,15 +12,7 @@ doy_annual_exp_sum <- readRDS('objects/doy_annual_exp_sum.rds')
 #Flowering patterns are more highly correlated for sites that are closer together.
 
 
-# rank_years <- doy_annual_pp_sum %>%
-#   #filter(MAT == -0.7) %>%  # Filtering for coldest MAT only if still needed
-#   group_by(Sex, event, Site, MAT) %>%
-#   mutate(DoY_Rank = rank(DoY, ties.method = "min")) %>%
-#   ungroup() %>%
-#   select(MAT,Sex, event, Site, Year, DoY_Rank) %>%
-#   pivot_wider(names_from = Site, values_from = DoY_Rank) %>%
-#   drop_na()
-
+# rank years at each site from earliest to latest flowering
 rank_years <- doy_annual_exp_sum %>%
   #filter(MAT == -0.7) %>%  # Filtering for coldest MAT only if still needed
   group_by(Sex, event, Site) %>%
@@ -60,7 +55,7 @@ siteorder <- readRDS('objects/factororder.rds')$site
 rank_correlation <- rank_years %>%
   group_by(Sex, event) %>%
   nest() %>%
-  mutate(correlation_matrix = map(data, ~ correlate(.x %>% select(-Year), method = "kendall", use = "pairwise.complete.obs"))) %>%
+  mutate(correlation_matrix = purrr::map(data, ~ corrr::correlate(.x %>% select(-Year), method = "kendall", use = "pairwise.complete.obs"))) %>%
   select(-data) %>%
   unnest(correlation_matrix) %>%
   pivot_longer(cols = Border:Kalamalka,
@@ -81,11 +76,10 @@ sitedat <- sitedat %>%
   select(Site, Latitude, Longitude, Elevation, MAT)
 
 # calculate distances between sites in km
-library(geosphere)
 distances <- sitedat %>%
   select(Longitude, Latitude) %>%
   as.matrix() %>%
-  distm(., fun = distHaversine)
+  geosphere::distm(., fun = distHaversine)
 
 distances_df <- as.data.frame(as.table(distances)) %>%
   mutate(Distance = Freq/1000, .keep = "unused") # convert from m to km
@@ -93,65 +87,15 @@ names(distances_df) <- c("Site1", "Site2", "Distance")
 distances_df$Site1 <- sitedat$Site[distances_df$Site1]
 distances_df$Site2 <- sitedat$Site[distances_df$Site2]
 
-
-# # create an environmental isolation measure based on MAT
-# pairwise_combinations <- expand.grid(Site1 = sitedat$Site, Site2 = sitedat$Site, stringsAsFactors = FALSE)
-#
-# # Remove combinations of the same site and duplicate pairs
-# #pairwise_combinations <- pairwise_combinations[pairwise_combinations$Site1 != pairwise_combinations$Site2, ]
-# #pairwise_combinations <- pairwise_combinations[!duplicated(t(apply(pairwise_combinations, 1, sort))), ]
-#
-# # Calculate MAT differences for each pair
-# pairwise_MAT_differences <- pairwise_combinations %>%
-#   left_join(sitedat, by = c("Site1" = "Site")) %>%
-#   rename(MAT1 = MAT) %>%
-#   left_join(sitedat, by = c("Site2" = "Site")) %>%
-#   rename(MAT2 = MAT) %>%
-#   mutate(MAT_Difference = abs(MAT1 - MAT2)) %>%
-#   select(Site1, Site2, MAT_Difference)
-
-# add isolation measures to rank corr df and drop duplicates
+# add geographic isolation measures to rank corr df and drop duplicates
 rank_correlation_wdist <- rank_correlation %>%
- # left_join(pairwise_MAT_differences) %>%
   left_join(distances_df, relationship = "many-to-many") %>%
   group_by(Sex, event) %>%
-  #group_by(MAT, Sex, event) %>%
   distinct(Distance, .keep_all = TRUE)
- # mutate(MAT = as.factor(MAT), .keep = "unused")
 saveRDS(rank_correlation_wdist, 'objects/rank_correlation_wdist.rds')
 
-
-
-# Building models and summarizing them
-# corr_model_reports <- rank_correlation_wdist %>%
-#   group_by(MAT, Sex, event) %>%
-#   do({
-#     fitted_model = lm(Correlation ~ Distance, data = .)
-#     model_report = report(fitted_model)
-#     data.frame(model_report = as.character(model_report), check.names = FALSE)
-#   }) %>%
-#   ungroup()
-corr_model_reports <- rank_correlation_wdist %>%
-  group_by(Sex, event) %>%
-  do({
-    fitted_model = lm(Correlation ~ Distance, data = .)
-    model_report = report(fitted_model)
-    data.frame(model_report = as.character(model_report), check.names = FALSE)
-  }) %>%
-  ungroup()
-
 # Building models and extracting tidy summaries
-# corr_model_results <- rank_correlation_wdist %>%
-#   group_by(MAT, Sex, event) %>%
-#   do({
-#     fitted_model = lm(Correlation ~ Distance, data = .)
-#     tidy_summary = tidy(fitted_model)
-#     glance_summary = glance(fitted_model)
-#     bind_cols(glance_summary, tidy_summary)
-#   }) %>%
-#   ungroup() %>%
-#   select(MAT, Sex, event, r.squared, p.value = p.value...8, term, estimate, std.error)
-#
+
 corr_model_results <- rank_correlation_wdist %>%
 group_by(Sex, event) %>%
   do({
@@ -163,59 +107,6 @@ group_by(Sex, event) %>%
   ungroup() %>%
   select(Sex, event, r.squared, p.value = p.value...7, term, estimate, std.error)
 saveRDS(corr_model_results, 'objects/corr_model_results.rds')
-
-
-# ggplot(rank_correlation_wdist, aes(colour = as.factor(MAT), x = MAT_Difference, y = Correlation, shape = interaction(Sex, event))) +
-#   geom_point() +
-#   ggtitle("Isolation by environment")
-
-# lm ibd and ibe
-
-# summary_results_dist <- rank_correlation_wdist %>%
-#   group_by(MAT, Sex, event) %>%
-#   do(glanced_model = glance(lm(Correlation ~ Distance, data = .))) %>%
-#   unnest(glanced_model)
-
-summary_results_dist <- rank_correlation_wdist %>%
-  group_by(Sex, event) %>%
-  do(glanced_model = glance(lm(Correlation ~ Distance, data = .))) %>%
-  unnest(glanced_model)
-
-library(report)
-report(summary_results_dist$glanced_model[[1]])
-
-summary_results_MAT <- rank_correlation_wdist %>%
-  group_by(Sex, event) %>%
-  do(glanced_model = glance(lm(Correlation ~ MAT_Difference, data = .))) %>%
-  unnest(glanced_model)
-
-rank_correlation <- rank_correlation %>%
-  left_join(distances_df)
-
-# # Create a heatmap
-# ggplot(filter(rank_correlation, MAT == -0.7), aes(x = Site1, y = Site2, fill = Correlation)) +
-#   geom_tile() +
-#   scale_fill_viridis_c(option = "C", direction = -1) +
-#   labs(fill = "Kendall's Tau") +
-#   theme_minimal() +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-#   facet_grid(Sex ~ event) +
-#   xlab("") +
-#   ylab("") +
-#   ggtitle("Provenance MAT -0.7")
-#
-# ggplot(filter(rank_correlation, MAT == 6.8), aes(x = Site1, y = Site2, fill = Correlation)) +
-#   geom_tile() +
-#   scale_fill_viridis_c(option = "C", direction = -1) +
-#   labs(fill = "Kendall's Tau") +
-#   theme_minimal() +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-#   facet_grid(Sex ~ event) +
-#   xlab("") +
-#   ylab("") +
-#   ggtitle("Provenance MAT 6.8")
-
-
 
 # variation in day of year ####
 # do different sites vary more than others in flowering?
