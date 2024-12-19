@@ -270,56 +270,57 @@ doy_normal_subset <- doy_normal %>%
 saveRDS(doy_normal_subset, "objects/doy_normal_subset.rds")
 
 # historical dates
-doy_normal_subset %>%
-  filter(period %in% c('1951-1980')) %>%
-  group_by(Site, Sex, event, period) %>%
-  median_qi(DoY) %>%
-  mutate(DoY = as.Date(DoY - 1, origin = "2024-01-01"),
-         .lower = as.Date(.lower - 1, origin = "2024-01-01"),
-         .upper = as.Date(.upper -1, origin = "2024-01-01")) %>%
-  ungroup() %>%
-  arrange(DoY)
+# this is now in paper as historicalnormal
+# doy_normal_subset %>%
+#   filter(period %in% c('1951-1980')) %>%
+#   group_by(Site, Sex, event, period) %>%
+#   median_qi(DoY) %>%
+#   mutate(DoY = as.Date(DoY - 1, origin = "2024-01-01"),
+#          .lower = as.Date(.lower - 1, origin = "2024-01-01"),
+#          .upper = as.Date(.upper -1, origin = "2024-01-01")) %>%
+#   ungroup() %>%
+#   arrange(DoY)
 
 # difference between 1951-1980 and 1981-2010
-doy_normal_subset %>%
-  filter(period %in% c('1951-1980', '1981-2010')) %>%
-  group_by(Site, Sex, event, period, MAT) %>%
-  median_hdci(DoY) %>%
-  select(Site, Sex, event, period, DoY, MAT) %>%
-  pivot_wider(names_from = period, values_from = DoY) %>%
-  mutate(advancement = `1981-2010` - `1951-1980`) %>%
-  arrange(advancement)
+# doy_normal_subset %>%
+#   filter(period %in% c('1951-1980', '1981-2010')) %>%
+#   group_by(Site, Sex, event, period, MAT) %>%
+#   median_hdci(DoY) %>%
+#   select(Site, Sex, event, period, DoY, MAT) %>%
+#   pivot_wider(names_from = period, values_from = DoY) %>%
+#   mutate(advancement = `1981-2010` - `1951-1980`) %>%
+#   arrange(advancement)
 
 # advancement between 1951-1980 and 2071-2100
-doy_normal_subset %>%
-  filter(period %in% c('1951-1980', '2071-2100')) %>%
-  select(-period) %>%
-  group_by(Site, Sex, event, scenario, MAT) %>%
-  median_hdci(DoY) %>%
-  select(Site, Sex, event, scenario, DoY, MAT) %>%
-  pivot_wider(names_from = scenario, values_from = DoY) %>%
-  mutate(ssp2_adv = historical - ssp245, ssp5_adv = historical - ssp585) %>%
-  arrange(ssp5_adv)
+# doy_normal_subset %>%
+#   filter(period %in% c('1951-1980', '2071-2100')) %>%
+#   select(-period) %>%
+#   group_by(Site, Sex, event, scenario, MAT) %>%
+#   median_hdci(DoY) %>%
+#   select(Site, Sex, event, scenario, DoY, MAT) %>%
+#   pivot_wider(names_from = scenario, values_from = DoY) %>%
+#   mutate(ssp2_adv = historical - ssp245, ssp5_adv = historical - ssp585) %>%
+#   arrange(ssp5_adv)
 
-doy_normal_subset %>%
-  select(.draw, Site, Sex, event, DoY, period, scenario) %>%
-  filter(period %in% c('1951-1980', '2071-2100'),
-    scenario %in% c("historical", "ssp245", "ssp585")) %>%
-  select(-period) %>%
-  pivot_wider(names_from = scenario, values_from = DoY) %>%
-  mutate(ssp2_adv = historical - ssp245, ssp5_adv = historical - ssp585) %>%
-  group_by(Site, Sex, event) %>%
-  summarize(
-    median_qi_ssp2 = median_qi(ssp2_adv, .width = 0.95), #quantile interval
-    median_qi_ssp5 = median_qi(ssp5_adv, .width = 0.95)
-  ) %>%
-  unnest_wider(median_qi_ssp2, names_sep = "_") %>%
-  unnest_wider(median_qi_ssp5, names_sep = "_") %>%
-  select(-contains(".width"), -contains(".point"), -contains(".interval")) %>%
-  rename_with(~ gsub("median_qi", "adv", .), starts_with("median_qi")) %>%
-  arrange(adv_ssp5_y)
+# doy_normal_subset %>%
+#   select(.draw, Site, Sex, event, DoY, period, scenario) %>%
+#   filter(period %in% c('1951-1980', '2071-2100'),
+#     scenario %in% c("historical", "ssp245", "ssp585")) %>%
+#   select(-period) %>%
+#   pivot_wider(names_from = scenario, values_from = DoY) %>%
+#   mutate(ssp2_adv = historical - ssp245, ssp5_adv = historical - ssp585) %>%
+#   group_by(Site, Sex, event) %>%
+#   summarize(
+#     median_qi_ssp2 = median_qi(ssp2_adv, .width = 0.95), #quantile interval
+#     median_qi_ssp5 = median_qi(ssp5_adv, .width = 0.95)
+#   ) %>%
+#   unnest_wider(median_qi_ssp2, names_sep = "_") %>%
+#   unnest_wider(median_qi_ssp5, names_sep = "_") %>%
+#   select(-contains(".width"), -contains(".point"), -contains(".interval")) %>%
+#   rename_with(~ gsub("median_qi", "adv", .), starts_with("median_qi")) %>%
+#   arrange(adv_ssp5_y)
 
 ## climate change uncertainty
-doy_normal_subset %>%
-  group_by(index, Site, event, Sex, period) %>%
-  median_qi(DoY, .width = c(.50, 0.95))
+# doy_normal_subset %>%
+#   group_by(index, Site, event, Sex, period) %>%
+#   median_qi(DoY, .width = c(.50, 0.95))
