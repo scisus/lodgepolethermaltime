@@ -238,7 +238,7 @@ interceptsummary <- intercepts %>%
 
 saveRDS(interceptsummary, file = "../flowering-cline/tables/interceptsummary.rds")
 
-### slopes
+### slopes ####
 slopes <- readRDS(file = "objects/slopes.rds")
 
 slopesummary <- slopes %>%
@@ -271,7 +271,7 @@ varplot
 
 
 ### offset_medians
-# plot medians of offset parameters in point clouds (like beeswarm) 6000 draws
+# plot medians of offset parameters in point clouds (like beeswarm)
 offsets_summary <- readRDS("objects/offsets_summary.rds") %>%
   mutate(model = factor(model, levels = c("mb", "fb", "me", "fe")))
 offsetplot <- offsets_summary %>%
