@@ -16,8 +16,6 @@ library(flowers)
 library(dplyr)
 library(knitr)
 library(tidyr)
-
-source('phenology_functions.R')
 ```
 
 
@@ -63,7 +61,7 @@ So, how much forcing is accumulated over the year? I use the sites in my study a
 ```{r, echo = FALSE, fig.caption="Forcing accumulation at all sites 1945-2012.", out.extra = ''}
 
 # forcing units for 15 years and at sites included in this study
-forcing <- read.csv('~/lodgepolethermaltime/data/forcing/dailyforc_1945_2012.csv', header=TRUE) 
+forcing <- read.csv('~/Documents/research/lodgepolethermaltime/data/forcing/dailyforc_1945_2012.csv', header=TRUE) 
   
 ggplot(forcing, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
   geom_line() +
@@ -112,7 +110,7 @@ range(ffend$sum_forcing)
 
 ```
 Flowering is more likely to start in the earlier part of the date range and end in the later part of the date range.
-The range of forcing accumulation for May is`r min(ffstart$sum_forcing)` - `r max(ffstart$sum_forcing` GDD. The range of forcing accumulation from May 15 to June 30 is `r min(ffend$sum_forcing)` - `r max(ffend$sum_forcing` GDD.
+The range of forcing accumulation for May is`r min(ffstart$sum_forcing)` - `r max(ffstart$sum_forcing)` GDD. The range of forcing accumulation from May 15 to June 30 is `r min(ffend$sum_forcing)` - `r max(ffend$sum_forcing)` GDD.
 
 Each event is associated with a year, site, genotype, and genotype. There are 14 years, 7 sites, 259 genotypes, and 748 individual trees (genotypes).
 
