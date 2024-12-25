@@ -25,7 +25,7 @@ siteMAT <- sitedat %>%
 
 # orchards ############
 ## generic orchard ############
-## at 100 points spanning full range of provenances in the data
+## at 100 points spanning full range of provenances in the data. Use fewer MAT points with length.out for smaller object.
 neworchdat_avg <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
                                     to = range(alldatls$fbdat$MAT)[2], length.out = 100),
                           Year = "newyear",
@@ -58,35 +58,35 @@ saveRDS(fpred_orch_avg_summary, "objects/fpred_orch_avg_summary.rds")
 
 ## orchard specific predictions using full posterior ############
 
-shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Tolko", "PRT", "Vernon", "Kalamalka") # drop border and trench
-neworchdat <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
-                                    to = range(alldatls$fbdat$MAT)[2], length.out = 100),
-                         Year = "newyear",
-                         Tree = "newtree",
-                         Genotype = "newgenotype",
-                         Site = shortsites,
-                         event = c("begin", "end"),
-                         Sex = c("FEMALE", "MALE")) %>%
-  split(list(.$event, .$Sex))
+# shortsites <- c("PGTIS", "KettleRiver", "Sorrento", "Tolko", "PRT", "Vernon", "Kalamalka") # drop border and trench
+# neworchdat <- expand.grid(MAT = seq(from = range(alldatls$fbdat$MAT)[1],
+#                                     to = range(alldatls$fbdat$MAT)[2], length.out = 100),
+#                          Year = "newyear",
+#                          Tree = "newtree",
+#                          Genotype = "newgenotype",
+#                          Site = shortsites,
+#                          event = c("begin", "end"),
+#                          Sex = c("FEMALE", "MALE")) %>%
+#   split(list(.$event, .$Sex))
 
 # posterior prediction #########
 # for each site for the full range of provenances using an average year, genotype, and tree (using estimated gaussian prior to generate random effects). 6000 draws, 95% HDPI #######
 
-fpred_orch <- purrr::map2(neworchdat, modells,
-                          .f = function(x,y) {add_predicted_draws(newdata = x,
-                                                                  object = y,
-                                                                  re_formula = NULL,
-                                                                  allow_new_levels = TRUE,
-                                                                  sample_new_levels = "gaussian",
-                                                                  ndraws = n)}) %>%
-  bind_rows()
-saveRDS(fpred_orch, file = "objects/fpred_orch.rds")
-
-fpred_orch_summary <- fpred_orch %>%
-  group_by(MAT, Year, Tree, Genotype, Site, event, Sex) %>%
-  median_hdci(.prediction) %>%
-  mutate(Site = forcats::fct_relevel(Site, shortsites))
-saveRDS(fpred_orch_summary, "objects/fpred_orch_summary.rds")
+# fpred_orch <- purrr::map2(neworchdat, modells,
+#                           .f = function(x,y) {add_predicted_draws(newdata = x,
+#                                                                   object = y,
+#                                                                   re_formula = NULL,
+#                                                                   allow_new_levels = TRUE,
+#                                                                   sample_new_levels = "gaussian",
+#                                                                   ndraws = n)}) %>%
+#   bind_rows()
+# saveRDS(fpred_orch, file = "objects/fpred_orch.rds")
+#
+# fpred_orch_summary <- fpred_orch %>%
+#   group_by(MAT, Year, Tree, Genotype, Site, event, Sex) %>%
+#   median_hdci(.prediction) %>%
+#   mutate(Site = forcats::fct_relevel(Site, shortsites))
+# saveRDS(fpred_orch_summary, "objects/fpred_orch_summary.rds")
 
 
 

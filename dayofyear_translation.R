@@ -147,26 +147,26 @@ saveRDS(doy_typical_all_at_PGTIS, "objects/doy_typical_all_at_PGTIS.rds")
 ## posterior prediction, 6000 draws, avg year, genotype, tree, site effects. 1945-2011. See comments on fpred_orch generation in predict.R####
 
 # split climate data and forcing predictions into lists based on site
-dailyforc_so_list <- split(dailyforc_so, f = list(dailyforc_so$Site), drop = TRUE)
-fpred_orch_list <- split(fpred_orch, f = list(fpred_orch$Site), drop = TRUE)
+# dailyforc_so_list <- split(dailyforc_so, f = list(dailyforc_so$Site), drop = TRUE)
+# fpred_orch_list <- split(fpred_orch, f = list(fpred_orch$Site), drop = TRUE)
+#
+# all(names(dailyforc_so_list) == names(fpred_orch_list)) # test that lists have sites in same order
 
-all(names(dailyforc_so_list) == names(fpred_orch_list)) # test that lists have sites in same order
-
-doy_annual_pp <- map2_dfr(.x = dailyforc_so_list, .y = fpred_orch_list, .f = find_day_of_forcing_mapper, bforce = ".prediction") %>%
-  rename(DoY = newdoycol, index = .id) %>%
-  mutate(index = as.numeric(index)) %>%
-  ungroup() %>%
-  select(-Year, -Tree, -Genotype) %>%
-  left_join(select(dailyforc_so, index, Site, Year) %>% distinct())
-
-#now summarise
-doy_annual_pp_sum <- doy_annual_pp %>%
-  group_by(MAT, Site, event, Sex, Year) %>%
-  median_hdci(DoY) %>%
-  ungroup() %>%
-  mutate(Site = forcats::fct_relevel(Site, seedorchardsites)) # correct to full sites
-doy_annual_pp_sum$MAT_label <- paste("MAT:", doy_annual_pp_sum$MAT)
-saveRDS(doy_annual_pp_sum, "objects/doy_annual_pp_sum.rds")
+# doy_annual_pp <- map2_dfr(.x = dailyforc_so_list, .y = fpred_orch_list, .f = find_day_of_forcing_mapper, bforce = ".prediction") %>%
+#   rename(DoY = newdoycol, index = .id) %>%
+#   mutate(index = as.numeric(index)) %>%
+#   ungroup() %>%
+#   select(-Year, -Tree, -Genotype) %>%
+#   left_join(select(dailyforc_so, index, Site, Year) %>% distinct())
+#
+# #now summarise
+# doy_annual_pp_sum <- doy_annual_pp %>%
+#   group_by(MAT, Site, event, Sex, Year) %>%
+#   median_hdci(DoY) %>%
+#   ungroup() %>%
+#   mutate(Site = forcats::fct_relevel(Site, seedorchardsites)) # correct to full sites
+# doy_annual_pp_sum$MAT_label <- paste("MAT:", doy_annual_pp_sum$MAT)
+# saveRDS(doy_annual_pp_sum, "objects/doy_annual_pp_sum.rds")
 
 ## no site posterior prediction, 6000 draws, avg year, genotype, tree, NO site effects. 1945-2011. See comments on fpred_orch generation in predict.R####
 
@@ -180,7 +180,7 @@ fpred_orch_avg <- readRDS('objects/fpred_orch_avg.rds') %>%
   ungroup() %>%
   select( -Year, -Site, -Tree, -Genotype, -.chain, -.iteration)
 
-# match forcing predictions in fpred_orch_avg to doy in dailyforc_list
+# match forcing predictions in fpred_orch_avg to doy in dailyforc_list.
 doy_annual_avg_pp <- map_dfr(dailyforc_list, .f = find_day_of_forcing,
                           .id = "index",
                           bdf = fpred_orch_avg,

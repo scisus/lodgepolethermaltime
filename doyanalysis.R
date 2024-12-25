@@ -132,8 +132,8 @@ saveRDS(warmvscold, "objects/warmvscold.rds")
 # do different sites vary more than others in flowering?
 # do not remove this analysis
 
-doy_annual_pp_sum <- readRDS('objects/doy_annual_pp_sum.rds')
-doysd <- doy_annual_pp_sum %>%
+doy_annual_avg_pp_sum <- readRDS('objects/doy_annual_avg_pp_sum.rds')
+doysd <- doy_annual_avg_pp_sum %>%
   group_by(MAT, Site, event, Sex) %>%
   summarise(sd = sd(DoY))
 
