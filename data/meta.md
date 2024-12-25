@@ -22,3 +22,13 @@ The file with the geographic information is the ParentTreeExtractReport_ParentTr
 
 `typical_year_forc.csv`
 forcing and mean temperatures for all seed orchard and comparison sites averaged over 1945-2011
+
+# Nilsson1981, oreilly-and-owens1988, and owens2005
+All contain lodgepole flowering phenology data copied from other papers
+
+Nilsson, J.-E., 1981. Flowering in Pinus contorta: a study of flowering abundance and flowering phenology of provenances from latitude 48⁰N to 63⁰N in a Swedish field trial. Swedish University of Agricultural Sciences, Dept. of Forest Genetics and Plant Physiology, Umeå.
+
+
+O’Reilly, C., Owens, J.N., 1988. Reproductive growth and development in seven provenances of lodgepole pine. Can. J. For. Res. 18, 43–53. https://doi.org/10.1139/x88-008
+
+Owens, J.N., Bennett, J., L’Hirondelle, S., 2005. Pollination and cone morphology affect cone and seed production in lodgepole pine seed orchards. Canadian Journal of Forest Research 35, 383–400. https://doi.org/10.1139/x04-176
