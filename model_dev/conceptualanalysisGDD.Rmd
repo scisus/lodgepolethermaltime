@@ -44,7 +44,7 @@ as well as censoring and variation due to provenance climate summarised at MAT
 
 So
 
-$phi_i = \mu + \beta MAT_i + delta_{site,i} + \delta_{year,i} + \delta_{genotype,i} + \delta_{tree,i}$
+$\phi_i = \mu + \beta MAT_i + delta_{site,i} + \delta_{year,i} + \delta_{genotype,i} + \delta_{tree,i}$
 
 where $\mu$ is the average amount of forcing it takes for a tree to reach an event and the $\delta$s describe how much each level in each factor (site, prov, year, genotype) is offset from the population mean amount of forcing required to reach the event.
 
@@ -60,7 +60,7 @@ So, how much forcing is accumulated over the year? I use the sites in my study a
 
 ```{r, echo = FALSE, fig.caption="Forcing accumulation at all sites 1945-2012.", out.extra = ''}
 
-# forcing units for 15 years and at sites included in this study
+# forcing units for 16 years and at sites included in this study
 forcing <- read.csv('~/Documents/research/lodgepolethermaltime/data/forcing/dailyforc_1945_2012.csv', header=TRUE) 
   
 ggplot(forcing, aes(x=DoY, y=sum_forcing, colour = interaction(Site,Year))) +
@@ -112,13 +112,13 @@ range(ffend$sum_forcing)
 Flowering is more likely to start in the earlier part of the date range and end in the later part of the date range.
 The range of forcing accumulation for May is`r min(ffstart$sum_forcing)` - `r max(ffstart$sum_forcing)` GDD. The range of forcing accumulation from May 15 to June 30 is `r min(ffend$sum_forcing)` - `r max(ffend$sum_forcing)` GDD.
 
-Each event is associated with a year, site, genotype, and genotype. There are 14 years, 7 sites, 259 genotypes, and 748 individual trees (genotypes).
+Each event is associated with a year, site, genotype, and genotype. There are 16 years, 7 sites, 259 genotypes, and 748 individual trees (genotypes).
 
 # Model development
 
 $f_i$ are the observations of accumulated forcing. They are positive and continuous and should be between about 0 and 1000 GDD. 
 
-$f_i$'s value can be modeled as coming from a distribution with a mean forcing accumulation ($phi_i$) and standard deviation $\sigma$ that represents our uncertainty in the observation - how good our temperature measurements are, how good the forcing unit accumulation function is, and whether the event was observed on the correct day, etc. 
+$f_i$'s value can be modeled as coming from a distribution with a mean forcing accumulation ($\phi_i$) and standard deviation $\sigma$ that represents our uncertainty in the observation - how good our temperature measurements are, how good the forcing unit accumulation function is, and whether the event was observed on the correct day, etc. 
 
 ## Residual standard deviation 
 
@@ -174,11 +174,11 @@ pt(60, 1)
 ```
 So,
 
-$f_i ~ \mathcal{N}(phi_i, \sigma)$
+$f_i ~ \mathcal{N}(\phi_i, \sigma)$
 
 $\sigma \sim |\mathcal{Normal}(0, 50)|$
 
-$phi_i$ is a function of $\mu$ and the $\delta$ offsets. 
+$\phi_i$ is a function of $\mu$ and the $\delta$ offsets. 
 
 ## mu
 
@@ -292,7 +292,7 @@ hist(rnorm(1000, mean=0, sd=18), breaks=50)
 
 ```
 
-I've stuck with half normals because while genotype and genotype have hundreds of levels, Site only has 7 and year only 14 (15?)
+I've stuck with half normals because while genotype and genotype have hundreds of levels, Site only has 7 and year only 16.
 
 ## beta
 Beta sampling distribution must include 0 as we don't know if there's an effect and it's centered on 0 because I don't have any reason to believe an effect would be positive or negative. How wide its sampling distribution will be depends realistic forcing ranges and MAT. MAT at my sites ranges from -0.7 to 6.8 $^\circ$C.
